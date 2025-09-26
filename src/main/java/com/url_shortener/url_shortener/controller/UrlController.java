@@ -7,6 +7,7 @@ import com.url_shortener.url_shortener.entities.Url;
 import com.url_shortener.url_shortener.mappers.UrlMapper;
 import com.url_shortener.url_shortener.repositories.StatisticRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,7 +20,7 @@ public class UrlController {
     private final StatisticRepository statisticRepository;
 
     @PostMapping("/shorten")
-    public UrlDto generateShortUrl(@RequestBody UrlRequest urlRequest) {
+    public ResponseEntity<UrlDto> generateShortUrl(@RequestBody UrlRequest urlRequest) {
 
         String shortUrl = urlRequest.getLongUrl() + " short (this is demo)";
 
@@ -35,6 +36,6 @@ public class UrlController {
 
         statisticRepository.save(stat);
 
-        return urlMapper.toDto(url);
+        return ResponseEntity.ok(urlMapper.toDto(url));
     }
 }
