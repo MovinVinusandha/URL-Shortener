@@ -44,8 +44,10 @@ public class UrlController {
     }
 
     @ExceptionHandler(UrlExistInDataBaseException.class)
-    public ResponseEntity<String> urlInDb(UrlExistInDataBaseException urlExistInDataBaseException) {
-        return ResponseEntity.badRequest().body(urlExistInDataBaseException.getMessage());
+    public ResponseEntity<Map<String, String >> urlInDb() {
+        return ResponseEntity.badRequest().body(
+                Map.of("longUrl", "This URL has already been shortened")
+        );
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
