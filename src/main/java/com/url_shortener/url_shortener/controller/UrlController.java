@@ -48,6 +48,14 @@ public class UrlController {
         return ResponseEntity.ok(urlDto);
     }
 
+    @DeleteMapping("/url/{hash}")
+    public ResponseEntity<Void> deleteUrl(@PathVariable String hash) {
+
+        urlService.deleteUrl(hash);
+        return ResponseEntity.noContent().build();
+    }
+
+
     @ExceptionHandler(UrlNotFoundException.class)
     public ResponseEntity<String> urlNotFound() {
         return ResponseEntity.notFound().build();

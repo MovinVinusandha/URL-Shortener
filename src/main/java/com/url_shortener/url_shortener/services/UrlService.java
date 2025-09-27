@@ -67,4 +67,9 @@ public class UrlService {
 
         return urlMapper.toDto(url);
     }
+
+    public void deleteUrl(String shortUrl) {
+        var url = urlRepository.findByShortUrl("https://localhost/" + shortUrl);
+        urlRepository.delete(url);
+    }
 }
