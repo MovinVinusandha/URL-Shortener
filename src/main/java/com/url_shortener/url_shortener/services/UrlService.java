@@ -4,6 +4,8 @@ import com.url_shortener.url_shortener.dtos.UrlDto;
 import com.url_shortener.url_shortener.dtos.UrlRequest;
 import com.url_shortener.url_shortener.entities.Statistic;
 import com.url_shortener.url_shortener.entities.Url;
+import com.url_shortener.url_shortener.exception.UrlExistInDataBaseException;
+import com.url_shortener.url_shortener.exception.UrlNotFoundException;
 import com.url_shortener.url_shortener.mappers.UrlMapper;
 import com.url_shortener.url_shortener.repositories.UrlRepository;
 import lombok.AllArgsConstructor;
@@ -20,6 +22,10 @@ public class UrlService {
 
     public UrlDto generateShortUrl(UrlRequest urlRequest) {
         String shortUrl = "https://localhost/" + generateUrlHash(urlRequest.getLongUrl());
+
+        if (urlRepository.existsUrlByShortUrl(shortUrl)) {
+           throw new UrlExistInDataBaseException();
+        }
 
         var url = urlMapper.toEntity(urlRequest);
         url.setShortUrl(shortUrl);
@@ -43,6 +49,9 @@ public class UrlService {
 
     public Url urlRedirect(String shortUrl) {
         var url = urlRepository.findByShortUrl("https://localhost/" + shortUrl);
+        if (url == null){
+            throw new UrlNotFoundException();
+        }
 
         url.getStatistic().setAccessedTimes(url.getStatistic().getAccessedTimes() + 1);
         urlRepository.save(url);
