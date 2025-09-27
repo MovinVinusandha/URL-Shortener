@@ -42,6 +42,11 @@ public class UrlService {
     }
 
     public Url urlRedirect(String shortUrl) {
-        return urlRepository.findByShortUrl("https://localhost/" + shortUrl);
+        var url = urlRepository.findByShortUrl("https://localhost/" + shortUrl);
+
+        url.getStatistic().setAccessedTimes(url.getStatistic().getAccessedTimes() + 1);
+        urlRepository.save(url);
+
+        return url;
     }
 }
