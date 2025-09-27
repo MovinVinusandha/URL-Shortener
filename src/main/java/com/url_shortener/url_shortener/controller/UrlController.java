@@ -2,6 +2,8 @@ package com.url_shortener.url_shortener.controller;
 
 import com.url_shortener.url_shortener.dtos.UrlDto;
 import com.url_shortener.url_shortener.dtos.UrlRequest;
+import com.url_shortener.url_shortener.exception.UrlExistInDataBaseException;
+import com.url_shortener.url_shortener.exception.UrlNotFoundException;
 import com.url_shortener.url_shortener.services.UrlService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -29,5 +31,15 @@ public class UrlController {
         HttpHeaders headers = new HttpHeaders();
         headers.add("Location", url.getLongUrl());
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
+    }
+
+    @ExceptionHandler(UrlNotFoundException.class)
+    public ResponseEntity<String> urlNotFound() {
+        return ResponseEntity.notFound().build();
+    }
+
+    @ExceptionHandler(UrlExistInDataBaseException.class)
+    public ResponseEntity<String> urlInDb(UrlExistInDataBaseException urlExistInDataBaseException) {
+        return ResponseEntity.badRequest().body(urlExistInDataBaseException.getMessage());
     }
 }
