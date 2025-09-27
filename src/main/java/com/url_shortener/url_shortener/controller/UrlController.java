@@ -5,11 +5,16 @@ import com.url_shortener.url_shortener.dtos.UrlRequest;
 import com.url_shortener.url_shortener.exception.UrlExistInDataBaseException;
 import com.url_shortener.url_shortener.exception.UrlNotFoundException;
 import com.url_shortener.url_shortener.services.UrlService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @AllArgsConstructor
@@ -18,7 +23,7 @@ public class UrlController {
     private final UrlService urlService;
 
     @PostMapping("/shorten")
-    public ResponseEntity<UrlDto> generateShortUrl(@RequestBody UrlRequest urlRequest) {
+    public ResponseEntity<UrlDto> generateShortUrl(@Valid @RequestBody UrlRequest urlRequest) {
 
         var urlDto = urlService.generateShortUrl(urlRequest);
         return ResponseEntity.ok(urlDto);
@@ -41,5 +46,18 @@ public class UrlController {
     @ExceptionHandler(UrlExistInDataBaseException.class)
     public ResponseEntity<String> urlInDb(UrlExistInDataBaseException urlExistInDataBaseException) {
         return ResponseEntity.badRequest().body(urlExistInDataBaseException.getMessage());
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>> handleValidationErrors(
+            MethodArgumentNotValidException exception
+    ) {
+        var errors = new HashMap<String, String>();
+
+        exception.getBindingResult().getFieldErrors().forEach(error ->
+                errors.put(error.getField(), error.getDefaultMessage())
+        );
+
+        return ResponseEntity.badRequest().body(errors);
     }
 }
