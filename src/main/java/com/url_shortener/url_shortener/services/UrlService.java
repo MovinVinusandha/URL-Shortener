@@ -23,7 +23,7 @@ public class UrlService {
     public UrlDto generateShortUrl(UrlRequest urlRequest) {
         String shortUrl = "https://localhost/" + generateUrlHash(urlRequest.getLongUrl());
 
-        if (!(urlRepository.findByShortUrl(shortUrl) == null)) {
+        if (urlRepository.existsUrlByShortUrl(shortUrl)) {
            throw new UrlExistInDataBaseException();
         }
 
