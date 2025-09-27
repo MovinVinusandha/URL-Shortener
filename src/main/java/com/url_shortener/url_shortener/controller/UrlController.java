@@ -38,6 +38,16 @@ public class UrlController {
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
 
+    @PutMapping("/url/{hash}")
+    public ResponseEntity<UrlDto> updateUrl(
+            @PathVariable String hash,
+            @RequestBody UrlRequest urlRequest
+    ) {
+
+        var urlDto = urlService.updateUrl(urlRequest, hash);
+        return ResponseEntity.ok(urlDto);
+    }
+
     @ExceptionHandler(UrlNotFoundException.class)
     public ResponseEntity<String> urlNotFound() {
         return ResponseEntity.notFound().build();
