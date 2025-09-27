@@ -2,8 +2,6 @@ package com.url_shortener.url_shortener.controller;
 
 import com.url_shortener.url_shortener.dtos.UrlDto;
 import com.url_shortener.url_shortener.dtos.UrlRequest;
-import com.url_shortener.url_shortener.mappers.UrlMapper;
-import com.url_shortener.url_shortener.repositories.StatisticRepository;
 import com.url_shortener.url_shortener.services.UrlService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +18,7 @@ public class UrlController {
     @PostMapping("/shorten")
     public ResponseEntity<UrlDto> generateShortUrl(@RequestBody UrlRequest urlRequest) {
 
-        var urlDto = urlService.generateShortUrl(urlRequest.getLongUrl());
+        var urlDto = urlService.generateShortUrl(urlRequest);
         return ResponseEntity.ok(urlDto);
     }
 }

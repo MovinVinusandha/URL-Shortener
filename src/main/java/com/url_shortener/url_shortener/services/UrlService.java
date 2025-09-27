@@ -1,10 +1,10 @@
 package com.url_shortener.url_shortener.services;
 
 import com.url_shortener.url_shortener.dtos.UrlDto;
+import com.url_shortener.url_shortener.dtos.UrlRequest;
 import com.url_shortener.url_shortener.entities.Statistic;
-import com.url_shortener.url_shortener.entities.Url;
 import com.url_shortener.url_shortener.mappers.UrlMapper;
-import com.url_shortener.url_shortener.repositories.StatisticRepository;
+import com.url_shortener.url_shortener.repositories.UrlRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,23 +15,22 @@ import java.util.zip.CRC32;
 @AllArgsConstructor
 public class UrlService {
     private final UrlMapper urlMapper;
-    private StatisticRepository statisticRepository;
+    private final UrlRepository urlRepository;
 
-    public UrlDto generateShortUrl(String longUrl) {
-        String shortUrl = "https://localhost/" + generateUrlHash(longUrl);
+    public UrlDto generateShortUrl(UrlRequest urlRequest) {
+        String shortUrl = "https://localhost/" + generateUrlHash(urlRequest.getLongUrl());
 
-        var url = Url.builder()
-                .longUrl(longUrl)
-                .shortUrl(shortUrl)
-                .build();
+        var url = urlMapper.toEntity(urlRequest);
+        url.setShortUrl(shortUrl);
 
         var stat = Statistic.builder()
-                .urls(url)
                 .accessedTimes(0L)
+                .urls(url)
                 .build();
 
-        statisticRepository.save(stat);
+        url.addStatistic(stat);
 
+        urlRepository.save(url);
         return urlMapper.toDto(url);
     }
 

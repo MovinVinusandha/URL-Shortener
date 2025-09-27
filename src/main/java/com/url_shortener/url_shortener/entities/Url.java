@@ -22,7 +22,11 @@ public class Url {
     @Column(name = "short_url")
     private String shortUrl;
 
-    @OneToOne(mappedBy = "urls")
+    @OneToOne(mappedBy = "urls", cascade = CascadeType.PERSIST)
     private Statistic statistic;
 
+    public void addStatistic(Statistic statistic){
+        this.statistic = statistic;
+        statistic.setUrls(this);
+    }
 }
