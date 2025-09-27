@@ -4,10 +4,10 @@ import com.url_shortener.url_shortener.dtos.UrlDto;
 import com.url_shortener.url_shortener.dtos.UrlRequest;
 import com.url_shortener.url_shortener.services.UrlService;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @AllArgsConstructor
@@ -20,5 +20,14 @@ public class UrlController {
 
         var urlDto = urlService.generateShortUrl(urlRequest);
         return ResponseEntity.ok(urlDto);
+    }
+
+    @GetMapping("/{shortUrl}")
+    public ResponseEntity<Void> redirectToNewUrl(@PathVariable String shortUrl) {
+        var url = urlService.urlRedirect(shortUrl);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Location", url.getLongUrl());
+        return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
 }
