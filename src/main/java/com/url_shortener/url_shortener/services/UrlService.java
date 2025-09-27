@@ -8,6 +8,9 @@ import com.url_shortener.url_shortener.repositories.StatisticRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Locale;
+import java.util.zip.CRC32;
+
 @Service
 @AllArgsConstructor
 public class UrlService {
@@ -15,7 +18,7 @@ public class UrlService {
     private StatisticRepository statisticRepository;
 
     public UrlDto generateShortUrl(String longUrl) {
-        String shortUrl = longUrl + " short (this is demo)";
+        String shortUrl = "https://localhost/" + generateUrlHash(longUrl);
 
         var url = Url.builder()
                 .longUrl(longUrl)
@@ -30,5 +33,11 @@ public class UrlService {
         statisticRepository.save(stat);
 
         return urlMapper.toDto(url);
+    }
+
+    public String generateUrlHash(String data){
+        CRC32 CRC32 = new CRC32();
+        CRC32.update(data.getBytes());
+        return String.format(Locale.US,"%08X", CRC32.getValue());
     }
 }
