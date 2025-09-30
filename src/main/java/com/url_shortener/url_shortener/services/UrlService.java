@@ -61,6 +61,9 @@ public class UrlService {
 
     public UrlDto updateUrl(UrlRequest urlRequest,String shortUrl) {
         var url = urlRepository.findByShortUrl("https://localhost/" + shortUrl);
+        if (url == null){
+            throw new UrlNotFoundException();
+        }
 
         urlMapper.updateUrl(urlRequest, url);
         urlRepository.save(url);
@@ -70,6 +73,10 @@ public class UrlService {
 
     public void deleteUrl(String shortUrl) {
         var url = urlRepository.findByShortUrl("https://localhost/" + shortUrl);
+        if (url == null){
+            throw new UrlNotFoundException();
+        }
+
         urlRepository.delete(url);
     }
 }

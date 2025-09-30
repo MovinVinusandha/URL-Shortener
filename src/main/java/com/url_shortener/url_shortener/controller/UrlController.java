@@ -41,7 +41,7 @@ public class UrlController {
     @PutMapping("/url/{hash}")
     public ResponseEntity<UrlDto> updateUrl(
             @PathVariable String hash,
-            @RequestBody UrlRequest urlRequest
+            @Valid @RequestBody UrlRequest urlRequest
     ) {
 
         var urlDto = urlService.updateUrl(urlRequest, hash);
