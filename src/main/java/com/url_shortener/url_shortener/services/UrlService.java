@@ -50,10 +50,7 @@ public class UrlService {
     }
 
     public Url urlRedirect(String shortUrl) {
-        var url = urlRepository.findByShortUrl("https://localhost/" + shortUrl);
-        if (url == null){
-            throw new UrlNotFoundException();
-        }
+        var url = isExistsShortUrl(shortUrl);
 
         url.getStatistic().setAccessedTimes(url.getStatistic().getAccessedTimes() + 1);
         urlRepository.save(url);
@@ -62,16 +59,14 @@ public class UrlService {
     }
 
     public UrlDto getUrl(String shortUrl) {
-        var url = urlRepository.findByShortUrl("https://localhost/" + shortUrl);
+        var url = isExistsShortUrl(shortUrl);
+
         urlMapper.toDto(url);
         return urlMapper.toDto(url);
     }
 
     public UrlUpdateDto updateUrl(UrlRequest urlRequest, String shortUrl) {
-        var url = urlRepository.findByShortUrl("https://localhost/" + shortUrl);
-        if (url == null){
-            throw new UrlNotFoundException();
-        }
+        var url = isExistsShortUrl(shortUrl);
 
         urlMapper.updateUrl(urlRequest, url);
         urlRepository.save(url);
@@ -80,11 +75,16 @@ public class UrlService {
     }
 
     public void deleteUrl(String shortUrl) {
+        var url = isExistsShortUrl(shortUrl);
+        urlRepository.delete(url);
+    }
+
+    private Url isExistsShortUrl(String shortUrl) {
         var url = urlRepository.findByShortUrl("https://localhost/" + shortUrl);
         if (url == null){
             throw new UrlNotFoundException();
         }
 
-        urlRepository.delete(url);
+        return url;
     }
 }
