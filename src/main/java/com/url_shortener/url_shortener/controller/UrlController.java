@@ -1,6 +1,7 @@
 package com.url_shortener.url_shortener.controller;
 
 import com.url_shortener.url_shortener.dtos.UrlDto;
+import com.url_shortener.url_shortener.dtos.UrlSend;
 import com.url_shortener.url_shortener.dtos.UrlRequest;
 import com.url_shortener.url_shortener.dtos.UrlUpdateDto;
 import com.url_shortener.url_shortener.exception.UrlExistInDataBaseException;
@@ -24,7 +25,7 @@ public class UrlController {
     private final UrlService urlService;
 
     @PostMapping("/shorten")
-    public ResponseEntity<UrlDto> generateShortUrl(@Valid @RequestBody UrlRequest urlRequest) {
+    public ResponseEntity<UrlSend> generateShortUrl(@Valid @RequestBody UrlRequest urlRequest) {
 
         var urlDto = urlService.generateShortUrl(urlRequest);
         return ResponseEntity.ok(urlDto);
@@ -37,6 +38,12 @@ public class UrlController {
         HttpHeaders headers = new HttpHeaders();
         headers.add("Location", url.getLongUrl());
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
+    }
+
+    @GetMapping("/url/{hash}")
+    public ResponseEntity<UrlDto> getUrl(@PathVariable String hash) {
+        var urlDto = urlService.getUrl(hash);
+        return ResponseEntity.ok(urlDto);
     }
 
     @PutMapping("/url/{hash}")

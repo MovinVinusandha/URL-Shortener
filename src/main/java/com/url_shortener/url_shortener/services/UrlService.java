@@ -1,6 +1,7 @@
 package com.url_shortener.url_shortener.services;
 
 import com.url_shortener.url_shortener.dtos.UrlDto;
+import com.url_shortener.url_shortener.dtos.UrlSend;
 import com.url_shortener.url_shortener.dtos.UrlRequest;
 import com.url_shortener.url_shortener.dtos.UrlUpdateDto;
 import com.url_shortener.url_shortener.entities.Statistic;
@@ -21,7 +22,7 @@ public class UrlService {
     private final UrlMapper urlMapper;
     private final UrlRepository urlRepository;
 
-    public UrlDto generateShortUrl(UrlRequest urlRequest) {
+    public UrlSend generateShortUrl(UrlRequest urlRequest) {
         String shortUrl = "https://localhost/" + generateUrlHash(urlRequest.getLongUrl());
 
         if (urlRepository.existsUrlByShortUrl(shortUrl)) {
@@ -39,7 +40,7 @@ public class UrlService {
         url.addStatistic(stat);
 
         urlRepository.save(url);
-        return urlMapper.toDto(url);
+        return urlMapper.toSendDto(url);
     }
 
     public String generateUrlHash(String data){
@@ -58,6 +59,12 @@ public class UrlService {
         urlRepository.save(url);
 
         return url;
+    }
+
+    public UrlDto getUrl(String shortUrl) {
+        var url = urlRepository.findByShortUrl("https://localhost/" + shortUrl);
+        urlMapper.toDto(url);
+        return urlMapper.toDto(url);
     }
 
     public UrlUpdateDto updateUrl(UrlRequest urlRequest, String shortUrl) {
