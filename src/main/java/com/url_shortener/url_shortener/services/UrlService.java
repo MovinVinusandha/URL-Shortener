@@ -63,6 +63,10 @@ public class UrlService {
 
     public UrlDto getUrl(String shortUrl) {
         var url = urlRepository.findByShortUrl("https://localhost/" + shortUrl);
+        if (url == null){
+            throw new UrlNotFoundException();
+        }
+
         urlMapper.toDto(url);
         return urlMapper.toDto(url);
     }
