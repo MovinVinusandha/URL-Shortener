@@ -2,6 +2,7 @@ package com.url_shortener.url_shortener.services;
 
 import com.url_shortener.url_shortener.dtos.UrlDto;
 import com.url_shortener.url_shortener.dtos.UrlRequest;
+import com.url_shortener.url_shortener.dtos.UrlUpdateDto;
 import com.url_shortener.url_shortener.entities.Statistic;
 import com.url_shortener.url_shortener.entities.Url;
 import com.url_shortener.url_shortener.exception.UrlExistInDataBaseException;
@@ -59,13 +60,13 @@ public class UrlService {
         return url;
     }
 
-    public UrlDto updateUrl(UrlRequest urlRequest,String shortUrl) {
+    public UrlUpdateDto updateUrl(UrlRequest urlRequest, String shortUrl) {
         var url = urlRepository.findByShortUrl("https://localhost/" + shortUrl);
 
         urlMapper.updateUrl(urlRequest, url);
         urlRepository.save(url);
 
-        return urlMapper.toDto(url);
+        return urlMapper.toUpdateDto(url);
     }
 
     public void deleteUrl(String shortUrl) {

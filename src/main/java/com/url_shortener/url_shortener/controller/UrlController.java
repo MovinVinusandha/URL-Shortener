@@ -2,6 +2,7 @@ package com.url_shortener.url_shortener.controller;
 
 import com.url_shortener.url_shortener.dtos.UrlDto;
 import com.url_shortener.url_shortener.dtos.UrlRequest;
+import com.url_shortener.url_shortener.dtos.UrlUpdateDto;
 import com.url_shortener.url_shortener.exception.UrlExistInDataBaseException;
 import com.url_shortener.url_shortener.exception.UrlNotFoundException;
 import com.url_shortener.url_shortener.services.UrlService;
@@ -39,13 +40,13 @@ public class UrlController {
     }
 
     @PutMapping("/url/{hash}")
-    public ResponseEntity<UrlDto> updateUrl(
+    public ResponseEntity<UrlUpdateDto> updateUrl(
             @PathVariable String hash,
             @RequestBody UrlRequest urlRequest
     ) {
 
-        var urlDto = urlService.updateUrl(urlRequest, hash);
-        return ResponseEntity.ok(urlDto);
+        var urlUpdateDto = urlService.updateUrl(urlRequest, hash);
+        return ResponseEntity.ok(urlUpdateDto);
     }
 
     @DeleteMapping("/url/{hash}")
