@@ -8,9 +8,13 @@ import java.time.LocalDateTime;
 
 @AllArgsConstructor
 @Getter
-public class UrlDto {
+public class UrlUpdateDto {
     private String longUrl;
     private String shortUrl;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime updatedAt;
 }
