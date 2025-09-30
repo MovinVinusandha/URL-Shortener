@@ -23,7 +23,7 @@ public class UrlService {
     private final UrlRepository urlRepository;
 
     public UrlSend generateShortUrl(UrlRequest urlRequest) {
-        String shortUrl = "https://localhost/" + generateUrlHash(urlRequest.getLongUrl());
+        String shortUrl = generateUrlHash(urlRequest.getLongUrl());
 
         if (urlRepository.existsUrlByShortUrl(shortUrl)) {
            throw new UrlExistInDataBaseException();
@@ -80,7 +80,7 @@ public class UrlService {
     }
 
     private Url isExistsShortUrl(String shortUrl) {
-        var url = urlRepository.findByShortUrl("https://localhost/" + shortUrl);
+        var url = urlRepository.findByShortUrl(shortUrl);
         if (url == null){
             throw new UrlNotFoundException();
         }
