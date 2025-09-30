@@ -2,8 +2,8 @@ spring:
   application:
     name: url-shortener
   datasource:
-    url: jdbc:mysql://localhost:3306/url_shortener?createDatabaseIfNotExist=true
-    username: root
-    password: password
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   jpa:
     show-sql: true
