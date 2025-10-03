@@ -4,9 +4,8 @@ import com.url_shortener.url_shortener.dtos.UrlDto;
 import com.url_shortener.url_shortener.dtos.UrlSend;
 import com.url_shortener.url_shortener.dtos.UrlRequest;
 import com.url_shortener.url_shortener.dtos.UrlUpdateDto;
-import com.url_shortener.url_shortener.exception.UrlExistInDataBaseException;
-import com.url_shortener.url_shortener.exception.UrlNotFoundException;
 import com.url_shortener.url_shortener.services.UrlService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -21,15 +20,17 @@ public class UrlController {
     private final UrlService urlService;
 
     @PostMapping("/shorten")
+    @Operation(summary = "Generate short url")
     public ResponseEntity<UrlSend> generateShortUrl(@Valid @RequestBody UrlRequest urlRequest) {
 
         var urlDto = urlService.generateShortUrl(urlRequest);
         return ResponseEntity.ok(urlDto);
     }
 
-    @GetMapping("/{shortUrl}")
-    public ResponseEntity<Void> redirectToNewUrl(@PathVariable String shortUrl) {
-        var url = urlService.urlRedirect(shortUrl);
+    @GetMapping("/{hash}")
+    @Operation(summary = "Redirect")
+    public ResponseEntity<Void> redirectToNewUrl(@PathVariable String hash) {
+        var url = urlService.urlRedirect(hash);
 
         HttpHeaders headers = new HttpHeaders();
         headers.add("Location", url.getLongUrl());
@@ -37,6 +38,7 @@ public class UrlController {
     }
 
     @GetMapping("/url/{hash}")
+    @Operation(summary = "Get details about url")
     public ResponseEntity<UrlDto> getUrl(@PathVariable String hash) {
         var urlDto = urlService.getUrl(hash);
         return ResponseEntity.ok(urlDto);
