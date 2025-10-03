@@ -27,10 +27,10 @@ public class UrlController {
         return ResponseEntity.ok(urlDto);
     }
 
-    @GetMapping("/{shortUrl}")
+    @GetMapping("/{hash}")
     @Operation(summary = "Redirect")
-    public ResponseEntity<Void> redirectToNewUrl(@PathVariable String shortUrl) {
-        var url = urlService.urlRedirect(shortUrl);
+    public ResponseEntity<Void> redirectToNewUrl(@PathVariable String hash) {
+        var url = urlService.urlRedirect(hash);
 
         HttpHeaders headers = new HttpHeaders();
         headers.add("Location", url.getLongUrl());
