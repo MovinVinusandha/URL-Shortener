@@ -33,6 +33,10 @@ public class Url {
     @OneToOne(mappedBy = "urls", cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
     private Statistic statistic;
 
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
     public void addStatistic(Statistic statistic){
         this.statistic = statistic;
         statistic.setUrls(this);
