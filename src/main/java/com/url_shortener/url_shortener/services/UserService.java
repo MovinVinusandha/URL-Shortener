@@ -1,5 +1,6 @@
 package com.url_shortener.url_shortener.services;
 
+import com.url_shortener.url_shortener.dtos.UpdateUserRequest;
 import com.url_shortener.url_shortener.dtos.UserDto;
 import com.url_shortener.url_shortener.dtos.UserRegister;
 import com.url_shortener.url_shortener.entities.User;
@@ -36,5 +37,19 @@ public class UserService {
                 .stream()
                 .map(userMapper::toDto)
                 .toList();
+    }
+
+    public User updateUser(Long id, UpdateUserRequest request) {
+        var user = userRepository.findById(id).orElse(null);
+
+        userMapper.update(request, user);
+        userRepository.save(user);
+        return user;
+    }
+
+    public void deleteUser(Long id) {
+        var user = userRepository.findById(id).orElse(null);
+
+        userRepository.delete(user);
     }
 }

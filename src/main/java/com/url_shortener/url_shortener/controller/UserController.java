@@ -1,5 +1,6 @@
 package com.url_shortener.url_shortener.controller;
 
+import com.url_shortener.url_shortener.dtos.UpdateUserRequest;
 import com.url_shortener.url_shortener.dtos.UserDto;
 import com.url_shortener.url_shortener.dtos.UserRegister;
 import com.url_shortener.url_shortener.mappers.UserMapper;
@@ -32,5 +33,19 @@ public class UserController {
             @RequestParam(required = false, defaultValue = "", name = "sort") String sortBy
     ) {
         return userService.getAllUsers(sortBy);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<UserDto> updateUser(
+            @PathVariable Long id, @RequestBody UpdateUserRequest request
+    ) {
+        var user = userService.updateUser(id, request);
+        return ResponseEntity.ok(userMapper.toDto(user));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
 }
