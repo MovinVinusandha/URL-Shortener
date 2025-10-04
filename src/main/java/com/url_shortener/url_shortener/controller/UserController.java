@@ -28,7 +28,9 @@ public class UserController {
     }
 
     @GetMapping
-    public Iterable<UserDto> getAllUsers() {
-        return userService.getAllUsers();
+    public Iterable<UserDto> getAllUsers(
+            @RequestParam(required = false, defaultValue = "", name = "sort") String sortBy
+    ) {
+        return userService.getAllUsers(sortBy);
     }
 }
