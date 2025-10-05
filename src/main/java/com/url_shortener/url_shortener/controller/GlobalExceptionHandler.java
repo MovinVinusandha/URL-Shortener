@@ -2,6 +2,8 @@ package com.url_shortener.url_shortener.controller;
 
 import com.url_shortener.url_shortener.exception.UrlExistInDataBaseException;
 import com.url_shortener.url_shortener.exception.UrlNotFoundException;
+import com.url_shortener.url_shortener.exception.UserAlreadyExist;
+import com.url_shortener.url_shortener.exception.UserNotFoundException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -17,10 +19,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity.notFound().build();
     }
 
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<String> userNotFound() {
+        return ResponseEntity.notFound().build();
+    }
+
     @ExceptionHandler(UrlExistInDataBaseException.class)
     public ResponseEntity<Map<String, String >> urlInDb() {
         return ResponseEntity.badRequest().body(
                 Map.of("longUrl", "This URL has already been shortened")
+        );
+    }
+
+    @ExceptionHandler(UserAlreadyExist.class)
+    public ResponseEntity<Map<String, String >> userAlreadyRegistered() {
+        return ResponseEntity.badRequest().body(
+                Map.of("longUrl", "This User has already been registered")
         );
     }
 

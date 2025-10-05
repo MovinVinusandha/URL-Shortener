@@ -5,6 +5,7 @@ import com.url_shortener.url_shortener.dtos.UserDto;
 import com.url_shortener.url_shortener.dtos.UserRegister;
 import com.url_shortener.url_shortener.mappers.UserMapper;
 import com.url_shortener.url_shortener.services.UserService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,7 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<UserDto> registerUser(@RequestBody UserRegister userRegister) {
+    public ResponseEntity<UserDto> registerUser(@Valid @RequestBody UserRegister userRegister) {
         var userDto = userService.registerUser(userRegister);
         return ResponseEntity.ok(userDto);
     }
