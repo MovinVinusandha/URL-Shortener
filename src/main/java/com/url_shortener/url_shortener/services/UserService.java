@@ -10,6 +10,7 @@ import com.url_shortener.url_shortener.mappers.UserMapper;
 import com.url_shortener.url_shortener.repositories.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,6 +21,7 @@ import java.util.Set;
 public class UserService {
     private UserMapper userMapper;
     private UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public UserDto registerUser(UserRegister userRegister) {
         if (userRepository.existsUserByEmail(userRegister.getEmail())) {
@@ -27,6 +29,7 @@ public class UserService {
         }
 
         var user = userMapper.toEntity(userRegister);
+        user.setPassword(passwordEncoder.encode(userRegister.getPassword()));
         userRepository.save(user);
         return userMapper.toDto(user);
     }
