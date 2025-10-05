@@ -4,6 +4,8 @@ import com.url_shortener.url_shortener.dtos.UpdateUserRequest;
 import com.url_shortener.url_shortener.dtos.UserDto;
 import com.url_shortener.url_shortener.dtos.UserRegister;
 import com.url_shortener.url_shortener.entities.User;
+import com.url_shortener.url_shortener.exception.UserAlreadyExist;
+import com.url_shortener.url_shortener.exception.UserNotFoundException;
 import com.url_shortener.url_shortener.mappers.UserMapper;
 import com.url_shortener.url_shortener.repositories.UserRepository;
 import lombok.AllArgsConstructor;
@@ -20,13 +22,21 @@ public class UserService {
     private UserRepository userRepository;
 
     public UserDto registerUser(UserRegister userRegister) {
+        if (userRepository.existsUserByEmail(userRegister.getEmail())) {
+            throw new UserAlreadyExist();
+        }
+
         var user = userMapper.toEntity(userRegister);
         userRepository.save(user);
         return userMapper.toDto(user);
     }
 
     public User getUser(Long id) {
-        return userRepository.findById(id).orElse(null);
+        var user = userRepository.findById(id).orElse(null);
+        if (user == null) {
+            throw new UserNotFoundException();
+        }
+        return user;
     }
 
     public List<UserDto> getAllUsers(String sortBy) {
@@ -41,6 +51,9 @@ public class UserService {
 
     public User updateUser(Long id, UpdateUserRequest request) {
         var user = userRepository.findById(id).orElse(null);
+        if (user == null) {
+            throw new UserNotFoundException();
+        }
 
         userMapper.update(request, user);
         userRepository.save(user);
@@ -49,6 +62,9 @@ public class UserService {
 
     public void deleteUser(Long id) {
         var user = userRepository.findById(id).orElse(null);
+        if (user == null) {
+            throw new UserNotFoundException();
+        }
 
         userRepository.delete(user);
     }
