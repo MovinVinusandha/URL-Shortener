@@ -24,11 +24,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         var authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
+            return;
         }
 
         var token = authHeader.replace("Bearer ", "");
         if (!jwtService.validateToken(token)){
             filterChain.doFilter(request, response);
+            return;
         }
 
         var authentication = new UsernamePasswordAuthenticationToken(
