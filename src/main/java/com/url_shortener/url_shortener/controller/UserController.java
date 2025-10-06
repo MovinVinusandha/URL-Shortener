@@ -23,12 +23,6 @@ public class UserController {
         return ResponseEntity.ok(userDto);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<UserDto> getUser(@PathVariable Long id) {
-        var user = userService.getUser(id);
-        return ResponseEntity.ok(userMapper.toDto(user));
-    }
-
     @GetMapping("/all")
     public Iterable<UserDto> getAllUsers(
             @RequestParam(required = false, defaultValue = "", name = "sort") String sortBy
@@ -36,17 +30,15 @@ public class UserController {
         return userService.getAllUsers(sortBy);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<UserDto> updateUser(
-            @PathVariable Long id, @RequestBody UpdateUserRequest request
-    ) {
-        var user = userService.updateUser(id, request);
+    @PutMapping
+    public ResponseEntity<UserDto> updateUser(@RequestBody UpdateUserRequest request) {
+        var user = userService.updateUser(request);
         return ResponseEntity.ok(userMapper.toDto(user));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        userService.deleteUser(id);
+    @DeleteMapping
+    public ResponseEntity<Void> deleteUser() {
+        userService.deleteUser();
         return ResponseEntity.noContent().build();
     }
 }

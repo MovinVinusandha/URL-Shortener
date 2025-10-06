@@ -11,6 +11,7 @@ import com.url_shortener.url_shortener.mappers.UserMapper;
 import com.url_shortener.url_shortener.repositories.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -36,14 +37,6 @@ public class UserService {
         return userMapper.toDto(user);
     }
 
-    public User getUser(Long id) {
-        var user = userRepository.findById(id).orElse(null);
-        if (user == null) {
-            throw new UserNotFoundException();
-        }
-        return user;
-    }
-
     public List<UserDto> getAllUsers(String sortBy) {
         if (!Set.of("name", "email", "id").contains(sortBy))
             sortBy = "id";
@@ -54,8 +47,10 @@ public class UserService {
                 .toList();
     }
 
-    public User updateUser(Long id, UpdateUserRequest request) {
-        var user = userRepository.findById(id).orElse(null);
+    public User updateUser(UpdateUserRequest request) {
+        var userId = getUserId();
+
+        var user = userRepository.findById(userId).orElse(null);
         if (user == null) {
             throw new UserNotFoundException();
         }
@@ -65,12 +60,19 @@ public class UserService {
         return user;
     }
 
-    public void deleteUser(Long id) {
-        var user = userRepository.findById(id).orElse(null);
+    public void deleteUser() {
+        var userId = getUserId();
+
+        var user = userRepository.findById(userId).orElse(null);
         if (user == null) {
             throw new UserNotFoundException();
         }
 
         userRepository.delete(user);
+    }
+
+    private static Long getUserId() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        return (Long) authentication.getPrincipal();
     }
 }
