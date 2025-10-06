@@ -1,5 +1,6 @@
 package com.url_shortener.url_shortener.config;
 
+import com.url_shortener.url_shortener.entities.Role;
 import com.url_shortener.url_shortener.filters.JwtAuthenticationFilter;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -52,16 +53,21 @@ public class SecurityConfig {
                         c.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(c -> c
+                        .requestMatchers("/admin/**").hasRole(Role.ADMIN.name())
                         .requestMatchers(HttpMethod.POST, "/user").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/refresh").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .exceptionHandling(c ->
-                        c.authenticationEntryPoint(
+                .exceptionHandling(c -> {
+                            c.authenticationEntryPoint(
                                 new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)
-                        )
+                            );
+                            c.accessDeniedHandler(((request, response, accessDeniedException) ->
+                                    response.setStatus(HttpStatus.FORBIDDEN.value()))
+                            );
+                        }
                 );
 
         return http.build();
