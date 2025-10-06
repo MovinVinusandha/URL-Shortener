@@ -3,6 +3,7 @@ package com.url_shortener.url_shortener.services;
 import com.url_shortener.url_shortener.dtos.UpdateUserRequest;
 import com.url_shortener.url_shortener.dtos.UserDto;
 import com.url_shortener.url_shortener.dtos.UserRegister;
+import com.url_shortener.url_shortener.entities.Role;
 import com.url_shortener.url_shortener.entities.User;
 import com.url_shortener.url_shortener.exception.UserAlreadyExist;
 import com.url_shortener.url_shortener.exception.UserNotFoundException;
@@ -30,6 +31,7 @@ public class UserService {
 
         var user = userMapper.toEntity(userRegister);
         user.setPassword(passwordEncoder.encode(userRegister.getPassword()));
+        user.setRole(Role.USER);
         userRepository.save(user);
         return userMapper.toDto(user);
     }
