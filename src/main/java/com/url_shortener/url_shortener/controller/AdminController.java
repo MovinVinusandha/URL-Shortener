@@ -1,14 +1,39 @@
 package com.url_shortener.url_shortener.controller;
 
-import org.springframework.web.bind.annotation.GetMapping;
+import com.url_shortener.url_shortener.dtos.UserDto;
+import com.url_shortener.url_shortener.dtos.UserRegister;
+import com.url_shortener.url_shortener.entities.Role;
+import com.url_shortener.url_shortener.exception.UserAlreadyExist;
+import com.url_shortener.url_shortener.mappers.UserMapper;
+import com.url_shortener.url_shortener.repositories.UserRepository;
+import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/admin")
+@AllArgsConstructor
 public class AdminController {
-    @GetMapping
-    public String sayHello() {
-        return "This is ADMIN only endpoint";
+    private final UserMapper userMapper;
+    private final UserRepository userRepository;
+    private PasswordEncoder passwordEncoder;
+
+    @PostMapping("/addNew")
+    public ResponseEntity<UserDto> addNewAdmin(@Valid @RequestBody UserRegister userRegister) {
+        if (userRepository.existsUserByEmail(userRegister.getEmail())) {
+            throw new UserAlreadyExist();
+        }
+
+        var user = userMapper.toEntity(userRegister);
+        user.setPassword(passwordEncoder.encode(userRegister.getPassword()));
+        user.setRole(Role.ADMIN);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(userMapper.toDto(user));
     }
 }
