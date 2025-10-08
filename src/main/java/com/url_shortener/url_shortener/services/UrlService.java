@@ -1,9 +1,6 @@
 package com.url_shortener.url_shortener.services;
 
-import com.url_shortener.url_shortener.dtos.UrlDto;
-import com.url_shortener.url_shortener.dtos.UrlSend;
-import com.url_shortener.url_shortener.dtos.UrlRequest;
-import com.url_shortener.url_shortener.dtos.UrlUpdateDto;
+import com.url_shortener.url_shortener.dtos.*;
 import com.url_shortener.url_shortener.entities.Statistic;
 import com.url_shortener.url_shortener.entities.Url;
 import com.url_shortener.url_shortener.exception.UrlExistInDataBaseException;
@@ -13,10 +10,13 @@ import com.url_shortener.url_shortener.mappers.UrlMapper;
 import com.url_shortener.url_shortener.repositories.UrlRepository;
 import com.url_shortener.url_shortener.repositories.UserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.zip.CRC32;
 
 @Service
@@ -75,6 +75,20 @@ public class UrlService {
 
         urlMapper.toDto(url);
         return urlMapper.toDto(url);
+    }
+
+    public List<UrlDto> getAllUrls(String sortBy) {
+        if (sortBy.equals("accessed_times")) {
+            sortBy = "statistic.accessedTimes";
+        }
+
+        if (!Set.of( "id", "statistic.accessedTimes").contains(sortBy))
+            sortBy = "id";
+
+        return urlRepository.findAll(Sort.by(sortBy).descending())
+                .stream()
+                .map(urlMapper::toDto)
+                .toList();
     }
 
     public UrlUpdateDto updateUrl(UrlRequest urlRequest, String shortUrl) {

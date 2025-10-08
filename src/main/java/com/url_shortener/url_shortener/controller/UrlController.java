@@ -1,9 +1,6 @@
 package com.url_shortener.url_shortener.controller;
 
-import com.url_shortener.url_shortener.dtos.UrlDto;
-import com.url_shortener.url_shortener.dtos.UrlSend;
-import com.url_shortener.url_shortener.dtos.UrlRequest;
-import com.url_shortener.url_shortener.dtos.UrlUpdateDto;
+import com.url_shortener.url_shortener.dtos.*;
 import com.url_shortener.url_shortener.services.UrlService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -42,6 +39,13 @@ public class UrlController {
     public ResponseEntity<UrlDto> getUrl(@PathVariable String hash) {
         var urlDto = urlService.getUrl(hash);
         return ResponseEntity.ok(urlDto);
+    }
+
+    @GetMapping("url/all")
+    public Iterable<UrlDto> getAllUsers(
+            @RequestParam(required = false, defaultValue = "", name = "sort") String sortBy
+    ) {
+        return urlService.getAllUrls(sortBy);
     }
 
     @PutMapping("/url/{hash}")
