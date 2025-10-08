@@ -8,9 +8,12 @@ import com.url_shortener.url_shortener.entities.Statistic;
 import com.url_shortener.url_shortener.entities.Url;
 import com.url_shortener.url_shortener.exception.UrlExistInDataBaseException;
 import com.url_shortener.url_shortener.exception.UrlNotFoundException;
+import com.url_shortener.url_shortener.exception.UserNotFoundException;
 import com.url_shortener.url_shortener.mappers.UrlMapper;
 import com.url_shortener.url_shortener.repositories.UrlRepository;
+import com.url_shortener.url_shortener.repositories.UserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.Locale;
@@ -21,8 +24,14 @@ import java.util.zip.CRC32;
 public class UrlService {
     private final UrlMapper urlMapper;
     private final UrlRepository urlRepository;
+    private final UserRepository userRepository;
 
     public UrlSend generateShortUrl(UrlRequest urlRequest) {
+        var user = userRepository.findById(getUserId()).orElse(null);
+        if (user == null) {
+            throw new UserNotFoundException();
+        }
+
         String shortUrl = generateUrlHash(urlRequest.getLongUrl());
 
         if (urlRepository.existsUrlByShortUrl(shortUrl)) {
@@ -31,6 +40,7 @@ public class UrlService {
 
         var url = urlMapper.toEntity(urlRequest);
         url.setShortUrl(shortUrl);
+        url.setUser(user);
 
         var stat = Statistic.builder()
                 .accessedTimes(0L)
@@ -86,5 +96,10 @@ public class UrlService {
         }
 
         return url;
+    }
+
+    private static Long getUserId() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        return (Long) authentication.getPrincipal();
     }
 }
