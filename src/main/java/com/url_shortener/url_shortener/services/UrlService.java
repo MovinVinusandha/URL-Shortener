@@ -71,12 +71,16 @@ public class UrlService {
     public UrlDto getUrl(String shortUrl) {
         var url = isExistsShortUrl(shortUrl);
 
+        isUserCorrect(url);
+
         urlMapper.toDto(url);
         return urlMapper.toDto(url);
     }
 
     public UrlUpdateDto updateUrl(UrlRequest urlRequest, String shortUrl) {
         var url = isExistsShortUrl(shortUrl);
+
+        isUserCorrect(url);
 
         urlMapper.updateUrl(urlRequest, url);
         urlRepository.save(url);
@@ -86,7 +90,16 @@ public class UrlService {
 
     public void deleteUrl(String shortUrl) {
         var url = isExistsShortUrl(shortUrl);
+
+        isUserCorrect(url);
+
         urlRepository.delete(url);
+    }
+
+    private static void isUserCorrect(Url url) {
+        if (!(url.getUser().getId().equals(getUserId()))) {
+            throw new UrlNotFoundException();
+        }
     }
 
     private Url isExistsShortUrl(String shortUrl) {
