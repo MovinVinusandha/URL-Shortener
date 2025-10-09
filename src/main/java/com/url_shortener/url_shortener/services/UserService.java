@@ -68,8 +68,12 @@ public class UserService {
         return user;
     }
 
-    public void deleteUser() {
+    public void deleteUser(Long id) {
         var userId = getUserId();
+
+        if (!id.equals(userId)) {
+            throw new UserNotFoundException();
+        }
 
         var user = userRepository.findById(userId).orElse(null);
         if (user == null) {
