@@ -54,10 +54,11 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(c -> c
                         .requestMatchers("/admin/**").hasAnyRole(Role.ROOT.name(), Role.ADMIN.name())
-                        .requestMatchers(HttpMethod.GET, "/{hash:[a-zA-Z0-9]+}").permitAll()
+                        .requestMatchers("/{hash:[a-zA-Z0-9]+}", "/shorten").permitAll()
                         .requestMatchers(HttpMethod.POST, "/user").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/refresh").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/url/all").hasAnyRole(Role.ROOT.name(), Role.ADMIN.name())
                         .requestMatchers(HttpMethod.GET, "/user/all").hasAnyRole(Role.ROOT.name(), Role.ADMIN.name())
                         .anyRequest().authenticated()
                 )

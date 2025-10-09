@@ -1,19 +1,25 @@
 package com.url_shortener.url_shortener.services;
 
 import com.url_shortener.url_shortener.dtos.UrlDto;
-import com.url_shortener.url_shortener.dtos.UrlSend;
 import com.url_shortener.url_shortener.dtos.UrlRequest;
+import com.url_shortener.url_shortener.dtos.UrlSend;
 import com.url_shortener.url_shortener.dtos.UrlUpdateDto;
 import com.url_shortener.url_shortener.entities.Statistic;
 import com.url_shortener.url_shortener.entities.Url;
 import com.url_shortener.url_shortener.exception.UrlExistInDataBaseException;
 import com.url_shortener.url_shortener.exception.UrlNotFoundException;
+import com.url_shortener.url_shortener.exception.UserNotFoundException;
 import com.url_shortener.url_shortener.mappers.UrlMapper;
 import com.url_shortener.url_shortener.repositories.UrlRepository;
+import com.url_shortener.url_shortener.repositories.UserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.zip.CRC32;
 
 @Service
@@ -21,16 +27,28 @@ import java.util.zip.CRC32;
 public class UrlService {
     private final UrlMapper urlMapper;
     private final UrlRepository urlRepository;
+    private final UserRepository userRepository;
 
     public UrlSend generateShortUrl(UrlRequest urlRequest) {
         String shortUrl = generateUrlHash(urlRequest.getLongUrl());
-
         if (urlRepository.existsUrlByShortUrl(shortUrl)) {
-           throw new UrlExistInDataBaseException();
+            throw new UrlExistInDataBaseException();
         }
-
         var url = urlMapper.toEntity(urlRequest);
         url.setShortUrl(shortUrl);
+
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null
+                && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal())
+        ) {
+            System.out.println(authentication.getPrincipal());
+            var user = userRepository.findById((Long) authentication.getPrincipal()).orElse(null);
+            if (user == null) {
+                throw new UserNotFoundException();
+            }
+            url.setUser(user);
+        }
 
         var stat = Statistic.builder()
                 .accessedTimes(0L)
@@ -61,12 +79,30 @@ public class UrlService {
     public UrlDto getUrl(String shortUrl) {
         var url = isExistsShortUrl(shortUrl);
 
+        isUserCorrect(url);
+
         urlMapper.toDto(url);
         return urlMapper.toDto(url);
     }
 
+    public List<UrlDto> getAllUrls(String sortBy) {
+        if (sortBy.equals("accessed_times")) {
+            sortBy = "statistic.accessedTimes";
+        }
+
+        if (!Set.of( "id", "statistic.accessedTimes").contains(sortBy))
+            sortBy = "id";
+
+        return urlRepository.findAll(Sort.by(sortBy).descending())
+                .stream()
+                .map(urlMapper::toDto)
+                .toList();
+    }
+
     public UrlUpdateDto updateUrl(UrlRequest urlRequest, String shortUrl) {
         var url = isExistsShortUrl(shortUrl);
+
+        isUserCorrect(url);
 
         urlMapper.updateUrl(urlRequest, url);
         urlRepository.save(url);
@@ -76,7 +112,16 @@ public class UrlService {
 
     public void deleteUrl(String shortUrl) {
         var url = isExistsShortUrl(shortUrl);
+
+        isUserCorrect(url);
+
         urlRepository.delete(url);
+    }
+
+    private static void isUserCorrect(Url url) {
+        if (!(url.getUser().getId().equals(getUserId()))) {
+            throw new UrlNotFoundException();
+        }
     }
 
     private Url isExistsShortUrl(String shortUrl) {
@@ -86,5 +131,10 @@ public class UrlService {
         }
 
         return url;
+    }
+
+    private static Long getUserId() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        return (Long) authentication.getPrincipal();
     }
 }
