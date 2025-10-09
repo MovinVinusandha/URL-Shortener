@@ -1,6 +1,9 @@
 package com.url_shortener.url_shortener.services;
 
-import com.url_shortener.url_shortener.dtos.*;
+import com.url_shortener.url_shortener.dtos.UrlDto;
+import com.url_shortener.url_shortener.dtos.UrlRequest;
+import com.url_shortener.url_shortener.dtos.UrlSend;
+import com.url_shortener.url_shortener.dtos.UrlUpdateDto;
 import com.url_shortener.url_shortener.entities.Statistic;
 import com.url_shortener.url_shortener.entities.Url;
 import com.url_shortener.url_shortener.exception.UrlExistInDataBaseException;
@@ -27,20 +30,25 @@ public class UrlService {
     private final UserRepository userRepository;
 
     public UrlSend generateShortUrl(UrlRequest urlRequest) {
-        var user = userRepository.findById(getUserId()).orElse(null);
-        if (user == null) {
-            throw new UserNotFoundException();
-        }
-
         String shortUrl = generateUrlHash(urlRequest.getLongUrl());
-
         if (urlRepository.existsUrlByShortUrl(shortUrl)) {
-           throw new UrlExistInDataBaseException();
+            throw new UrlExistInDataBaseException();
         }
-
         var url = urlMapper.toEntity(urlRequest);
         url.setShortUrl(shortUrl);
-        url.setUser(user);
+
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null
+                && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal())
+        ) {
+            System.out.println(authentication.getPrincipal());
+            var user = userRepository.findById((Long) authentication.getPrincipal()).orElse(null);
+            if (user == null) {
+                throw new UserNotFoundException();
+            }
+            url.setUser(user);
+        }
 
         var stat = Statistic.builder()
                 .accessedTimes(0L)
