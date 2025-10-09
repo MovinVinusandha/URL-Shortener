@@ -49,11 +49,21 @@ public class UserService {
         var userId = getUserId();
 
         isIdIdentical(id, userId);
-        isUserExistInDatabase(request.getEmail());
 
         var user = userRepository.findById(userId).orElse(null);
         if (user == null) {
             throw new UserNotFoundException();
+        }
+
+        if (userRepository.existsUserByEmail(request.getEmail()) && !(user.getEmail().equals(request.getEmail()))) {
+            throw new UserAlreadyExist();
+        }
+
+        if (request.getName() == null) {
+            request.setName(user.getName());
+        }
+        if (request.getEmail() == null) {
+            request.setEmail(user.getEmail());
         }
 
         userMapper.update(request, user);
