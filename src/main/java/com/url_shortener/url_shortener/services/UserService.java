@@ -54,6 +54,10 @@ public class UserService {
             throw new UserNotFoundException();
         }
 
+        if (userRepository.existsUserByEmail(request.getEmail())) {
+            throw new UserAlreadyExist();
+        }
+
         var user = userRepository.findById(userId).orElse(null);
         if (user == null) {
             throw new UserNotFoundException();
