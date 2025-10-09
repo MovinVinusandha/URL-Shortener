@@ -47,8 +47,12 @@ public class UserService {
                 .toList();
     }
 
-    public User updateUser(UpdateUserRequest request) {
+    public User updateUser(Long id, UpdateUserRequest request) {
         var userId = getUserId();
+
+        if (!id.equals(userId)) {
+            throw new UserNotFoundException();
+        }
 
         var user = userRepository.findById(userId).orElse(null);
         if (user == null) {

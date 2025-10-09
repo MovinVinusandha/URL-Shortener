@@ -30,9 +30,9 @@ public class UserController {
         return userService.getAllUsers(sortBy);
     }
 
-    @PutMapping
-    public ResponseEntity<UserDto> updateUser(@RequestBody UpdateUserRequest request) {
-        var user = userService.updateUser(request);
+    @PutMapping("/{id}")
+    public ResponseEntity<UserDto> updateUser(@PathVariable(name = "id") Long id, @RequestBody UpdateUserRequest request) {
+        var user = userService.updateUser(id, request);
         return ResponseEntity.ok(userMapper.toDto(user));
     }
 
