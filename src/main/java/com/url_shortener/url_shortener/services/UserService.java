@@ -26,9 +26,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     public UserDto registerUser(UserRegister userRegister) {
-        if (userRepository.existsUserByEmail(userRegister.getEmail())) {
-            throw new UserAlreadyExist();
-        }
+        isUserExistInDatabase(userRegister.getEmail());
 
         var user = userMapper.toEntity(userRegister);
         user.setPassword(passwordEncoder.encode(userRegister.getPassword()));
@@ -50,13 +48,8 @@ public class UserService {
     public User updateUser(Long id, UpdateUserRequest request) {
         var userId = getUserId();
 
-        if (!id.equals(userId)) {
-            throw new UserNotFoundException();
-        }
-
-        if (userRepository.existsUserByEmail(request.getEmail())) {
-            throw new UserAlreadyExist();
-        }
+        isIdIdentical(id, userId);
+        isUserExistInDatabase(request.getEmail());
 
         var user = userRepository.findById(userId).orElse(null);
         if (user == null) {
@@ -71,9 +64,7 @@ public class UserService {
     public void deleteUser(Long id) {
         var userId = getUserId();
 
-        if (!id.equals(userId)) {
-            throw new UserNotFoundException();
-        }
+        isIdIdentical(id, userId);
 
         var user = userRepository.findById(userId).orElse(null);
         if (user == null) {
@@ -86,5 +77,17 @@ public class UserService {
     private static Long getUserId() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         return (Long) authentication.getPrincipal();
+    }
+
+    private void isUserExistInDatabase(String email) {
+        if (userRepository.existsUserByEmail(email)) {
+            throw new UserAlreadyExist();
+        }
+    }
+
+    private static void isIdIdentical(Long id, Long userId) {
+        if (!id.equals(userId)) {
+            throw new UserNotFoundException();
+        }
     }
 }
