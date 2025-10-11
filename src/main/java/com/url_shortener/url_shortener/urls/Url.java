@@ -1,6 +1,6 @@
 package com.url_shortener.url_shortener.urls;
 
-import com.url_shortener.url_shortener.entities.Statistic;
+import com.url_shortener.url_shortener.statistics.Statistic;
 import com.url_shortener.url_shortener.users.User;
 import jakarta.persistence.*;
 import lombok.*;
