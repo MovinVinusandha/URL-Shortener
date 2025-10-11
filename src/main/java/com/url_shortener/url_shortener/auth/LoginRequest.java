@@ -1,4 +1,4 @@
-package com.url_shortener.url_shortener.dtos;
+package com.url_shortener.url_shortener.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

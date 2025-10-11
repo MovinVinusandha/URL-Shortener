@@ -1,6 +1,5 @@
-package com.url_shortener.url_shortener.filters;
+package com.url_shortener.url_shortener.auth;
 
-import com.url_shortener.url_shortener.services.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

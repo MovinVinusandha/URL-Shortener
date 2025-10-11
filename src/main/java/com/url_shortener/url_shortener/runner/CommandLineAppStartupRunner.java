@@ -1,6 +1,6 @@
 package com.url_shortener.url_shortener.runner;
 
-import com.url_shortener.url_shortener.config.JwtConfig;
+import com.url_shortener.url_shortener.auth.JwtConfig;
 import com.url_shortener.url_shortener.entities.Role;
 import com.url_shortener.url_shortener.entities.User;
 import com.url_shortener.url_shortener.repositories.UserRepository;

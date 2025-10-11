@@ -1,4 +1,4 @@
-package com.url_shortener.url_shortener.config;
+package com.url_shortener.url_shortener.auth;
 
 import io.jsonwebtoken.security.Keys;
 import lombok.Data;
