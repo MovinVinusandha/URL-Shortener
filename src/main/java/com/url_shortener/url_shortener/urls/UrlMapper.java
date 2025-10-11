@@ -1,10 +1,5 @@
-package com.url_shortener.url_shortener.mappers;
+package com.url_shortener.url_shortener.urls;
 
-import com.url_shortener.url_shortener.dtos.UrlDto;
-import com.url_shortener.url_shortener.dtos.UrlSend;
-import com.url_shortener.url_shortener.dtos.UrlRequest;
-import com.url_shortener.url_shortener.dtos.UrlUpdateDto;
-import com.url_shortener.url_shortener.entities.Url;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;

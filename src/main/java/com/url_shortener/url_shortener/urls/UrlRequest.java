@@ -1,4 +1,4 @@
-package com.url_shortener.url_shortener.dtos;
+package com.url_shortener.url_shortener.urls;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;

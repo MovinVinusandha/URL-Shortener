@@ -1,4 +1,4 @@
-package com.url_shortener.url_shortener.exception;
+package com.url_shortener.url_shortener.urls;
 
 public class UrlExistInDataBaseException extends RuntimeException {
 }

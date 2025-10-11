@@ -1,5 +1,6 @@
 package com.url_shortener.url_shortener.entities;
 
+import com.url_shortener.url_shortener.urls.Url;
 import jakarta.persistence.*;
 import lombok.*;
 

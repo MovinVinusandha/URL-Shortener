@@ -1,7 +1,5 @@
-package com.url_shortener.url_shortener.controller;
+package com.url_shortener.url_shortener.urls;
 
-import com.url_shortener.url_shortener.dtos.*;
-import com.url_shortener.url_shortener.services.UrlService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
