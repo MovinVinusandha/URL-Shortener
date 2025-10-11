@@ -1,15 +1,11 @@
 spring:
   application:
     name: url-shortener
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-  jpa:
-    show-sql: true
   jwt:
     secret: ${JWT_SECRET}
     accessTokenExpiration: 300  # 5m
     refreshTokenExpiration: 604800  # 7d
     rootAdminEmail: ${ROOT_ADMIN_EMAIL}
     rootAdminPassword: ${ROOT_ADMIN_PASSWORD}
+  profiles:
+    active: dev
