@@ -1,10 +1,9 @@
 package com.url_shortener.url_shortener.auth;
 
-import com.url_shortener.url_shortener.users.Role;
+import com.url_shortener.url_shortener.common.SecurityRules;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -21,12 +20,15 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import java.util.List;
+
 @Configuration
 @EnableWebSecurity
 @AllArgsConstructor
 public class SecurityConfig {
     private final UserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final List<SecurityRules> featureSecurityRules;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -51,15 +53,10 @@ public class SecurityConfig {
                 .sessionManagement(c ->
                         c.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(c -> c
-                        .requestMatchers("/admin/**").hasAnyRole(Role.ROOT.name(), Role.ADMIN.name())
-                        .requestMatchers("/{hash:[a-zA-Z0-9]+}", "/shorten").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/user").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/refresh").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/url/all").hasAnyRole(Role.ROOT.name(), Role.ADMIN.name())
-                        .requestMatchers(HttpMethod.GET, "/user/all").hasAnyRole(Role.ROOT.name(), Role.ADMIN.name())
-                        .anyRequest().authenticated()
+                .authorizeHttpRequests(c -> {
+                            featureSecurityRules.forEach(r -> r.configure(c));
+                            c.anyRequest().authenticated();
+                        }
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(c -> {
