@@ -1,0 +1,65 @@
+package com.url_shortener.url_shortener.urls;
+
+import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@AllArgsConstructor
+public class UrlController {
+    
+    private final UrlService urlService;
+
+    @PostMapping("/shorten")
+    @Operation(summary = "Generate short url")
+    public ResponseEntity<UrlSend> generateShortUrl(@Valid @RequestBody UrlRequest urlRequest) {
+
+        var urlDto = urlService.generateShortUrl(urlRequest);
+        return ResponseEntity.ok(urlDto);
+    }
+
+    @GetMapping("/{hash}")
+    @Operation(summary = "Redirect")
+    public ResponseEntity<Void> redirectToNewUrl(@PathVariable String hash) {
+        var url = urlService.urlRedirect(hash);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Location", url.getLongUrl());
+        return new ResponseEntity<>(headers, HttpStatus.FOUND);
+    }
+
+    @GetMapping("/url/{hash}")
+    @Operation(summary = "Get details about url")
+    public ResponseEntity<UrlDto> getUrl(@PathVariable String hash) {
+        var urlDto = urlService.getUrl(hash);
+        return ResponseEntity.ok(urlDto);
+    }
+
+    @GetMapping("url/all")
+    public Iterable<UrlDto> getAllUsers(
+            @RequestParam(required = false, defaultValue = "", name = "sort") String sortBy
+    ) {
+        return urlService.getAllUrls(sortBy);
+    }
+
+    @PutMapping("/url/{hash}")
+    public ResponseEntity<UrlUpdateDto> updateUrl(
+            @PathVariable String hash,
+            @Valid @RequestBody UrlRequest urlRequest
+    ) {
+
+        var urlUpdateDto = urlService.updateUrl(urlRequest, hash);
+        return ResponseEntity.ok(urlUpdateDto);
+    }
+
+    @DeleteMapping("/url/{hash}")
+    public ResponseEntity<Void> deleteUrl(@PathVariable String hash) {
+
+        urlService.deleteUrl(hash);
+        return ResponseEntity.noContent().build();
+    }
+}
