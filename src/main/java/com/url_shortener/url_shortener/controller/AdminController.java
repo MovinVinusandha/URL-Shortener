@@ -1,11 +1,11 @@
 package com.url_shortener.url_shortener.controller;
 
-import com.url_shortener.url_shortener.dtos.UserDto;
-import com.url_shortener.url_shortener.dtos.UserRegister;
-import com.url_shortener.url_shortener.entities.Role;
-import com.url_shortener.url_shortener.exception.UserAlreadyExist;
-import com.url_shortener.url_shortener.mappers.UserMapper;
-import com.url_shortener.url_shortener.repositories.UserRepository;
+import com.url_shortener.url_shortener.users.UserDto;
+import com.url_shortener.url_shortener.users.UserRegister;
+import com.url_shortener.url_shortener.users.Role;
+import com.url_shortener.url_shortener.users.UserAlreadyExist;
+import com.url_shortener.url_shortener.users.UserMapper;
+import com.url_shortener.url_shortener.users.UserRepository;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;

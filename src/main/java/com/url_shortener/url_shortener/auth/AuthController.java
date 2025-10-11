@@ -1,8 +1,8 @@
 package com.url_shortener.url_shortener.auth;
 
-import com.url_shortener.url_shortener.dtos.UserDto;
-import com.url_shortener.url_shortener.mappers.UserMapper;
-import com.url_shortener.url_shortener.repositories.UserRepository;
+import com.url_shortener.url_shortener.users.UserDto;
+import com.url_shortener.url_shortener.users.UserMapper;
+import com.url_shortener.url_shortener.users.UserRepository;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;

@@ -1,9 +1,9 @@
 package com.url_shortener.url_shortener.runner;
 
 import com.url_shortener.url_shortener.auth.JwtConfig;
-import com.url_shortener.url_shortener.entities.Role;
-import com.url_shortener.url_shortener.entities.User;
-import com.url_shortener.url_shortener.repositories.UserRepository;
+import com.url_shortener.url_shortener.users.Role;
+import com.url_shortener.url_shortener.users.User;
+import com.url_shortener.url_shortener.users.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;

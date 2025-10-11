@@ -1,6 +1,6 @@
 package com.url_shortener.url_shortener.auth;
 
-import com.url_shortener.url_shortener.entities.Role;
+import com.url_shortener.url_shortener.users.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 

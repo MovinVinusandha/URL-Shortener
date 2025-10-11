@@ -1,9 +1,5 @@
-package com.url_shortener.url_shortener.mappers;
+package com.url_shortener.url_shortener.users;
 
-import com.url_shortener.url_shortener.dtos.UpdateUserRequest;
-import com.url_shortener.url_shortener.dtos.UserDto;
-import com.url_shortener.url_shortener.dtos.UserRegister;
-import com.url_shortener.url_shortener.entities.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 

@@ -1,14 +1,5 @@
-package com.url_shortener.url_shortener.services;
+package com.url_shortener.url_shortener.users;
 
-import com.url_shortener.url_shortener.dtos.UpdateUserRequest;
-import com.url_shortener.url_shortener.dtos.UserDto;
-import com.url_shortener.url_shortener.dtos.UserRegister;
-import com.url_shortener.url_shortener.entities.Role;
-import com.url_shortener.url_shortener.entities.User;
-import com.url_shortener.url_shortener.exception.UserAlreadyExist;
-import com.url_shortener.url_shortener.exception.UserNotFoundException;
-import com.url_shortener.url_shortener.mappers.UserMapper;
-import com.url_shortener.url_shortener.repositories.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;

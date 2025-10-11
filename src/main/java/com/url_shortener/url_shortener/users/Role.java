@@ -1,4 +1,4 @@
-package com.url_shortener.url_shortener.entities;
+package com.url_shortener.url_shortener.users;
 
 public enum Role {
     USER,

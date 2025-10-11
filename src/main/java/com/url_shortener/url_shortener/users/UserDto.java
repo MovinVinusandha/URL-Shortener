@@ -1,4 +1,4 @@
-package com.url_shortener.url_shortener.dtos;
+package com.url_shortener.url_shortener.users;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
