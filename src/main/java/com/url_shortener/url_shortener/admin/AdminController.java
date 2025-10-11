@@ -1,4 +1,4 @@
-package com.url_shortener.url_shortener.controller;
+package com.url_shortener.url_shortener.admin;
 
 import com.url_shortener.url_shortener.users.UserDto;
 import com.url_shortener.url_shortener.users.UserRegister;

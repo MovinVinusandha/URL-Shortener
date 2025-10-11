@@ -1,4 +1,4 @@
-package com.url_shortener.url_shortener.runner;
+package com.url_shortener.url_shortener.common;
 
 import com.url_shortener.url_shortener.auth.JwtConfig;
 import com.url_shortener.url_shortener.users.Role;

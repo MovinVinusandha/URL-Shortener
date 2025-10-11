@@ -1,4 +1,4 @@
-package com.url_shortener.url_shortener.controller;
+package com.url_shortener.url_shortener.common;
 
 import com.url_shortener.url_shortener.urls.UrlExistInDataBaseException;
 import com.url_shortener.url_shortener.urls.UrlNotFoundException;
