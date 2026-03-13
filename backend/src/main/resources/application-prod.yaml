@@ -1,3 +1,13 @@
 spring:
   datasource:
     url: ${DB_URL}
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+  cache:
+    type: redis
+    redis:
+      time-to-live: 600000   # 10 minutes in ms
+      cache-null-values: false

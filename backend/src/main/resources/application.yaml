@@ -9,3 +9,10 @@ spring:
     rootAdminPassword: ${ROOT_ADMIN_PASSWORD}
   profiles:
     active: dev
+
+# Async thread pool configuration for click analytics
+analytics:
+  async:
+    core-pool-size: 4
+    max-pool-size: 16
+    queue-capacity: 500
