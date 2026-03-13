@@ -30,7 +30,7 @@ public class UrlController {
             @PathVariable String hash,
             HttpServletRequest request
     ) {
-        var url = urlService.urlRedirect(hash);
+        var longUrl = urlService.getLongUrlForRedirect(hash);
 
         // Fire async click tracking — does not block the redirect response
         String userAgent = request.getHeader("User-Agent");
@@ -38,7 +38,7 @@ public class UrlController {
         analyticsService.trackClick(hash, userAgent, clientIp);
 
         HttpHeaders headers = new HttpHeaders();
-        headers.add("Location", url.getLongUrl());
+        headers.add("Location", longUrl);
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
 

@@ -4,6 +4,7 @@ import com.url_shortener.url_shortener.statistics.Statistic;
 import com.url_shortener.url_shortener.users.UserNotFoundException;
 import com.url_shortener.url_shortener.users.UserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -58,13 +59,9 @@ public class UrlService {
         return String.format(Locale.US,"%08X", CRC32.getValue());
     }
 
-    public Url urlRedirect(String shortUrl) {
-        var url = isExistsShortUrl(shortUrl);
-
-        url.getStatistic().setAccessedTimes(url.getStatistic().getAccessedTimes() + 1);
-        urlRepository.save(url);
-
-        return url;
+    @Cacheable(value = "urls", key = "#shortUrl")
+    public String getLongUrlForRedirect(String shortUrl) {
+        return isExistsShortUrl(shortUrl).getLongUrl();
     }
 
     public UrlDto getUrl(String shortUrl) {

@@ -59,6 +59,12 @@ public class AnalyticsService {
                 return;
             }
 
+            // Update legacy statistic asynchronously so it doesn't block the redirect
+            if (url.getStatistic() != null) {
+                url.getStatistic().setAccessedTimes(url.getStatistic().getAccessedTimes() + 1);
+                urlRepository.save(url);
+            }
+
             // 2. Parse User-Agent
             var deviceInfo = userAgentParserService.parse(userAgent);
 
