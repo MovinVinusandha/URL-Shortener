@@ -10,7 +10,9 @@ import {
   ChevronUp,
   Link2,
   AlertCircle,
+  Activity
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import axiosInstance, { extractBackendError } from '../api/axiosInstance';
 import EditModal from './EditModal';
 import type { UrlEntry } from '../types';
@@ -198,6 +200,14 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted }) => {
                   {/* Actions */}
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
+                      <Link
+                        to={`/analytics/${extractHash(entry.shortUrl)}`}
+                        className="p-2 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
+                        title="View Analytics"
+                      >
+                        <Activity className="w-4 h-4" />
+                      </Link>
+
                       <button
                         id={`edit-btn-${originalIndex}`}
                         onClick={() => { setEditIndex(originalIndex); setDeleteConfirm(null); }}
@@ -292,6 +302,13 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted }) => {
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
+                  <Link
+                    to={`/analytics/${extractHash(entry.shortUrl)}`}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
+                    title="View Analytics"
+                  >
+                    <Activity className="w-4 h-4" />
+                  </Link>
                   {deleteConfirm === originalIndex ? (
                     <div className="flex gap-1">
                       <button
