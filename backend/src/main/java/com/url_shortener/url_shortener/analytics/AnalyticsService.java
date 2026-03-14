@@ -59,12 +59,6 @@ public class AnalyticsService {
                 return;
             }
 
-            // Update legacy statistic asynchronously so it doesn't block the redirect
-            if (url.getStatistic() != null) {
-                url.getStatistic().setAccessedTimes(url.getStatistic().getAccessedTimes() + 1);
-                urlRepository.save(url);
-            }
-
             // 2. Parse User-Agent (Safe)
             UserAgentParserService.DeviceInfo deviceInfo;
             try {
@@ -101,6 +95,12 @@ public class AnalyticsService {
                     .build();
 
             clickEventRepository.save(event);
+
+            // Keep legacy statistic column in sync for any code paths that still read it
+            if (url.getStatistic() != null) {
+                url.getStatistic().setAccessedTimes(clickEventRepository.countByUrl_Id(url.getId()));
+                urlRepository.save(url);
+            }
 
             log.debug("Click tracked: hash=[{}] device=[{}] browser=[{}] country=[{}] thread=[{}]",
                     shortUrlHash, deviceInfo.device(), deviceInfo.browser(),

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Navbar from '../components/Navbar';
 import ShortenForm from '../components/ShortenForm';
 import UrlTable from '../components/UrlTable';
@@ -9,6 +9,14 @@ import type { UrlEntry, UrlDto, UrlSend } from '../types';
 /** Helper to extract hash from short URL */
 const extractHash = (shortUrl: string): string =>
   shortUrl.split('/').pop() ?? shortUrl;
+
+const mapDtoToEntry = (d: UrlDto): UrlEntry => ({
+  longUrl: d.longUrl,
+  shortUrl: d.shortUrl,
+  accessed_times: d.accessed_times ?? 0,
+  createdAt: d.createdAt,
+  updatedAt: d.updatedAt,
+});
 
 /**
  * DashboardPage (protected — route: /dashboard)
@@ -28,6 +36,9 @@ const DashboardPage: React.FC = () => {
   const [urls, setUrls] = useState<UrlEntry[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loadingAll, setLoadingAll] = useState(true);
+  const urlsRef = useRef(urls);
+
+  urlsRef.current = urls;
 
   // Scoped key based on logged in user's ID or email to prevent cross-account leak
   const storageKey = user ? `user_urls_${user.id ?? user.email}` : null;
@@ -46,6 +57,28 @@ const DashboardPage: React.FC = () => {
     [storageKey, isAdmin]
   );
 
+  /** Refresh live click counts via GET /url/{hash} for each entry */
+  const syncClickCounts = useCallback(async (entries: UrlEntry[]): Promise<UrlEntry[]> => {
+    if (entries.length === 0) return entries;
+
+    return Promise.all(
+      entries.map(async (entry) => {
+        try {
+          const hash = extractHash(entry.shortUrl);
+          const { data: updatedDto } = await axiosInstance.get<UrlDto>(`/url/${hash}`);
+          return {
+            ...entry,
+            longUrl: updatedDto.longUrl,
+            accessed_times: updatedDto.accessed_times ?? 0,
+            updatedAt: updatedDto.updatedAt,
+          };
+        } catch {
+          return entry;
+        }
+      })
+    );
+  }, []);
+
   // Initial load logic on mount / user change
   useEffect(() => {
     let isMounted = true;
@@ -58,15 +91,16 @@ const DashboardPage: React.FC = () => {
         const { data } = await axiosInstance.get<UrlDto[]>('/url/all');
         if (isMounted) {
           setIsAdmin(true);
-          const serverUrls: UrlEntry[] = data.map((d) => ({
-            longUrl: d.longUrl,
-            shortUrl: d.shortUrl,
-            accessed_times: d.accessed_times,
-            createdAt: d.createdAt,
-            updatedAt: d.updatedAt,
-          }));
+          const serverUrls = data.map(mapDtoToEntry);
           setUrls(serverUrls);
           setLoadingAll(false);
+
+          // Background refresh so click counts stay live while the dashboard is open
+          syncClickCounts(serverUrls).then((freshUrls) => {
+            if (isMounted) {
+              setUrls(freshUrls);
+            }
+          });
           return;
         }
       } catch {
@@ -87,22 +121,7 @@ const DashboardPage: React.FC = () => {
             }
 
             // Background sync: Fetch latest click counts via GET /url/{hash}
-            const syncedPromises = cached.map(async (entry) => {
-              try {
-                const hash = extractHash(entry.shortUrl);
-                const { data: updatedDto } = await axiosInstance.get<UrlDto>(`/url/${hash}`);
-                return {
-                  ...entry,
-                  longUrl: updatedDto.longUrl,
-                  accessed_times: updatedDto.accessed_times,
-                  updatedAt: updatedDto.updatedAt,
-                };
-              } catch {
-                return entry; // Fallback to cached if link was deleted externally
-              }
-            });
-
-            const freshUrls = await Promise.all(syncedPromises);
+            const freshUrls = await syncClickCounts(cached);
             if (isMounted) {
               setUrls(freshUrls);
               localStorage.setItem(storageKey, JSON.stringify(freshUrls));
@@ -123,7 +142,37 @@ const DashboardPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [storageKey]);
+  }, [storageKey, syncClickCounts]);
+
+  // Periodically refresh click counts while the dashboard is visible
+  useEffect(() => {
+    if (urls.length === 0) return;
+
+    let cancelled = false;
+
+    const refreshCounts = async () => {
+      const freshUrls = await syncClickCounts(urlsRef.current);
+      if (!cancelled) {
+        setUrls(freshUrls);
+        saveToStorage(freshUrls);
+      }
+    };
+
+    const intervalId = window.setInterval(refreshCounts, 30_000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshCounts();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [urls.length, syncClickCounts, saveToStorage]);
 
   /** Called when ShortenForm successfully shortens a URL */
   const handleShortened = (newEntry: UrlSend) => {

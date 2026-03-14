@@ -1,5 +1,6 @@
 package com.url_shortener.url_shortener.urls;
 
+import com.url_shortener.url_shortener.analytics.ClickEventRepository;
 import com.url_shortener.url_shortener.statistics.Statistic;
 import com.url_shortener.url_shortener.users.UserNotFoundException;
 import com.url_shortener.url_shortener.users.UserRepository;
@@ -9,6 +10,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigInteger;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -20,6 +23,7 @@ public class UrlService {
     private final UrlMapper urlMapper;
     private final UrlRepository urlRepository;
     private final UserRepository userRepository;
+    private final ClickEventRepository clickEventRepository;
 
     public UrlSend generateShortUrl(UrlRequest urlRequest) {
         String shortUrl = generateUrlHash(urlRequest.getLongUrl());
@@ -69,22 +73,50 @@ public class UrlService {
 
         isUserCorrect(url);
 
-        urlMapper.toDto(url);
-        return urlMapper.toDto(url);
+        return toDtoWithClickCount(url);
     }
 
     public List<UrlDto> getAllUrls(String sortBy) {
-        if (sortBy.equals("accessed_times")) {
-            sortBy = "statistic.accessedTimes";
+        var sortByClickCount = sortBy.equals("accessed_times");
+
+        if (sortByClickCount) {
+            sortBy = "id";
         }
 
-        if (!Set.of( "id", "statistic.accessedTimes").contains(sortBy))
+        if (!Set.of("id", "statistic.accessedTimes").contains(sortBy)) {
             sortBy = "id";
+        }
 
-        return urlRepository.findAll(Sort.by(sortBy).descending())
+        var dtos = urlRepository.findAll(Sort.by(sortBy).descending())
                 .stream()
-                .map(urlMapper::toDto)
+                .map(this::toDtoWithClickCount)
                 .toList();
+
+        if (sortByClickCount) {
+            return dtos.stream()
+                    .sorted(Comparator.comparing(UrlDto::getAccessed_times).reversed())
+                    .toList();
+        }
+
+        return dtos;
+    }
+
+    /**
+     * Builds a {@link UrlDto} whose {@code accessed_times} reflects live click data
+     * from {@link ClickEventRepository}, keeping the dashboard in sync with analytics.
+     */
+    private UrlDto toDtoWithClickCount(Url url) {
+        var dto = urlMapper.toDto(url);
+        long clicks = clickEventRepository.countByUrl_Id(url.getId());
+
+        return new UrlDto(
+                dto.getId(),
+                dto.getLongUrl(),
+                dto.getShortUrl(),
+                BigInteger.valueOf(clicks),
+                dto.getCreatedAt(),
+                dto.getUpdatedAt()
+        );
     }
 
     public UrlUpdateDto updateUrl(UrlRequest urlRequest, String shortUrl) {
