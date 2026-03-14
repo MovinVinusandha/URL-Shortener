@@ -14,8 +14,6 @@ public class JwtConfig {
     private String secret;
     private int accessTokenExpiration;
     private int refreshTokenExpiration;
-    private String rootAdminEmail;
-    private String rootAdminPassword;
 
     public SecretKey getSecretKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
