@@ -1,48 +1,51 @@
+version: '3.8'
+
 services:
   mysql:
     image: mysql:8.0
     container_name: url_shortener_db
-    environment:
-      MYSQL_DATABASE: url_shortener
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-    ports:
-      - "3306:3306"
+    env_file:
+      - .env
     volumes:
       - mysql_data:/var/lib/mysql
+    networks:
+      - db_network
+    ports:
+      - "3306:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 5s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
     container_name: url_shortener_redis
-    ports:
-      - "6379:6379"
+    command: redis-server --appendonly yes
+    env_file:
+      - .env
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    networks:
+      - db_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
+      interval: 10s
+      timeout: 5s
       retries: 5
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: url_shortener_backend
+    env_file:
+      - .env
     ports:
       - "8080:8080"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/url_shortener?useSSL=false&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      ROOT_USER_EMAIL: ${ROOT_USER_EMAIL}
-      ROOT_USER_PASSWORD: ${ROOT_USER_PASSWORD}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+    networks:
+      - db_network
+      - web_network
     depends_on:
       mysql:
         condition: service_healthy
@@ -50,13 +53,27 @@ services:
         condition: service_healthy
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
     container_name: url_shortener_frontend
+    env_file:
+      - .env
     ports:
-      - "80:80"
+      - "80:8080"
+    networks:
+      - web_network
     depends_on:
       - backend
 
 volumes:
   mysql_data:
   redis_data:
+
+networks:
+  db_network:
+    driver: bridge
+  web_network:
+    driver: bridge
