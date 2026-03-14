@@ -46,7 +46,8 @@ public class AnalyticsController {
         LocalDateTime startDate = LocalDateTime.now().minusDays(30);
         Long urlId = url.getId();
 
-        Long totalClicks = clickEventRepository.countByUrl_Id(urlId);
+        Long totalClicksRaw = clickEventRepository.countByUrl_Id(urlId);
+        Long totalClicks = totalClicksRaw != null ? totalClicksRaw : 0L;
 
         List<DateCountDto> clicksByDate = clickEventRepository.countByDateForUrl(urlId, startDate)
                 .stream()

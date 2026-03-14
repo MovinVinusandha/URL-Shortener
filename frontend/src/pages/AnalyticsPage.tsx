@@ -87,6 +87,45 @@ const AnalyticsPage: React.FC = () => {
     return null;
   };
 
+  const totalClicks = data.totalClicks || 0;
+  const clicksByDate = data.clicksByDate || [];
+  const clicksByCountry = data.clicksByCountry || [];
+  const clicksByDevice = data.clicksByDevice || [];
+  const clicksByBrowser = data.clicksByBrowser || [];
+
+  if (totalClicks === 0) {
+    return (
+      <div className="page-bg min-h-screen pb-12">
+        <Navbar />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+          <div className="flex items-center justify-between animate-slide-up">
+            <div>
+              <button 
+                onClick={() => navigate('/dashboard')}
+                className="group flex items-center text-sm text-slate-400 hover:text-white transition-colors mb-2"
+              >
+                <ArrowLeft className="w-4 h-4 mr-1 transition-transform group-hover:-translate-x-1" />
+                Back to Dashboard
+              </button>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center">
+                Analytics for <span className="text-violet-500 ml-2">/{hash}</span>
+              </h1>
+            </div>
+          </div>
+          <div className="card p-12 flex flex-col items-center justify-center animate-slide-up" style={{ animationDelay: '100ms' }}>
+            <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4">
+              <MousePointerClick className="w-8 h-8 text-slate-500" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-200 mb-2">No clicks yet for this link</h2>
+            <p className="text-slate-400 text-center max-w-md">
+              Share your short URL with your audience. Once people start clicking on it, detailed geographic and device analytics will appear here.
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="page-bg min-h-screen pb-12">
       <Navbar />
@@ -117,7 +156,7 @@ const AnalyticsPage: React.FC = () => {
               <MousePointerClick className="w-4 h-4 mr-2" />
               <span className="text-sm font-semibold uppercase tracking-wider">Total Clicks</span>
             </div>
-            <p className="text-4xl font-bold text-slate-900 dark:text-white relative z-10">{data.totalClicks}</p>
+            <p className="text-4xl font-bold text-slate-900 dark:text-white relative z-10">{totalClicks}</p>
           </div>
           
           <div className="card p-6 flex flex-col relative overflow-hidden group">
@@ -127,7 +166,7 @@ const AnalyticsPage: React.FC = () => {
               <span className="text-sm font-semibold uppercase tracking-wider">Top Country</span>
             </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-white relative z-10 truncate">
-              {data.clicksByCountry.length > 0 ? data.clicksByCountry[0].name : '-'}
+              {clicksByCountry.length > 0 ? clicksByCountry[0].name : '-'}
             </p>
           </div>
 
@@ -138,7 +177,7 @@ const AnalyticsPage: React.FC = () => {
               <span className="text-sm font-semibold uppercase tracking-wider">Top Device</span>
             </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-white relative z-10 truncate">
-              {data.clicksByDevice.length > 0 ? data.clicksByDevice[0].name : '-'}
+              {clicksByDevice.length > 0 ? clicksByDevice[0].name : '-'}
             </p>
           </div>
 
@@ -149,7 +188,7 @@ const AnalyticsPage: React.FC = () => {
               <span className="text-sm font-semibold uppercase tracking-wider">Top Browser</span>
             </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-white relative z-10 truncate">
-              {data.clicksByBrowser.length > 0 ? data.clicksByBrowser[0].name : '-'}
+              {clicksByBrowser.length > 0 ? clicksByBrowser[0].name : '-'}
             </p>
           </div>
         </div>
@@ -158,9 +197,9 @@ const AnalyticsPage: React.FC = () => {
         <div className="card p-6 animate-slide-up" style={{ animationDelay: '200ms' }}>
           <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Clicks over last 30 days</h2>
           <div className="h-72 w-full">
-            {data.clicksByDate.length > 0 ? (
+            {clicksByDate.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data.clicksByDate} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                <LineChart data={clicksByDate} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                   <Line type="monotone" dataKey="count" stroke="#8b5cf6" strokeWidth={3} activeDot={{ r: 8, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2 }} />
                   <CartesianGrid stroke="#334155" strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="date" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} tickMargin={10} axisLine={false} tickLine={false} />
@@ -183,15 +222,15 @@ const AnalyticsPage: React.FC = () => {
           <div className="card p-6">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Countries</h2>
             <div className="h-64">
-              {data.clicksByCountry.length > 0 ? (
+              {clicksByCountry.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.clicksByCountry} layout="vertical" margin={{ top: 0, right: 0, left: 20, bottom: 0 }}>
+                  <BarChart data={clicksByCountry} layout="vertical" margin={{ top: 0, right: 0, left: 20, bottom: 0 }}>
                     <CartesianGrid stroke="#334155" strokeDasharray="3 3" horizontal={false} />
                     <XAxis type="number" hide />
                     <YAxis dataKey="name" type="category" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
                     <Tooltip content={<CustomTooltip />} cursor={{ fill: '#1e293b' }} />
                     <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={24}>
-                      {data.clicksByCountry.map((_, index) => (
+                      {clicksByCountry.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Bar>
@@ -207,11 +246,11 @@ const AnalyticsPage: React.FC = () => {
           <div className="card p-6">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Devices</h2>
             <div className="h-64 relative">
-              {data.clicksByDevice.length > 0 ? (
+              {clicksByDevice.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={data.clicksByDevice}
+                      data={clicksByDevice}
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
@@ -220,7 +259,7 @@ const AnalyticsPage: React.FC = () => {
                       dataKey="count"
                       nameKey="name"
                     >
-                      {data.clicksByDevice.map((_, index) => (
+                      {clicksByDevice.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -232,7 +271,7 @@ const AnalyticsPage: React.FC = () => {
               )}
               {/* Custom Legend */}
               <div className="absolute bottom-0 w-full flex flex-wrap justify-center gap-4 mt-2">
-                {data.clicksByDevice.map((d, i) => (
+                {clicksByDevice.map((d, i) => (
                   <div key={d.name} className="flex items-center text-xs text-slate-400">
                     <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                     {d.name} ({d.count})
@@ -245,10 +284,10 @@ const AnalyticsPage: React.FC = () => {
           {/* Browsers List */}
           <div className="card p-6">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Browsers</h2>
-            {data.clicksByBrowser.length > 0 ? (
+            {clicksByBrowser.length > 0 ? (
               <div className="space-y-4">
-                {data.clicksByBrowser.map((browser, index) => {
-                  const percentage = Math.round((browser.count / data.totalClicks) * 100);
+                {clicksByBrowser.map((browser, index) => {
+                  const percentage = Math.round((browser.count / totalClicks) * 100);
                   return (
                     <div key={browser.name} className="flex flex-col">
                       <div className="flex justify-between items-end mb-1 text-sm">
