@@ -2,18 +2,15 @@
 FROM maven:3.9-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 
-# Copy Maven wrapper files
 COPY pom.xml .
 COPY .mvn .mvn
 COPY mvnw .
 
-# FIX: Grant execution permissions to the wrapper script
 RUN chmod +x mvnw
 
 # Download dependencies in advance to leverage Docker caching
 RUN ./mvnw dependency:go-offline -B
 
-# Copy source code and build the executable JAR file
 COPY src ./src
 RUN ./mvnw clean package -DskipTests
 
@@ -21,7 +18,11 @@ RUN ./mvnw clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-COPY --from=build /app/target/*.jar app.jar
+RUN addgroup -S springgroup && adduser -S springuser -G springgroup
+
+COPY --from=build --chown=springuser:springgroup /app/target/*.jar app.jar
+
+USER springuser
 
 EXPOSE 8080
 
