@@ -65,11 +65,23 @@ public class AnalyticsService {
                 urlRepository.save(url);
             }
 
-            // 2. Parse User-Agent
-            var deviceInfo = userAgentParserService.parse(userAgent);
+            // 2. Parse User-Agent (Safe)
+            UserAgentParserService.DeviceInfo deviceInfo;
+            try {
+                deviceInfo = userAgentParserService.parse(userAgent);
+            } catch (Exception e) {
+                log.warn("Failed to parse User-Agent: {}", e.getMessage());
+                deviceInfo = new UserAgentParserService.DeviceInfo("Unknown", "Unknown", "Unknown");
+            }
 
-            // 3. GeoIP lookup
-            var geoInfo = geoLocationService.lookup(ipAddress);
+            // 3. GeoIP lookup (Safe)
+            GeoLocationService.GeoInfo geoInfo;
+            try {
+                geoInfo = geoLocationService.lookup(ipAddress);
+            } catch (Exception e) {
+                log.warn("Failed GeoIP lookup for {}: {}", ipAddress, e.getMessage());
+                geoInfo = new GeoLocationService.GeoInfo("Unknown", "Unknown", "Unknown", "Unknown");
+            }
 
             // 4. Pseudonymize IP (SHA-256, first 16 hex chars = 64-bit prefix)
             String hashedIp = hashIp(ipAddress);
