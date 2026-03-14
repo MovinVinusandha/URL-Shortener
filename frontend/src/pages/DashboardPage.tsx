@@ -61,22 +61,32 @@ const DashboardPage: React.FC = () => {
   const syncClickCounts = useCallback(async (entries: UrlEntry[]): Promise<UrlEntry[]> => {
     if (entries.length === 0) return entries;
 
-    return Promise.all(
+    const updatedUrls = await Promise.all(
       entries.map(async (entry) => {
         try {
           const hash = extractHash(entry.shortUrl);
-          const { data: updatedDto } = await axiosInstance.get<UrlDto>(`/url/${hash}`);
+          const { data: updatedDto } = await axiosInstance.get<any>(`/url/${hash}`);
+          
+          const freshClicks = updatedDto.accessed_times ?? updatedDto.accessedTimes ?? updatedDto.clicks ?? 0;
+          
           return {
             ...entry,
             longUrl: updatedDto.longUrl,
-            accessed_times: updatedDto.accessed_times ?? 0,
+            accessed_times: freshClicks,
             updatedAt: updatedDto.updatedAt,
           };
-        } catch {
+        } catch (err: any) {
+          if (err.response?.status === 404) {
+            console.warn(`URL ${entry.shortUrl} was deleted remotely. Removing from local cache.`);
+            return null;
+          }
+          console.error(`Failed to refresh stats for ${entry.shortUrl}`, err);
           return entry;
         }
       })
     );
+    
+    return updatedUrls.filter((u): u is UrlEntry => u !== null);
   }, []);
 
   // Initial load logic on mount / user change
@@ -262,7 +272,9 @@ const DashboardPage: React.FC = () => {
         )}
 
         {/* ── Shorten form ─────────────────────────────────── */}
-        <ShortenForm onShorten={handleShortened} />
+        {user?.role !== 'ROOT' && user?.role !== 'ROLE_ROOT' && (
+          <ShortenForm onShorten={handleShortened} />
+        )}
 
         {/* ── URL Table ────────────────────────────────────── */}
         {loadingAll ? (

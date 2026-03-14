@@ -39,7 +39,10 @@ public class AnalyticsController {
         }
 
         Long currentUserId = (Long) authentication.getPrincipal();
-        if (url.getUser() == null || !url.getUser().getId().equals(currentUserId)) {
+        boolean isRoot = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ROOT") || a.getAuthority().equals("ROOT"));
+        
+        if (!isRoot && (url.getUser() == null || !url.getUser().getId().equals(currentUserId))) {
             throw new UrlNotFoundException();
         }
 

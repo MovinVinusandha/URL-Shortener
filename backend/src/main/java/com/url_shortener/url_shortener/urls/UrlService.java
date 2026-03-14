@@ -5,6 +5,7 @@ import com.url_shortener.url_shortener.statistics.Statistic;
 import com.url_shortener.url_shortener.users.UserNotFoundException;
 import com.url_shortener.url_shortener.users.UserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +18,8 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.zip.CRC32;
 
+import org.springframework.security.access.AccessDeniedException;
+
 @Service
 @AllArgsConstructor
 public class UrlService {
@@ -26,6 +29,11 @@ public class UrlService {
     private final ClickEventRepository clickEventRepository;
 
     public UrlSend generateShortUrl(UrlRequest urlRequest) {
+        var authForCheck = SecurityContextHolder.getContext().getAuthentication();
+        if (authForCheck != null && authForCheck.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ROOT") || a.getAuthority().equals("ROOT"))) {
+            throw new AccessDeniedException("Admins cannot create short links.");
+        }
         String shortUrl = generateUrlHash(urlRequest.getLongUrl());
         if (urlRepository.existsUrlByShortUrl(shortUrl)) {
             throw new UrlExistInDataBaseException();
@@ -119,6 +127,7 @@ public class UrlService {
         );
     }
 
+    @CacheEvict(value = "urls", key = "#shortUrl")
     public UrlUpdateDto updateUrl(UrlRequest urlRequest, String shortUrl) {
         var url = isExistsShortUrl(shortUrl);
 
@@ -130,6 +139,7 @@ public class UrlService {
         return urlMapper.toUpdateDto(url);
     }
 
+    @CacheEvict(value = "urls", key = "#shortUrl")
     public void deleteUrl(String shortUrl) {
         var url = isExistsShortUrl(shortUrl);
 
@@ -139,6 +149,11 @@ public class UrlService {
     }
 
     private static void isUserCorrect(Url url) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ROOT") || a.getAuthority().equals("ROOT"))) {
+            return;
+        }
         if (!(url.getUser().getId().equals(getUserId()))) {
             throw new UrlNotFoundException();
         }

@@ -12,6 +12,7 @@ public class UserDto {
     private Long id;
     private String name;
     private String email;
+    private String role;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
