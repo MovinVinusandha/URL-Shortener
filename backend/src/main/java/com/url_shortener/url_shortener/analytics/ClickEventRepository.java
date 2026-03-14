@@ -36,41 +36,51 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
     @Query("""
             SELECT c.device, COUNT(c) AS cnt
             FROM ClickEvent c
-            WHERE c.url.id = :urlId
+            WHERE c.url.id = :urlId AND c.timestamp >= :startDate
             GROUP BY c.device
             ORDER BY cnt DESC
             """)
-    List<Object[]> countByDeviceForUrl(@Param("urlId") Long urlId);
+    List<Object[]> countByDeviceForUrl(@Param("urlId") Long urlId, @Param("startDate") LocalDateTime startDate);
 
     /** Count clicks grouped by browser for a URL. */
     @Query("""
             SELECT c.browser, COUNT(c) AS cnt
             FROM ClickEvent c
-            WHERE c.url.id = :urlId
+            WHERE c.url.id = :urlId AND c.timestamp >= :startDate
             GROUP BY c.browser
             ORDER BY cnt DESC
             """)
-    List<Object[]> countByBrowserForUrl(@Param("urlId") Long urlId);
+    List<Object[]> countByBrowserForUrl(@Param("urlId") Long urlId, @Param("startDate") LocalDateTime startDate);
 
     /** Count clicks grouped by country for a URL. */
     @Query("""
             SELECT c.country, COUNT(c) AS cnt
             FROM ClickEvent c
-            WHERE c.url.id = :urlId
+            WHERE c.url.id = :urlId AND c.timestamp >= :startDate
             GROUP BY c.country
             ORDER BY cnt DESC
             """)
-    List<Object[]> countByCountryForUrl(@Param("urlId") Long urlId);
+    List<Object[]> countByCountryForUrl(@Param("urlId") Long urlId, @Param("startDate") LocalDateTime startDate);
 
     /** Count clicks grouped by OS for a URL. */
     @Query("""
             SELECT c.os, COUNT(c) AS cnt
             FROM ClickEvent c
-            WHERE c.url.id = :urlId
+            WHERE c.url.id = :urlId AND c.timestamp >= :startDate
             GROUP BY c.os
             ORDER BY cnt DESC
             """)
-    List<Object[]> countByOsForUrl(@Param("urlId") Long urlId);
+    List<Object[]> countByOsForUrl(@Param("urlId") Long urlId, @Param("startDate") LocalDateTime startDate);
+
+    /** Count clicks grouped by date for a URL over a time range. */
+    @Query("""
+            SELECT DATE(c.timestamp) as date, COUNT(c) as cnt
+            FROM ClickEvent c
+            WHERE c.url.id = :urlId AND c.timestamp >= :startDate
+            GROUP BY DATE(c.timestamp)
+            ORDER BY date ASC
+            """)
+    List<Object[]> countByDateForUrl(@Param("urlId") Long urlId, @Param("startDate") LocalDateTime startDate);
 
     /** Total click count across ALL URLs (admin overview). */
     @Query("SELECT COUNT(c) FROM ClickEvent c")
