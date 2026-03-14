@@ -25,6 +25,5 @@ coverage/
 
 # Local env files
 .env
-.env.*
 Backend/.env
 frontend/.env
