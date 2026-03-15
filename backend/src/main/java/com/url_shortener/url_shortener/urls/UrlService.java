@@ -34,9 +34,20 @@ public class UrlService {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ROOT") || a.getAuthority().equals("ROOT"))) {
             throw new AccessDeniedException("Admins cannot create short links.");
         }
-        String shortUrl = generateUrlHash(urlRequest.getLongUrl());
-        if (urlRepository.existsUrlByShortUrl(shortUrl)) {
-            throw new UrlExistInDataBaseException();
+        String shortUrl;
+        if (urlRequest.getCustomAlias() != null && !urlRequest.getCustomAlias().trim().isEmpty()) {
+            shortUrl = urlRequest.getCustomAlias().trim();
+            if (!shortUrl.matches("^[a-zA-Z0-9-_]+$")) {
+                throw new IllegalArgumentException("Invalid custom alias format. Only alphanumeric characters, hyphens, and underscores are allowed.");
+            }
+            if (urlRepository.existsUrlByShortUrl(shortUrl)) {
+                throw new AliasAlreadyExistsException();
+            }
+        } else {
+            shortUrl = generateUrlHash(urlRequest.getLongUrl());
+            if (urlRepository.existsUrlByShortUrl(shortUrl)) {
+                throw new UrlExistInDataBaseException();
+            }
         }
         var url = urlMapper.toEntity(urlRequest);
         url.setShortUrl(shortUrl);

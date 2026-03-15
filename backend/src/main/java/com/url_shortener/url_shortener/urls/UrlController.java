@@ -20,6 +20,12 @@ public class UrlController {
     @PostMapping("/shorten")
     @Operation(summary = "Generate short url")
     public ResponseEntity<UrlSend> generateShortUrl(@Valid @RequestBody UrlRequest urlRequest) {
+        if (urlRequest.getCustomAlias() != null && !urlRequest.getCustomAlias().trim().isEmpty()) {
+            var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                throw new org.springframework.security.access.AccessDeniedException("You must be logged in to use a custom alias.");
+            }
+        }
         var urlDto = urlService.generateShortUrl(urlRequest);
         return ResponseEntity.ok(urlDto);
     }

@@ -9,4 +9,6 @@ import lombok.Getter;
 public class UrlRequest {
     @NotBlank(message = "url is required")
     private String longUrl;
+    
+    private String customAlias;
 }
