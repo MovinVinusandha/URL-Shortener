@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Link2, Sparkles, AlertCircle } from 'lucide-react';
 import Navbar from '../components/Navbar';
-import ShortenForm from '../components/ShortenForm';
 import UrlTable from '../components/UrlTable';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
@@ -9,6 +9,8 @@ import type { UrlEntry, UrlDto, UrlSend } from '../types';
 /** Helper to extract hash from short URL */
 const extractHash = (shortUrl: string): string =>
   shortUrl.split('/').pop() ?? shortUrl;
+
+const generateRandomHash = () => Math.random().toString(36).substring(2, 8);
 
 const mapDtoToEntry = (d: UrlDto): UrlEntry => ({
   longUrl: d.longUrl,
@@ -36,6 +38,13 @@ const DashboardPage: React.FC = () => {
   const [urls, setUrls] = useState<UrlEntry[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loadingAll, setLoadingAll] = useState(true);
+  
+  // Inline Shorten Form states
+  const [longUrl, setLongUrl] = useState('');
+  const [customAlias, setCustomAlias] = useState('');
+  const [shortenLoading, setShortenLoading] = useState(false);
+  const [shortenError, setShortenError] = useState('');
+
   const urlsRef = useRef(urls);
 
   urlsRef.current = urls;
@@ -87,6 +96,10 @@ const DashboardPage: React.FC = () => {
     );
     
     return updatedUrls.filter((u): u is UrlEntry => u !== null);
+  }, []);
+
+  useEffect(() => {
+    setCustomAlias(generateRandomHash());
   }, []);
 
   // Initial load logic on mount / user change
@@ -197,6 +210,30 @@ const DashboardPage: React.FC = () => {
       saveToStorage(updatedList);
       return updatedList;
     });
+    setCustomAlias(generateRandomHash());
+  };
+
+  const handleShortenSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!longUrl.trim()) return;
+    setShortenError('');
+    setShortenLoading(true);
+    try {
+      const { data } = await axiosInstance.post<UrlSend>('/shorten', { 
+        longUrl: longUrl.trim(),
+        customAlias: customAlias.trim() || undefined
+      });
+      handleShortened(data);
+      setLongUrl('');
+    } catch (err: any) {
+      if (err.response?.status === 409 || err.response?.status === 400) {
+        setShortenError('This custom alias is already taken. Please choose another one.');
+      } else {
+        setShortenError(err.response?.data?.message || 'Failed to shorten URL. Please try again.');
+      }
+    } finally {
+      setShortenLoading(false);
+    }
   };
 
   /** Called when EditModal saves an update */
@@ -273,7 +310,82 @@ const DashboardPage: React.FC = () => {
 
         {/* ── Shorten form ─────────────────────────────────── */}
         {user?.role !== 'ROOT' && user?.role !== 'ROLE_ROOT' && (
-          <ShortenForm onShorten={handleShortened} />
+          <div className="card p-6 animate-slide-up">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-9 h-9 rounded-xl bg-violet-100 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+              </div>
+              <div>
+                <h2 className="text-slate-900 dark:text-white font-semibold">Shorten a URL</h2>
+                <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
+                  Paste a long URL and customize your short link
+                </p>
+              </div>
+            </div>
+
+            {shortenError && (
+              <div className="mb-4 flex items-start gap-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl p-3 animate-fade-in">
+                <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                <p className="text-red-600 dark:text-red-400 text-sm">{shortenError}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleShortenSubmit} className="flex flex-col gap-4">
+              <div className="flex gap-3">
+                <div className="flex-1 relative">
+                  <Link2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
+                  <input
+                    id="shorten-input"
+                    type="url"
+                    required
+                    value={longUrl}
+                    onChange={(e) => { setLongUrl(e.target.value); setShortenError(''); }}
+                    className="input-field pl-10"
+                    placeholder="https://your-very-long-url.com/with/many/path/segments"
+                  />
+                </div>
+                <button
+                  id="shorten-submit"
+                  type="submit"
+                  disabled={shortenLoading}
+                  className="btn-primary flex items-center gap-2 whitespace-nowrap"
+                >
+                  {shortenLoading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Shortening…
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Shorten
+                    </>
+                  )}
+                </button>
+              </div>
+              
+              {/* Custom Alias Input */}
+              <div className="flex flex-col sm:flex-row items-center gap-3 animate-fade-in">
+                <div className="flex items-center w-full max-w-sm overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 focus-within:border-violet-500 dark:focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500 transition-all shadow-sm">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 px-3 py-2.5 text-sm font-medium border-r border-slate-200 dark:border-slate-700 whitespace-nowrap select-none">
+                    {window.location.host}/
+                  </div>
+                  <input
+                    type="text"
+                    value={customAlias}
+                    onChange={(e) => { setCustomAlias(e.target.value); setShortenError(''); }}
+                    className="flex-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-white px-3 py-2.5 text-sm outline-none w-full"
+                    placeholder="custom-alias"
+                    pattern="[a-zA-Z0-9-_]+"
+                    title="Only alphanumeric characters, hyphens, and underscores are allowed."
+                  />
+                </div>
+                <p className="text-xs text-slate-400 dark:text-slate-500 self-start sm:self-center">
+                  Leave the generated hash or enter a custom alias.
+                </p>
+              </div>
+            </form>
+          </div>
         )}
 
         {/* ── URL Table ────────────────────────────────────── */}
