@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link2, Sparkles, AlertCircle } from 'lucide-react';
+import { Link2, Sparkles, AlertCircle, Clock } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import UrlTable from '../components/UrlTable';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +18,8 @@ const mapDtoToEntry = (d: UrlDto): UrlEntry => ({
   accessed_times: d.accessed_times ?? 0,
   createdAt: d.createdAt,
   updatedAt: d.updatedAt,
+  expiresAt: d.expiresAt,
+  isActive: d.isActive ?? true,
 });
 
 /**
@@ -42,6 +44,8 @@ const DashboardPage: React.FC = () => {
   // Inline Shorten Form states
   const [longUrl, setLongUrl] = useState('');
   const [customAlias, setCustomAlias] = useState('');
+  const [expiresAt, setExpiresAt] = useState<string>('');
+  const [expirationPreset, setExpirationPreset] = useState<string>('none');
   const [shortenLoading, setShortenLoading] = useState(false);
   const [shortenError, setShortenError] = useState('');
 
@@ -204,6 +208,8 @@ const DashboardPage: React.FC = () => {
       shortUrl: newEntry.shortUrl,
       accessed_times: 0,
       createdAt: newEntry.createdAt,
+      expiresAt: newEntry.expiresAt,
+      isActive: newEntry.isActive ?? true,
     };
     setUrls((prev) => {
       const updatedList = [created, ...prev];
@@ -211,6 +217,26 @@ const DashboardPage: React.FC = () => {
       return updatedList;
     });
     setCustomAlias(generateRandomHash());
+    setExpirationPreset('none');
+    setExpiresAt('');
+  };
+
+  const handleExpirationPresetChange = (preset: string) => {
+    setExpirationPreset(preset);
+    const tzOffset = new Date().getTimezoneOffset() * 60000;
+    const localNow = Date.now() - tzOffset;
+    if (preset === 'none') {
+      setExpiresAt('');
+    } else if (preset === '1hour') {
+      setExpiresAt(new Date(localNow + 60 * 60 * 1000).toISOString().substring(0, 16));
+    } else if (preset === '24hours') {
+      setExpiresAt(new Date(localNow + 24 * 60 * 60 * 1000).toISOString().substring(0, 16));
+    } else if (preset === '7days') {
+      setExpiresAt(new Date(localNow + 7 * 24 * 60 * 60 * 1000).toISOString().substring(0, 16));
+    } else if (preset === 'custom') {
+      // Initialize to current time + 1 hour if switching to custom
+      setExpiresAt(new Date(localNow + 60 * 60 * 1000).toISOString().substring(0, 16));
+    }
   };
 
   const handleShortenSubmit = async (e: React.FormEvent) => {
@@ -219,10 +245,16 @@ const DashboardPage: React.FC = () => {
     setShortenError('');
     setShortenLoading(true);
     try {
-      const { data } = await axiosInstance.post<UrlSend>('/shorten', { 
+      const payload: any = {
         longUrl: longUrl.trim(),
         customAlias: customAlias.trim() || undefined
-      });
+      };
+      
+      if (expiresAt) {
+        payload.expiresAt = new Date(expiresAt).toISOString().substring(0, 19);
+      }
+
+      const { data } = await axiosInstance.post<UrlSend>('/shorten', payload);
       handleShortened(data);
       setLongUrl('');
     } catch (err: any) {
@@ -383,6 +415,52 @@ const DashboardPage: React.FC = () => {
                 <p className="text-xs text-slate-400 dark:text-slate-500 self-start sm:self-center">
                   Leave the generated hash or enter a custom alias.
                 </p>
+              </div>
+
+              {/* Expiration UI */}
+              <div className="flex flex-col gap-2 mt-2 animate-fade-in">
+                <div className="flex items-center gap-2 text-sm text-slate-900 dark:text-white font-medium">
+                  <Clock className="w-4 h-4 text-violet-500" />
+                  Expiration (Optional)
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {[
+                    { id: 'none', label: 'None' },
+                    { id: '1hour', label: '1 Hour' },
+                    { id: '24hours', label: '24 Hours' },
+                    { id: '7days', label: '7 Days' },
+                    { id: 'custom', label: 'Custom' },
+                  ].map((preset) => {
+                    const isActive = expirationPreset === preset.id;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => handleExpirationPresetChange(preset.id)}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
+                          isActive
+                            ? 'bg-slate-900 text-white border-transparent dark:bg-white dark:text-slate-900'
+                            : 'bg-transparent text-slate-600 border border-slate-200 hover:border-slate-300 dark:text-slate-300 dark:border-slate-700 dark:hover:border-slate-600'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                {expirationPreset === 'custom' && (
+                  <div className="mt-2 animate-fade-in">
+                    <input
+                      type="datetime-local"
+                      value={expiresAt}
+                      onChange={(e) => setExpiresAt(e.target.value)}
+                      className="input-field text-sm max-w-sm"
+                      min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 16)}
+                      required
+                    />
+                  </div>
+                )}
               </div>
             </form>
           </div>

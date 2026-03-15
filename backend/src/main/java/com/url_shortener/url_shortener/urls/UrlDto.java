@@ -20,4 +20,6 @@ public class UrlDto {
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
+
+    private boolean isActive;
 }

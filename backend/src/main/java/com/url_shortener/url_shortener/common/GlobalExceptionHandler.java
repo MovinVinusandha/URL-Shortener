@@ -24,6 +24,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.notFound().build();
     }
 
+    @org.springframework.beans.factory.annotation.Value("${app.frontend.url:http://localhost}")
+    private String frontendUrl;
+
+    @ExceptionHandler(com.url_shortener.url_shortener.urls.LinkExpiredException.class)
+    public void linkExpired(com.url_shortener.url_shortener.urls.LinkExpiredException ex, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        response.sendRedirect(frontendUrl + "/expired");
+    }
+
     @ExceptionHandler(UrlExistInDataBaseException.class)
     public ResponseEntity<Map<String, String >> urlInDb() {
         return ResponseEntity.badRequest().body(

@@ -29,6 +29,40 @@ const extractHash = (shortUrl: string): string =>
 const truncate = (str: string, max = 55): string =>
   str.length > max ? str.slice(0, max) + '…' : str;
 
+const formatExpiration = (expiresAt: string | null | undefined, isActive: boolean) => {
+  if (!isActive) {
+    return <span className="text-red-500 bg-red-100 dark:bg-red-500/20 px-2 py-1 rounded-md text-xs font-medium">Expired</span>;
+  }
+  if (!expiresAt) {
+    return <span className="text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md text-xs font-medium">Never</span>;
+  }
+  
+  const now = new Date();
+  // Backend returns yyyy-MM-dd HH:mm:ss, append Z to parse as UTC.
+  // Replace space with T to be safe.
+  const expDate = new Date(expiresAt.replace(' ', 'T') + 'Z');
+  const diffMs = expDate.getTime() - now.getTime();
+  
+  if (diffMs <= 0) {
+    return <span className="text-red-500 bg-red-100 dark:bg-red-500/20 px-2 py-1 rounded-md text-xs font-medium">Expired</span>;
+  }
+
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffHours / 24);
+  
+  let timeStr = '';
+  if (diffDays > 0) {
+    timeStr = `In ${diffDays} day${diffDays > 1 ? 's' : ''}`;
+  } else if (diffHours > 0) {
+    timeStr = `In ${diffHours} hour${diffHours > 1 ? 's' : ''}`;
+  } else {
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    timeStr = `In ${diffMins} min${diffMins > 1 ? 's' : ''}`;
+  }
+  
+  return <span className="text-violet-600 bg-violet-100 dark:text-violet-300 dark:bg-violet-500/20 px-2 py-1 rounded-md text-xs font-medium">{timeStr}</span>;
+};
+
 const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted }) => {
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
@@ -62,8 +96,8 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted }) => {
   const sortedWithIndex = [...urls]
     .map((entry, i) => ({ entry, originalIndex: i }))
     .sort((a, b) => {
-      const dateA = new Date(a.entry.createdAt).getTime();
-      const dateB = new Date(b.entry.createdAt).getTime();
+      const dateA = new Date(a.entry.createdAt.replace(' ', 'T') + 'Z').getTime();
+      const dateB = new Date(b.entry.createdAt.replace(' ', 'T') + 'Z').getTime();
       return sortAsc ? dateA - dateB : dateB - dateA;
     });
 
@@ -128,7 +162,7 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted }) => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800">
-                {['Original URL', 'Short URL', 'Clicks', 'Created', 'Actions'].map((h) => (
+                {['Original URL', 'Short URL', 'Clicks', 'Status / Expires', 'Actions'].map((h) => (
                   <th
                     key={h}
                     className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider last:text-right"
@@ -186,15 +220,9 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted }) => {
                     </span>
                   </td>
 
-                  {/* Created */}
-                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm whitespace-nowrap">
-                    {entry.createdAt
-                      ? new Date(entry.createdAt.replace(' ', 'T')).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })
-                      : '—'}
+                  {/* Status / Expires */}
+                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                    {formatExpiration(entry.expiresAt, entry.isActive ?? true)}
                   </td>
 
                   {/* Actions */}
@@ -282,11 +310,9 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted }) => {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400 dark:text-slate-500 text-xs">
-                  {entry.createdAt
-                    ? new Date(entry.createdAt.replace(' ', 'T')).toLocaleDateString()
-                    : '—'}
-                </span>
+                <div className="flex items-center gap-2">
+                  {formatExpiration(entry.expiresAt, entry.isActive ?? true)}
+                </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => copyToClipboard(entry.shortUrl, originalIndex)}

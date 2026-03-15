@@ -26,6 +26,12 @@ public class UrlController {
                 throw new org.springframework.security.access.AccessDeniedException("You must be logged in to use a custom alias.");
             }
         }
+        if (urlRequest.getExpiresAt() != null) {
+            var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                throw new org.springframework.security.access.AccessDeniedException("You must be logged in to set an expiration date.");
+            }
+        }
         var urlDto = urlService.generateShortUrl(urlRequest);
         return ResponseEntity.ok(urlDto);
     }

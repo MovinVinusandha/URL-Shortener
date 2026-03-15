@@ -19,3 +19,7 @@ analytics:
     core-pool-size: 4
     max-pool-size: 16
     queue-capacity: 500
+
+app:
+  frontend:
+    url: ${FRONTEND_URL:http://localhost}

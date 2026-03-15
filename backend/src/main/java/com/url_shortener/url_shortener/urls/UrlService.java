@@ -22,6 +22,7 @@ import org.springframework.security.access.AccessDeniedException;
 
 @Service
 @AllArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class UrlService {
     private final UrlMapper urlMapper;
     private final UrlRepository urlRepository;
@@ -73,6 +74,17 @@ public class UrlService {
         url.addStatistic(stat);
 
         urlRepository.save(url);
+        
+        String cacheKey = "urls::" + url.getShortUrl();
+        if (url.getExpiresAt() != null) {
+            java.time.Duration ttl = java.time.Duration.between(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC), url.getExpiresAt());
+            if (!ttl.isNegative()) {
+                redisTemplate.opsForValue().set(cacheKey, url.getLongUrl(), ttl);
+            }
+        } else {
+            redisTemplate.opsForValue().set(cacheKey, url.getLongUrl(), java.time.Duration.ofHours(24));
+        }
+        
         return urlMapper.toSendDto(url);
     }
 
@@ -82,9 +94,31 @@ public class UrlService {
         return String.format(Locale.US,"%08X", CRC32.getValue());
     }
 
-    @Cacheable(value = "urls", key = "#shortUrl")
+    private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
+
     public String getLongUrlForRedirect(String shortUrl) {
-        return isExistsShortUrl(shortUrl).getLongUrl();
+        // Enforce strict lazy evaluation first
+        var url = isExistsShortUrl(shortUrl);
+        log.info("Evaluating URL hash: {}. IsActive: {}, ExpiresAt: {}", url.getShortUrl(), url.isActive(), url.getExpiresAt());
+
+        String cacheKey = "urls::" + shortUrl;
+        String cachedUrl = redisTemplate.opsForValue().get(cacheKey);
+        if (cachedUrl != null) {
+            return cachedUrl;
+        }
+
+        String longUrl = url.getLongUrl();
+
+        if (url.getExpiresAt() != null) {
+            java.time.Duration ttl = java.time.Duration.between(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC), url.getExpiresAt());
+            if (!ttl.isNegative()) {
+                redisTemplate.opsForValue().set(cacheKey, longUrl, ttl);
+            }
+        } else {
+            redisTemplate.opsForValue().set(cacheKey, longUrl, java.time.Duration.ofHours(24));
+        }
+
+        return longUrl;
     }
 
     public UrlDto getUrl(String shortUrl) {
@@ -134,7 +168,8 @@ public class UrlService {
                 dto.getShortUrl(),
                 BigInteger.valueOf(clicks),
                 dto.getCreatedAt(),
-                dto.getUpdatedAt()
+                dto.getUpdatedAt(),
+                url.isActive()
         );
     }
 
@@ -146,6 +181,16 @@ public class UrlService {
 
         urlMapper.updateUrl(urlRequest, url);
         urlRepository.save(url);
+        
+        String cacheKey = "urls::" + url.getShortUrl();
+        if (url.getExpiresAt() != null) {
+            java.time.Duration ttl = java.time.Duration.between(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC), url.getExpiresAt());
+            if (!ttl.isNegative()) {
+                redisTemplate.opsForValue().set(cacheKey, url.getLongUrl(), ttl);
+            }
+        } else {
+            redisTemplate.opsForValue().set(cacheKey, url.getLongUrl(), java.time.Duration.ofHours(24));
+        }
 
         return urlMapper.toUpdateDto(url);
     }
@@ -175,7 +220,18 @@ public class UrlService {
         if (url == null){
             throw new UrlNotFoundException();
         }
-
+        
+        if (!url.isActive()) {
+            throw new LinkExpiredException();
+        }
+        
+        if (url.isActive() && url.getExpiresAt() != null && url.getExpiresAt().isBefore(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC))) {
+            url.setActive(false);
+            urlRepository.save(url);
+            redisTemplate.delete("urls::" + url.getShortUrl());
+            throw new LinkExpiredException();
+        }
+        
         return url;
     }
 
