@@ -1,178 +1,51 @@
-# URL Shortener 🔗
+# Backend API - URL Shortener
 
-A RESTful URL shortener service built with Spring Boot that converts long URLs into short, manageable links.
+## Key Features
+- Hibernate/Flyway for database entity management and migrations.
+- Async Click Tracking ensuring immediate HTTP 302 redirects without blocking for analytics collection.
+- Redis Cache Eviction strategy for aggressive invalidation on URL update or deletion.
+- Yauaa User-Agent parsing for robust and granular device, browser, and OS analytics.
 
-## Features
+## Setup
+### Prerequisites
+- Java 21
+- Maven
+- Local instances of MySQL and Redis.
 
-- **URL Shortening**: Generate short URLs using CRC32 hash algorithm
-- **URL Redirection**: Redirect short URLs to original destinations
-- **Analytics Tracking**: Track access count for each shortened URL
-- **CRUD Operations**: Create, read, update, and delete shortened URLs
-
-## Tech Stack
-
-- **Framework**: Spring Boot 3.5.6
-- **Language**: Java 25
-- **Database**: MySQL
-- **ORM**: Spring Data JPA / Hibernate
-
-## API Endpoints
-
-### Shorten URL
-```http
-POST /shorten
-{
-    "longUrl": "https://example.com/very-long-url"
-}
-```
-
-### Redirect to Original URL
-```http
-GET /{shortUrl}
-```
-Returns HTTP 302 redirect to the original URL.
-
-
-### Get URL Details
-```http
-GET /url/{hash}
-```
-
-### Update URL
-```http
-PUT /url/{hash}
-{
-    "longUrl": "https://updated-url.com"
-}
-```
-
-### Delete URL
-```http
-DELETE /url/{hash}
-```
-
-## Prerequisites
-
-Before running this application, ensure you have:
-
-- Java 25 or higher
-- Maven 3.6 or higher
-- MySQL 8.0 or higher
-
-## Setup and Installation
-
-### 1. Clone the Repository
+### Steps to Run Locally
+1. Ensure your local MySQL server is running and a database named `url_shortener` is created.
+2. Ensure your local Redis server is running on port `6379`.
+3. Set the required configuration environment variables (see Configuration section below) in your IDE or shell.
+4. Execute the following command from the `backend` directory to start the application:
 ```bash
-git clone https://github.com/MovinVinusandha/URL-Shortener.git
-cd URL-Shortener
+./mvnw spring-boot:run
 ```
-
-### 2. Database Setup
-Create a MySQL database:
-```sql
-CREATE DATABASE url_shortener;
-```
-
-### 3. Environment Configuration
-Create a `.env` file in the root directory:
-```env
-DB_URL=jdbc:mysql://localhost:3306/url_shortener?createDatabaseIfNotExist=true
-DB_USERNAME=your_mysql_username
-DB_PASSWORD=your_mysql_password
-```
-
-### 4. Run Database Migrations
-```bash
-mvn flyway:migrate
-```
-
-### 5. Build the Application
-```bash
-mvn clean compile
-```
-
-### 6. Run the Application
-```bash
-mvn spring-boot:run
-```
-
-The application will start on `http://localhost:8080`
-
-## Usage Examples
-
-### Shorten a URL
-```bash
-curl -X POST http://localhost:8080/shorten \
-  -H "Content-Type: application/json" \
-  -d '{"longUrl": "https://www.example.com/very-long-url-that-needs-shortening"}'
-```
-
-Response:
-```json
-{
-    "shortUrl": "http://localhost:8080/A1B2C3D4",
-    "longUrl": "https://www.example.com/very-long-url-that-needs-shortening"
-}
-```
-
-### Access the Short URL
-Visit `http://localhost:8080/A1B2C3D4` in your browser to be redirected to the original URL.
-
-### Get URL Statistics
-```bash
-curl http://localhost:8080/url/A1B2C3D4
-```
-
-Response:
-```json
-{
-    "id": 1,
-    "longUrl": "https://www.example.com/very-long-url-that-needs-shortening",
-    "shortUrl": "http://localhost:8080/A1B2C3D4",
-    "accessed_times": 5,
-    "createdAt": "2025-09-30 16:48:08",
-    "updatedAt": "2025-09-30 16:48:08"
-}
-```
+The API will be available at `http://localhost:8080`.
 
 ## Configuration
+The following environment variables are required to run the application locally using the `dev` profile (found in `src/main/resources/application-dev.yaml`).
 
-### Application Properties
-The application uses environment variables for configuration:
+| Variable | Description | Example |
+| :--- | :--- | :--- |
+| `SPRING_DATASOURCE_URL` | JDBC URL for MySQL connection | `jdbc:mysql://localhost:3306/url_shortener` |
+| `SPRING_DATASOURCE_USERNAME` | Database username | `root` |
+| `SPRING_DATASOURCE_PASSWORD` | Database password | `root` |
+| `REDIS_HOST` | Redis hostname | `localhost` |
+| `REDIS_PORT` | Redis port | `6379` |
+| `JWT_SECRET` | 256-bit secure secret for signing JWTs | `your_secret_key` |
 
-- `DB_URL`: Database connection URL
-- `DB_USERNAME`: Database username
-- `DB_PASSWORD`: Database password
+## API
 
-### Flyway Configuration
-Database migrations are automatically applied on startup. Manual migration:
-```bash
-mvn flyway:migrate
-```
+| Method | Endpoint | Auth Required | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/auth/login` | No | Authenticate with email/password to retrieve a JWT token. |
+| `GET` | `/auth/me` | Yes | Retrieve the currently authenticated user's profile. |
+| `POST` | `/shorten` | Yes | Generate a new short URL from a provided long URL. |
+| `GET` | `/{hash}` | No | Redirect to the destination `longUrl` and asynchronously track the click. |
+| `GET` | `/url/{hash}` | Yes* | Retrieve the details and live click counts of a specific short URL. |
+| `PUT` | `/url/{hash}` | Yes* | Update the destination `longUrl` of an existing short URL and evict the cache. |
+| `DELETE` | `/url/{hash}` | Yes* | Delete a short URL and evict it from the cache. |
+| `GET` | `/url/all` | Yes (ROOT) | Retrieve the global list of all URLs in the system. |
+| `GET` | `/analytics/{hash}` | Yes* | Retrieve detailed 30-day time-series and categorical click analytics. |
 
-## Project Structure
-```
-src/
-├── main/
-│   ├── java/com/url_shortener/url_shortener/
-│   │   ├── controller/         # REST controllers
-│   │   ├── dtos/               # Data Transfer Objects
-│   │   ├── entities/           # JPA entities
-│   │   ├── exception/          # Custom exceptions
-│   │   ├── mappers/            # MapStruct mappers
-│   │   ├── repositories/       # Spring Data repositories
-│   │   └── services/           # Business logic
-│   └── resources/
-│       ├── db/migration/       # Flyway migration scripts
-│       └── application.yaml    # Application configuration
-└── test/                       # Test classes
-```
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Contact
-
-- **Developer**: MovinVinusandha
-- **Repository**: [URL-Shortener](https://github.com/MovinVinusandha/URL-Shortener)
+*\* Requires the user to own the URL or possess the `ROOT` admin role.*
