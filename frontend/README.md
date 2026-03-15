@@ -1,4 +1,4 @@
-<h1 align="center">Frontend UI - URL Shortener</h1>
+# Frontend UI - URL Shortener
 
 ## Setup
 ### Prerequisites

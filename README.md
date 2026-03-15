@@ -1,13 +1,12 @@
 # URL Shortener
 
-  <strong>URL shortener with advanced analytics, built with Spring Boot and React.</strong>
+  ![Spring](https://img.shields.io/badge/spring-%236DB33F.svg?style=for-the-badge&logo=spring&logoColor=white)
+  ![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
+  ![MySQL](https://img.shields.io/badge/mysql-4479A1.svg?style=for-the-badge&logo=mysql&logoColor=white)
+  ![Redis](https://img.shields.io/badge/redis-%23DD0031.svg?style=for-the-badge&logo=redis&logoColor=white)
+  ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 
-  <img src="https://img.shields.io/badge/Spring%20Boot-3-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot 3" />
-  <img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 18" />
-  <img src="https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL 8.0" />
-  <img src="https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Redis 7" />
-  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Compose" />
-  <img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License MIT" />
+  <strong>URL shortener with advanced analytics, built with Spring Boot and React.</strong>
 
 ## Table of Contents
 - [URL Shortener](#url-shortener)
@@ -55,3 +54,31 @@ Before running the application, copy `.env.example` to `.env` and provide your s
 The application uses Docker Compose to enforce robust container network isolation. It implements a two-tier network architecture:
 - `db_network`: A backend-only bridged network securing communication between the Spring Boot application, MySQL, and Redis. The databases are isolated and do not expose ports directly to the host machine.
 - `web_network`: A frontend-to-backend bridged network that strictly manages traffic between the Vite/Nginx frontend and the Spring Boot backend.
+
+## Used Technology
+- Backend: Spring Boot, Spring Security, Spring Data JPA, Flyway, Redis, JWT.
+- Frontend: React, TypeScript, Vite, Tailwind CSS, Axios.
+- Database and infrastructure: MySQL, Docker, Docker Compose, Nginx.
+
+## Project Structure
+```text
+URL-Shortener/
+├── backend/
+│   ├── src/
+│   │   ├── main/
+│   │   └── test/
+│   ├── pom.xml
+│   └── Dockerfile
+├── frontend/
+│   ├── src/
+│   ├── public/
+│   └── Dockerfile
+├── docker-compose.yml
+├── README.md
+└── LICENSE
+```
+
+This is the top-level layout of the project. The backend contains the Spring Boot API and database migrations, while the frontend contains the React app and UI assets.
+
+## Licence
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for the full text.
