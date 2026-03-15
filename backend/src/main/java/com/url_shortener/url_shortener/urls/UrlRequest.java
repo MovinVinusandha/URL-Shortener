@@ -14,4 +14,6 @@ public class UrlRequest {
 
     @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private java.time.LocalDateTime expiresAt;
+    
+    private String password;
 }

@@ -26,7 +26,7 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !error.config?.url?.includes('/unlock')) {
       const currentPath = window.location.pathname;
       // Don't redirect if already on auth pages (prevents redirect loops)
       const isAuthPage = currentPath === '/login' || currentPath === '/register';

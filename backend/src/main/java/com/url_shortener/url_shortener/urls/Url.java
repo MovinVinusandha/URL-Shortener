@@ -39,6 +39,9 @@ public class Url {
     @Builder.Default
     private boolean isActive = true;
 
+    @Column(name = "password_hash")
+    private String passwordHash;
+
     @OneToOne(mappedBy = "urls", cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
     private Statistic statistic;
 
@@ -60,5 +63,9 @@ public class Url {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public boolean isHasPassword() {
+        return this.passwordHash != null && !this.passwordHash.isEmpty();
     }
 }

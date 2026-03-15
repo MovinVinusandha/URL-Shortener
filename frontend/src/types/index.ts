@@ -32,6 +32,7 @@ export interface UrlSend {
   createdAt: string;
   expiresAt?: string | null;
   isActive?: boolean;
+  hasPassword?: boolean;
 }
 
 /** Returned by GET /url/{hash} and GET /url/all */
@@ -44,6 +45,7 @@ export interface UrlDto {
   updatedAt: string;
   expiresAt?: string | null;
   isActive?: boolean;
+  hasPassword?: boolean;
 }
 
 /** Returned by PUT /url/{hash} */
@@ -63,4 +65,5 @@ export interface UrlEntry {
   updatedAt?: string;
   expiresAt?: string | null;
   isActive?: boolean;
+  hasPassword?: boolean;
 }

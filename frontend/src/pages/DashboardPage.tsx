@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link2, Sparkles, AlertCircle, Clock } from 'lucide-react';
+import { Link2, Sparkles, AlertCircle, Clock, Lock, Eye, EyeOff } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import UrlTable from '../components/UrlTable';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +20,7 @@ const mapDtoToEntry = (d: UrlDto): UrlEntry => ({
   updatedAt: d.updatedAt,
   expiresAt: d.expiresAt,
   isActive: d.isActive ?? true,
+  hasPassword: d.hasPassword,
 });
 
 /**
@@ -44,6 +45,8 @@ const DashboardPage: React.FC = () => {
   // Inline Shorten Form states
   const [longUrl, setLongUrl] = useState('');
   const [customAlias, setCustomAlias] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [expiresAt, setExpiresAt] = useState<string>('');
   const [expirationPreset, setExpirationPreset] = useState<string>('none');
   const [shortenLoading, setShortenLoading] = useState(false);
@@ -87,6 +90,7 @@ const DashboardPage: React.FC = () => {
             longUrl: updatedDto.longUrl,
             accessed_times: freshClicks,
             updatedAt: updatedDto.updatedAt,
+            hasPassword: updatedDto.hasPassword,
           };
         } catch (err: any) {
           if (err.response?.status === 404) {
@@ -210,6 +214,7 @@ const DashboardPage: React.FC = () => {
       createdAt: newEntry.createdAt,
       expiresAt: newEntry.expiresAt,
       isActive: newEntry.isActive ?? true,
+      hasPassword: newEntry.hasPassword,
     };
     setUrls((prev) => {
       const updatedList = [created, ...prev];
@@ -219,6 +224,7 @@ const DashboardPage: React.FC = () => {
     setCustomAlias(generateRandomHash());
     setExpirationPreset('none');
     setExpiresAt('');
+    setPassword('');
   };
 
   const handleExpirationPresetChange = (preset: string) => {
@@ -247,7 +253,8 @@ const DashboardPage: React.FC = () => {
     try {
       const payload: any = {
         longUrl: longUrl.trim(),
-        customAlias: customAlias.trim() || undefined
+        customAlias: customAlias.trim() || undefined,
+        password: password.trim() || undefined
       };
       
       if (expiresAt) {
@@ -461,6 +468,33 @@ const DashboardPage: React.FC = () => {
                     />
                   </div>
                 )}
+              </div>
+
+              {/* Password Protection UI */}
+              <div className="flex flex-col gap-2 mt-2 animate-fade-in">
+                <div className="flex items-center gap-2 text-sm text-slate-900 dark:text-white font-medium">
+                  <Lock className="w-4 h-4 text-violet-500" />
+                  Password Protection (Optional)
+                </div>
+                <div className="flex items-center max-w-sm relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="input-field text-sm pr-10"
+                    placeholder="Enter a secret password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  Users will need to enter this password to access the link.
+                </p>
               </div>
             </form>
           </div>

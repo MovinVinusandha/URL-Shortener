@@ -32,6 +32,18 @@ public class GlobalExceptionHandler {
         response.sendRedirect(frontendUrl + "/expired");
     }
 
+    @ExceptionHandler(com.url_shortener.url_shortener.urls.PasswordProtectedException.class)
+    public void passwordProtected(com.url_shortener.url_shortener.urls.PasswordProtectedException ex, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        response.sendRedirect(frontendUrl + "/secure/" + ex.getHash());
+    }
+
+    @ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)
+    public ResponseEntity<Map<String, String>> handleBadCredentials(org.springframework.security.authentication.BadCredentialsException ex) {
+        return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).body(
+                Map.of("message", ex.getMessage())
+        );
+    }
+
     @ExceptionHandler(UrlExistInDataBaseException.class)
     public ResponseEntity<Map<String, String >> urlInDb() {
         return ResponseEntity.badRequest().body(

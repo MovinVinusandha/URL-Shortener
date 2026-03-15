@@ -10,7 +10,8 @@ import {
   ChevronUp,
   Link2,
   AlertCircle,
-  Activity
+  Activity,
+  Lock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axiosInstance, { extractBackendError } from '../api/axiosInstance';
@@ -200,6 +201,11 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted }) => {
                         {truncate(entry.shortUrl, 30)}
                         <ExternalLink className="w-3 h-3" />
                       </a>
+                      {entry.hasPassword && (
+                        <div title="Password Protected" className="flex items-center justify-center p-1 bg-violet-100 dark:bg-violet-500/20 rounded-md ml-1 text-violet-600 dark:text-violet-400">
+                          <Lock className="w-3 h-3" />
+                        </div>
+                      )}
                       <button
                         onClick={() => copyToClipboard(entry.shortUrl, originalIndex)}
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-slate-700 dark:hover:text-white"
@@ -294,15 +300,22 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted }) => {
                   <p className="text-slate-700 dark:text-slate-200 text-sm truncate" title={entry.longUrl}>
                     {truncate(entry.longUrl, 45)}
                   </p>
-                  <a
-                    href={entry.shortUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 text-xs font-medium flex items-center gap-1 mt-1 transition-colors"
-                  >
-                    {truncate(entry.shortUrl, 35)}
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+                  <div className="flex items-center gap-2 mt-1">
+                    <a
+                      href={entry.shortUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 text-xs font-medium flex items-center gap-1 transition-colors"
+                    >
+                      {truncate(entry.shortUrl, 35)}
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                    {entry.hasPassword && (
+                      <div title="Password Protected" className="flex items-center justify-center p-0.5 bg-violet-100 dark:bg-violet-500/20 rounded-md text-violet-600 dark:text-violet-400">
+                        <Lock className="w-3 h-3" />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <span className="flex-shrink-0 inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg px-2 py-1 text-xs font-medium text-slate-600 dark:text-slate-200">
                   <BarChart2 className="w-3 h-3 text-violet-500 dark:text-violet-400" />

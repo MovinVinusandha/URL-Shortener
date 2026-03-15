@@ -19,4 +19,5 @@ public class UrlSend {
     private LocalDateTime expiresAt;
     
     private boolean isActive;
+    private boolean hasPassword;
 }

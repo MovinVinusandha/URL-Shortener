@@ -22,4 +22,5 @@ public class UrlDto {
     private LocalDateTime updatedAt;
 
     private boolean isActive;
+    private boolean hasPassword;
 }

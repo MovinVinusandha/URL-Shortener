@@ -54,6 +54,22 @@ public class UrlController {
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
 
+    @PostMapping("/unlock/{hash}")
+    @Operation(summary = "Unlock a password protected short url")
+    public ResponseEntity<UnlockResponse> unlockUrl(
+            @PathVariable String hash,
+            @Valid @RequestBody UnlockRequest unlockRequest,
+            HttpServletRequest request
+    ) {
+        var longUrl = urlService.getUrlForUnlock(hash, unlockRequest.getPassword());
+
+        String userAgent = request.getHeader("User-Agent");
+        String clientIp  = resolveClientIp(request);
+        analyticsService.trackClick(hash, userAgent, clientIp);
+
+        return ResponseEntity.ok(new UnlockResponse(longUrl));
+    }
+
     @GetMapping("/url/{hash}")
     @Operation(summary = "Get details about url")
     public ResponseEntity<UrlDto> getUrl(@PathVariable String hash) {

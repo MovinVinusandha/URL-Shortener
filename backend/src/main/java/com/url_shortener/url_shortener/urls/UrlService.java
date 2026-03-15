@@ -28,6 +28,7 @@ public class UrlService {
     private final UrlRepository urlRepository;
     private final UserRepository userRepository;
     private final ClickEventRepository clickEventRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     public UrlSend generateShortUrl(UrlRequest urlRequest) {
         var authForCheck = SecurityContextHolder.getContext().getAuthentication();
@@ -52,6 +53,14 @@ public class UrlService {
         }
         var url = urlMapper.toEntity(urlRequest);
         url.setShortUrl(shortUrl);
+        
+        if (urlRequest.getPassword() != null && !urlRequest.getPassword().trim().isEmpty()) {
+            var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                throw new AccessDeniedException("You must be logged in to set a password.");
+            }
+            url.setPasswordHash(passwordEncoder.encode(urlRequest.getPassword().trim()));
+        }
 
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null
@@ -101,6 +110,10 @@ public class UrlService {
         var url = isExistsShortUrl(shortUrl);
         log.info("Evaluating URL hash: {}. IsActive: {}, ExpiresAt: {}", url.getShortUrl(), url.isActive(), url.getExpiresAt());
 
+        if (url.getPasswordHash() != null && !url.getPasswordHash().isEmpty()) {
+            throw new PasswordProtectedException(shortUrl);
+        }
+
         String cacheKey = "urls::" + shortUrl;
         String cachedUrl = redisTemplate.opsForValue().get(cacheKey);
         if (cachedUrl != null) {
@@ -119,6 +132,20 @@ public class UrlService {
         }
 
         return longUrl;
+    }
+
+    public String getUrlForUnlock(String shortUrl, String password) {
+        var url = isExistsShortUrl(shortUrl);
+        
+        if (url.getPasswordHash() == null || url.getPasswordHash().isEmpty()) {
+            throw new IllegalArgumentException("URL is not password protected.");
+        }
+        
+        if (!passwordEncoder.matches(password, url.getPasswordHash())) {
+            throw new org.springframework.security.authentication.BadCredentialsException("Incorrect password");
+        }
+        
+        return url.getLongUrl();
     }
 
     public UrlDto getUrl(String shortUrl) {
@@ -169,7 +196,8 @@ public class UrlService {
                 BigInteger.valueOf(clicks),
                 dto.getCreatedAt(),
                 dto.getUpdatedAt(),
-                url.isActive()
+                url.isActive(),
+                url.getPasswordHash() != null && !url.getPasswordHash().isEmpty()
         );
     }
 

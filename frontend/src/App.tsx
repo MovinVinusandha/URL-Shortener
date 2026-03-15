@@ -8,6 +8,7 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import ExpiredPage from './pages/ExpiredPage';
+import SecurePage from './pages/SecurePage';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/expired" element={<ExpiredPage />} />
+            <Route path="/secure/:hash" element={<SecurePage />} />
 
             {/* ── Protected Routes ──────────────────────────────── */}
             <Route element={<ProtectedRoute />}>
