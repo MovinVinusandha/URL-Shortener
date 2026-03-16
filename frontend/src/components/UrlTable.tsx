@@ -18,6 +18,7 @@ import { Link } from 'react-router-dom';
 import axiosInstance, { extractBackendError } from '../api/axiosInstance';
 import EditModal from './EditModal';
 import type { UrlEntry } from '../types';
+import { getTagColorClasses } from '../utils/tagColors';
 
 interface Props {
   urls: UrlEntry[];
@@ -191,15 +192,17 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted, onOpenQr }) => 
                     </p>
                     {entry.tags && entry.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1.5">
-                        {entry.tags.map(tag => (
-                          <span
-                            key={tag.id}
-                            className="bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-700 text-[10px] px-2 py-0.5 rounded-full inline-flex items-center leading-tight"
-                            style={tag.color ? { borderColor: tag.color, color: tag.color } : {}}
-                          >
-                            {tag.name}
-                          </span>
-                        ))}
+                        {entry.tags.map(tag => {
+                          const colors = getTagColorClasses(tag.color);
+                          return (
+                            <span
+                              key={tag.id}
+                              className={`text-[10px] px-2 py-0.5 rounded-full inline-flex items-center leading-tight border ${colors.bg} ${colors.text} ${colors.border}`}
+                            >
+                              {tag.name}
+                            </span>
+                          );
+                        })}
                       </div>
                     )}
                   </td>

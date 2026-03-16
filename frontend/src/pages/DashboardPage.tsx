@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link2, Sparkles, AlertCircle, Clock, Lock, Eye, EyeOff, X, Tag as TagIcon } from 'lucide-react';
+import { Link2, Sparkles, AlertCircle, Clock, Lock, Eye, EyeOff, X, Tag as TagIcon, Trash2, ChevronDown, Check } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import UrlTable from '../components/UrlTable';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 import type { UrlEntry, UrlDto, UrlSend, Tag } from '../types';
+import { TAG_COLORS, getTagColorClasses } from '../utils/tagColors';
 
 /** Helper to extract hash from short URL */
 const extractHash = (shortUrl: string): string =>
@@ -62,8 +63,8 @@ const DashboardPage: React.FC = () => {
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [activeFilterTagId, setActiveFilterTagId] = useState<number | null>(null);
   
-  const [newTagName, setNewTagName] = useState('');
-  const [newTagColor, setNewTagColor] = useState('#6366f1');
+  const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
+  const [tagSearchQuery, setTagSearchQuery] = useState('');
   const [isCreatingTag, setIsCreatingTag] = useState(false);
 
   const urlsRef = useRef(urls);
@@ -306,17 +307,35 @@ const DashboardPage: React.FC = () => {
   };
 
   const handleCreateTag = async () => {
-    if (!newTagName.trim()) return;
+    const name = tagSearchQuery.trim();
+    if (!name) return;
     setIsCreatingTag(true);
     try {
-      const { data } = await axiosInstance.post<Tag>('/tags', { name: newTagName, color: newTagColor });
+      const randomColor = TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
+      const { data } = await axiosInstance.post<Tag>('/tags', { name, color: randomColor.name });
       setTags([...tags, data]);
       setSelectedTagIds([...selectedTagIds, data.id]);
-      setNewTagName('');
-    } catch (err) {
-      console.error("Failed to create tag", err);
+      setTagSearchQuery('');
+    } catch (err: any) {
+      if (err.response?.status === 409) {
+        setShortenError("A tag with this name already exists.");
+      } else {
+        console.error("Failed to create tag", err);
+      }
     } finally {
       setIsCreatingTag(false);
+    }
+  };
+
+  const handleDeleteTag = async (tagId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await axiosInstance.delete(`/tags/${tagId}`);
+      setTags(tags.filter(t => t.id !== tagId));
+      setSelectedTagIds(selectedTagIds.filter(id => id !== tagId));
+      if (activeFilterTagId === tagId) setActiveFilterTagId(null);
+    } catch (err) {
+      console.error("Failed to delete tag", err);
     }
   };
 
@@ -418,7 +437,7 @@ const DashboardPage: React.FC = () => {
 
         {/* ── Shorten form ─────────────────────────────────── */}
         {user?.role !== 'ROOT' && user?.role !== 'ROLE_ROOT' && (
-          <div className="card p-6 animate-slide-up">
+          <div className="card p-6 animate-slide-up relative z-40 overflow-visible">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-9 h-9 rounded-xl bg-violet-100 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-violet-600 dark:text-violet-400" />
@@ -567,50 +586,113 @@ const DashboardPage: React.FC = () => {
               </div>
 
               {/* Tags UI */}
-              <div className="flex flex-col gap-2 mt-2 animate-fade-in">
+              <div className="flex flex-col gap-2 mt-2 animate-fade-in relative z-50">
                 <div className="flex items-center gap-2 text-sm text-slate-900 dark:text-white font-medium">
                   <TagIcon className="w-4 h-4 text-violet-500" />
                   Tags (Optional)
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {tags.map(tag => (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      onClick={() => setSelectedTagIds(prev => prev.includes(tag.id) ? prev.filter(id => id !== tag.id) : [...prev, tag.id])}
-                      className={`px-3 py-1 text-xs font-medium rounded-full transition-all border ${
-                        selectedTagIds.includes(tag.id)
-                          ? 'border-violet-500 bg-violet-50 dark:bg-violet-500/10'
-                          : 'border-slate-200 bg-transparent hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600 text-slate-600 dark:text-slate-300'
-                      }`}
-                      style={selectedTagIds.includes(tag.id) && tag.color ? { borderColor: tag.color, color: selectedTagIds.includes(tag.id) ? tag.color : 'inherit' } : {}}
-                    >
-                      {tag.name}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <input
-                    type="text"
-                    value={newTagName}
-                    onChange={e => setNewTagName(e.target.value)}
-                    placeholder="New tag name"
-                    className="input-field text-sm w-32 px-2 py-1 h-8"
-                  />
-                  <input
-                    type="color"
-                    value={newTagColor}
-                    onChange={e => setNewTagColor(e.target.value)}
-                    className="w-8 h-8 p-0 border-0 rounded cursor-pointer shrink-0"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCreateTag}
-                    disabled={isCreatingTag || !newTagName.trim()}
-                    className="text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-md transition-colors disabled:opacity-50 shrink-0"
+                
+                {/* Combobox Wrapper */}
+                <div className="relative w-full max-w-sm">
+                  {/* Combobox Trigger */}
+                  <div 
+                    onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
+                    className="input-field min-h-[42px] py-1.5 flex flex-wrap items-center gap-1.5 cursor-pointer pr-8"
                   >
-                    + Add Tag
-                  </button>
+                    {selectedTagIds.length === 0 ? (
+                      <span className="text-slate-400 dark:text-slate-500 text-sm ml-1 py-1">Select tags...</span>
+                    ) : (
+                      selectedTagIds.map(id => {
+                        const tag = tags.find(t => t.id === id);
+                        if (!tag) return null;
+                        const colors = getTagColorClasses(tag.color);
+                        return (
+                          <span
+                            key={tag.id}
+                            className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${colors.bg} ${colors.text} ${colors.border}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTagIds(prev => prev.filter(tId => tId !== tag.id));
+                            }}
+                          >
+                            {tag.name}
+                            <X className="w-3 h-3 hover:opacity-70" />
+                          </span>
+                        );
+                      })
+                    )}
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                  </div>
+
+                  {/* Combobox Dropdown */}
+                  {isTagDropdownOpen && (
+                    <div className="absolute top-full left-0 w-full mt-1 z-[60] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 shadow-2xl rounded-md max-h-60 overflow-y-auto animate-fade-in">
+                      <div className="p-2 border-b border-slate-100 dark:border-slate-800">
+                      <input
+                        type="text"
+                        value={tagSearchQuery}
+                        onChange={(e) => setTagSearchQuery(e.target.value)}
+                        placeholder="Search or create tag..."
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-sm px-3 py-2 rounded-lg outline-none text-slate-900 dark:text-white"
+                        autoFocus
+                      />
+                    </div>
+                    
+                    <div className="max-h-60 overflow-y-auto p-1">
+                      {tagSearchQuery.trim() && !tags.some(t => t.name.toLowerCase() === tagSearchQuery.trim().toLowerCase()) && (
+                        <button
+                          type="button"
+                          onClick={handleCreateTag}
+                          disabled={isCreatingTag}
+                          className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg flex items-center gap-2"
+                        >
+                          {isCreatingTag ? (
+                            <span className="w-4 h-4 border-2 border-slate-300 border-t-violet-500 rounded-full animate-spin" />
+                          ) : (
+                            <TagIcon className="w-4 h-4 text-slate-400" />
+                          )}
+                          <span>Create <span className="font-semibold">"{tagSearchQuery}"</span></span>
+                        </button>
+                      )}
+
+                      {tags.filter(t => t.name.toLowerCase().includes(tagSearchQuery.toLowerCase())).map(tag => {
+                        const colors = getTagColorClasses(tag.color);
+                        const isSelected = selectedTagIds.includes(tag.id);
+                        return (
+                          <div
+                            key={tag.id}
+                            className="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group cursor-pointer"
+                            onClick={() => {
+                              setSelectedTagIds(prev => 
+                                isSelected ? prev.filter(id => id !== tag.id) : [...prev, tag.id]
+                              );
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-violet-500 border-violet-500' : 'border-slate-300 dark:border-slate-600'}`}>
+                                {isSelected && <Check className="w-3 h-3 text-white" />}
+                              </div>
+                              <span className={`text-[11px] px-2 py-0.5 rounded-full border ${colors.bg} ${colors.text} ${colors.border}`}>
+                                {tag.name}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteTag(tag.id, e)}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-all"
+                              title="Delete Tag"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                      {tags.length === 0 && !tagSearchQuery.trim() && (
+                        <p className="text-center text-xs text-slate-500 py-3">No tags found. Type to create one.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 </div>
               </div>
             </form>
@@ -650,17 +732,19 @@ const DashboardPage: React.FC = () => {
 
         {/* ── URL Table ────────────────────────────────────── */}
         {loadingAll ? (
-          <div className="card p-12 flex flex-col items-center justify-center animate-slide-up">
+          <div className="card p-12 flex flex-col items-center justify-center animate-slide-up relative z-10">
             <div className="w-10 h-10 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mb-3" />
             <p className="text-slate-400 dark:text-slate-400 text-sm">Loading your links…</p>
           </div>
         ) : (
-          <UrlTable
-            urls={activeFilterTagId ? urls.filter(u => u.tags?.some(t => t.id === activeFilterTagId)) : urls}
-            onUpdated={handleUpdated}
-            onDeleted={handleDeleted}
-            onOpenQr={handleOpenQr}
-          />
+          <div className="relative z-10">
+            <UrlTable
+              urls={activeFilterTagId ? urls.filter(u => u.tags?.some(t => t.id === activeFilterTagId)) : urls}
+              onUpdated={handleUpdated}
+              onDeleted={handleDeleted}
+              onOpenQr={handleOpenQr}
+            />
+          </div>
         )}
       </main>
 
