@@ -6,6 +6,7 @@ import lombok.Getter;
 
 import java.math.BigInteger;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @AllArgsConstructor
 @Getter
@@ -23,4 +24,5 @@ public class UrlDto {
 
     private boolean isActive;
     private boolean hasPassword;
+    private List<TagDto> tags;
 }

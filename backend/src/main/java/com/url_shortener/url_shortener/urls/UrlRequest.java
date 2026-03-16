@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.List;
+
 @AllArgsConstructor
 @Getter
 public class UrlRequest {
@@ -16,4 +18,6 @@ public class UrlRequest {
     private java.time.LocalDateTime expiresAt;
     
     private String password;
+    
+    private List<Long> tagIds;
 }

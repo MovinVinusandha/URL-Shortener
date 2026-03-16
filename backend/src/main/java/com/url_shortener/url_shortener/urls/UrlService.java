@@ -2,6 +2,7 @@ package com.url_shortener.url_shortener.urls;
 
 import com.url_shortener.url_shortener.analytics.ClickEventRepository;
 import com.url_shortener.url_shortener.statistics.Statistic;
+import com.url_shortener.url_shortener.users.User;
 import com.url_shortener.url_shortener.users.UserNotFoundException;
 import com.url_shortener.url_shortener.users.UserRepository;
 import lombok.AllArgsConstructor;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigInteger;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -29,6 +31,7 @@ public class UrlService {
     private final UserRepository userRepository;
     private final ClickEventRepository clickEventRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final TagRepository tagRepository;
 
     public UrlSend generateShortUrl(UrlRequest urlRequest) {
         var authForCheck = SecurityContextHolder.getContext().getAuthentication();
@@ -74,6 +77,24 @@ public class UrlService {
             }
             url.setUser(user);
         }
+
+        if (urlRequest.getTagIds() != null && !urlRequest.getTagIds().isEmpty()) {
+            if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+                throw new AccessDeniedException("You must be logged in to assign tags.");
+            }
+            Long userId = (Long) authentication.getPrincipal();
+            User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+            
+            List<Tag> requestedTags = tagRepository.findAllById(urlRequest.getTagIds());
+            for (Tag t : requestedTags) {
+                if (!t.getUser().getId().equals(userId)) {
+                    throw new AccessDeniedException("You cannot assign a tag you do not own.");
+                }
+            }
+            url.setTags(new HashSet<>(requestedTags));
+        }
+
+        var savedUrl = urlRepository.save(url);
 
         var stat = Statistic.builder()
                 .accessedTimes(0L)
@@ -197,7 +218,8 @@ public class UrlService {
                 dto.getCreatedAt(),
                 dto.getUpdatedAt(),
                 url.isActive(),
-                url.getPasswordHash() != null && !url.getPasswordHash().isEmpty()
+                url.getPasswordHash() != null && !url.getPasswordHash().isEmpty(),
+                dto.getTags()
         );
     }
 
