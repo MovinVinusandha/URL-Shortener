@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link2, Sparkles, AlertCircle, Clock, Lock, Eye, EyeOff } from 'lucide-react';
+import { Link2, Sparkles, AlertCircle, Clock, Lock, Eye, EyeOff, X } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import UrlTable from '../components/UrlTable';
 import { useAuth } from '../context/AuthContext';
@@ -51,6 +51,11 @@ const DashboardPage: React.FC = () => {
   const [expirationPreset, setExpirationPreset] = useState<string>('none');
   const [shortenLoading, setShortenLoading] = useState(false);
   const [shortenError, setShortenError] = useState('');
+
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
+  const [isQrLoading, setIsQrLoading] = useState(false);
+  const [activeQrHash, setActiveQrHash] = useState<string | null>(null);
 
   const urlsRef = useRef(urls);
 
@@ -273,6 +278,30 @@ const DashboardPage: React.FC = () => {
     } finally {
       setShortenLoading(false);
     }
+  };
+
+  const handleOpenQr = async (hash: string) => {
+    setIsQrModalOpen(true);
+    setIsQrLoading(true);
+    setActiveQrHash(hash);
+    try {
+      const response = await axiosInstance.get(`/url/${hash}/qr`, { responseType: 'blob' });
+      const imageUrl = URL.createObjectURL(response.data);
+      setQrImageUrl(imageUrl);
+    } catch (err) {
+      console.error("Failed to load QR code", err);
+    } finally {
+      setIsQrLoading(false);
+    }
+  };
+
+  const closeQrModal = () => {
+    setIsQrModalOpen(false);
+    if (qrImageUrl) {
+      URL.revokeObjectURL(qrImageUrl);
+    }
+    setQrImageUrl(null);
+    setActiveQrHash(null);
   };
 
   /** Called when EditModal saves an update */
@@ -511,9 +540,52 @@ const DashboardPage: React.FC = () => {
             urls={urls}
             onUpdated={handleUpdated}
             onDeleted={handleDeleted}
+            onOpenQr={handleOpenQr}
           />
         )}
       </main>
+
+      {/* ── QR Code Modal ────────────────────────────────── */}
+      {isQrModalOpen && (
+        <div className="bg-black/50 fixed inset-0 z-50 flex items-center justify-center animate-fade-in px-4">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-80 text-center relative animate-slide-up">
+            <button
+              onClick={closeQrModal}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">QR Code</h3>
+            
+            {isQrLoading ? (
+              <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                <span className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+                <p className="text-slate-500 dark:text-slate-400 text-sm">Generating QR...</p>
+              </div>
+            ) : qrImageUrl ? (
+              <div className="flex flex-col items-center">
+                <img src={qrImageUrl} alt="QR Code" className="mx-auto rounded-lg mb-4 border border-gray-200 dark:border-slate-700 w-48 h-48 bg-white" />
+                <a
+                  href={qrImageUrl}
+                  download={`qr-${activeQrHash}.png`}
+                  className="bg-black text-white dark:bg-white dark:text-black font-medium w-full rounded-md py-2 text-sm transition-transform hover:scale-[1.02]"
+                >
+                  Download PNG
+                </a>
+              </div>
+            ) : (
+              <div className="py-8 text-sm text-red-500">Failed to generate QR code.</div>
+            )}
+            
+            <button
+              onClick={closeQrModal}
+              className="mt-4 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white text-sm font-medium transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

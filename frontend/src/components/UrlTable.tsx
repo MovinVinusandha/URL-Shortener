@@ -11,7 +11,8 @@ import {
   Link2,
   AlertCircle,
   Activity,
-  Lock
+  Lock,
+  QrCode
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axiosInstance, { extractBackendError } from '../api/axiosInstance';
@@ -22,6 +23,7 @@ interface Props {
   urls: UrlEntry[];
   onUpdated: (index: number, entry: UrlEntry) => void;
   onDeleted: (index: number) => void;
+  onOpenQr?: (hash: string) => void;
 }
 
 const extractHash = (shortUrl: string): string =>
@@ -64,7 +66,7 @@ const formatExpiration = (expiresAt: string | null | undefined, isActive: boolea
   return <span className="text-violet-600 bg-violet-100 dark:text-violet-300 dark:bg-violet-500/20 px-2 py-1 rounded-md text-xs font-medium">{timeStr}</span>;
 };
 
-const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted }) => {
+const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted, onOpenQr }) => {
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -234,6 +236,14 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted }) => {
                   {/* Actions */}
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => onOpenQr && onOpenQr(extractHash(entry.shortUrl))}
+                        className="p-2 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                        title="View QR Code"
+                      >
+                        <QrCode className="w-4 h-4" />
+                      </button>
+
                       <Link
                         to={`/analytics/${extractHash(entry.shortUrl)}`}
                         className="p-2 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
@@ -334,6 +344,13 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted }) => {
                     {copied === originalIndex
                       ? <Check className="w-4 h-4 text-emerald-500" />
                       : <Copy className="w-4 h-4" />}
+                  </button>
+                  <button
+                    onClick={() => onOpenQr && onOpenQr(extractHash(entry.shortUrl))}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                    title="View QR Code"
+                  >
+                    <QrCode className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setEditIndex(originalIndex)}
