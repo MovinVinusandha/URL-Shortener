@@ -23,7 +23,8 @@ interface Props {
   urls: UrlEntry[];
   onDeleted: (index: number) => void;
   onOpenQr?: (hash: string) => void;
-  onEdit: (index: number) => void;
+  onEdit?: (index: number) => void;
+  headerRightNode?: React.ReactNode;
 }
 
 const extractHash = (shortUrl: string): string =>
@@ -66,7 +67,10 @@ const formatExpiration = (expiresAt: string | null | undefined, isActive: boolea
   return <span className="text-violet-600 bg-violet-100 dark:text-violet-300 dark:bg-violet-500/20 px-2 py-1 rounded-md text-xs font-medium">{timeStr}</span>;
 };
 
-const UrlTable: React.FC<Props> = ({ urls, onDeleted, onOpenQr, onEdit }) => {
+const UrlTable: React.FC<Props> = ({ urls, onDeleted,  onOpenQr,
+  onEdit,
+  headerRightNode,
+}) => {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
@@ -128,16 +132,19 @@ const UrlTable: React.FC<Props> = ({ urls, onDeleted, onOpenQr, onEdit }) => {
             {urls.length}
           </span>
         </div>
-        <button
-          onClick={() => setSortAsc(!sortAsc)}
-          className="flex items-center gap-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white text-xs font-medium transition-colors"
-          title="Toggle sort order"
-        >
-          Date
-          {sortAsc
-            ? <ChevronUp className="w-3.5 h-3.5" />
-            : <ChevronDown className="w-3.5 h-3.5" />}
-        </button>
+        <div className="flex items-center gap-4">
+          {headerRightNode}
+          <button
+            onClick={() => setSortAsc(!sortAsc)}
+            className="flex items-center gap-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white text-xs font-medium transition-colors"
+            title="Toggle sort order"
+          >
+            Date
+            {sortAsc
+              ? <ChevronUp className="w-3.5 h-3.5" />
+              : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+        </div>
       </div>
 
       {deleteError && (
@@ -256,7 +263,7 @@ const UrlTable: React.FC<Props> = ({ urls, onDeleted, onOpenQr, onEdit }) => {
 
                       <button
                         id={`edit-btn-${originalIndex}`}
-                        onClick={() => { onEdit(originalIndex); setDeleteConfirm(null); }}
+                        onClick={() => { if (onEdit) onEdit(originalIndex); setDeleteConfirm(null); }}
                         className="p-2 rounded-lg text-slate-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-all"
                         title="Edit URL"
                       >
@@ -355,7 +362,7 @@ const UrlTable: React.FC<Props> = ({ urls, onDeleted, onOpenQr, onEdit }) => {
                     <QrCode className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => onEdit(originalIndex)}
+                    onClick={() => { if (onEdit) onEdit(originalIndex); }}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-all"
                   >
                     <Pencil className="w-4 h-4" />

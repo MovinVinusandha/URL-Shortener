@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link2, Sparkles, AlertCircle, Clock, Lock, Eye, EyeOff, X, Tag as TagIcon, Trash2, ChevronDown, Check } from 'lucide-react';
+import { Link2, Sparkles, AlertCircle, Clock, Lock, Eye, EyeOff, X, Tag as TagIcon, Trash2, ChevronDown, Check, Folder as FolderIcon, Plus, Layers } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import UrlTable from '../components/UrlTable';
 import EditModal from '../components/EditModal';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
-import type { UrlEntry, UrlDto, UrlSend, Tag } from '../types';
+import type { UrlEntry, UrlDto, UrlSend, Tag, Folder } from '../types';
 import { TAG_COLORS, getTagColorClasses } from '../utils/tagColors';
 
 /** Helper to extract hash from short URL */
@@ -24,6 +24,8 @@ const mapDtoToEntry = (d: UrlDto): UrlEntry => ({
   isActive: d.isActive ?? true,
   hasPassword: d.hasPassword,
   tags: d.tags,
+  folderId: d.folderId,
+  folderName: d.folderName,
 });
 
 /**
@@ -70,6 +72,13 @@ const DashboardPage: React.FC = () => {
   const [tagSearchQuery, setTagSearchQuery] = useState('');
   const [isCreatingTag, setIsCreatingTag] = useState(false);
 
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [activeFolderId, setActiveFolderId] = useState<number | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<number | ''>('');
+  const [newFolderName, setNewFolderName] = useState('');
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [isFolderDropdownOpen, setIsFolderDropdownOpen] = useState(false);
+
   const urlsRef = useRef(urls);
 
   urlsRef.current = urls;
@@ -110,6 +119,8 @@ const DashboardPage: React.FC = () => {
             updatedAt: updatedDto.updatedAt,
             hasPassword: updatedDto.hasPassword,
             tags: updatedDto.tags,
+            folderId: updatedDto.folderId,
+            folderName: updatedDto.folderName,
           };
         } catch (err: any) {
           if (err.response?.status === 404) {
@@ -198,8 +209,22 @@ const DashboardPage: React.FC = () => {
       }
     };
 
+    const loadFolders = async () => {
+      try {
+        const { data } = await axiosInstance.get<Folder[]>('/folders');
+        if (isMounted) {
+          setFolders(data);
+        }
+      } catch (err) {
+        // Ignore gracefully
+      }
+    };
+
+    if (user && user.role !== 'ROOT' && user.role !== 'ROLE_ROOT') {
+      loadTags();
+      loadFolders();
+    }
     loadDashboardData();
-    loadTags();
 
     return () => {
       isMounted = false;
@@ -247,6 +272,8 @@ const DashboardPage: React.FC = () => {
       isActive: newEntry.isActive ?? true,
       hasPassword: newEntry.hasPassword,
       tags: newEntry.tags,
+      folderId: newEntry.folderId,
+      folderName: newEntry.folderName,
     };
     setUrls((prev) => {
       const updatedList = [created, ...prev];
@@ -254,10 +281,12 @@ const DashboardPage: React.FC = () => {
       return updatedList;
     });
     setCustomAlias(generateRandomHash());
-    setExpirationPreset('none');
-    setExpiresAt('');
     setPassword('');
+    setExpiresAt('');
+    setExpirationPreset('none');
     setSelectedTagIds([]);
+    setSelectedFolderId('');
+    setLongUrl('');
   };
 
   const handleExpirationPresetChange = (preset: string) => {
@@ -288,7 +317,8 @@ const DashboardPage: React.FC = () => {
         longUrl: longUrl.trim(),
         customAlias: customAlias.trim() || undefined,
         password: password.trim() || undefined,
-        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined
+        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
+        folderId: selectedFolderId !== '' ? selectedFolderId : undefined
       };
       
       if (expiresAt) {
@@ -384,8 +414,13 @@ const DashboardPage: React.FC = () => {
     });
   };
 
-  const totalClicks = urls.reduce((acc, u) => acc + (u.accessed_times ?? 0), 0);
-  const topClicks = urls.length ? Math.max(...urls.map((u) => u.accessed_times ?? 0)) : 0;
+  const displayedUrls = urls.filter(u => 
+    (activeFolderId === null || u.folderId === activeFolderId) &&
+    (activeFilterTagId === null || u.tags?.some(t => t.id === activeFilterTagId))
+  );
+
+  const totalClicks = displayedUrls.reduce((acc, u) => acc + (u.accessed_times ?? 0), 0);
+  const topClicks = displayedUrls.length ? Math.max(...displayedUrls.map((u) => u.accessed_times ?? 0)) : 0;
 
   return (
     <div className="page-bg">
@@ -397,7 +432,7 @@ const DashboardPage: React.FC = () => {
         <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-indigo-500/5 dark:bg-indigo-900/10 rounded-full blur-3xl" />
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* ── Greeting ─────────────────────────────────────── */}
         <div className="animate-slide-up">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
@@ -421,7 +456,7 @@ const DashboardPage: React.FC = () => {
               <p className="text-slate-400 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">
                 Total Links
               </p>
-              <p className="text-4xl font-bold text-slate-900 dark:text-white mt-1">{urls.length}</p>
+              <p className="text-4xl font-bold text-slate-900 dark:text-white mt-1">{displayedUrls.length}</p>
             </div>
             <div className="card p-5">
               <p className="text-slate-400 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">
@@ -588,6 +623,27 @@ const DashboardPage: React.FC = () => {
                 </p>
               </div>
 
+              {/* Folder UI */}
+              <div className="flex flex-col gap-2 mt-2 animate-fade-in relative z-40">
+                <div className="flex items-center gap-2 text-sm text-slate-900 dark:text-white font-medium">
+                  <FolderIcon className="w-4 h-4 text-violet-500" />
+                  Folder (Optional)
+                </div>
+                <div className="relative w-full max-w-sm">
+                  <select
+                    value={selectedFolderId}
+                    onChange={(e) => setSelectedFolderId(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="input-field text-sm appearance-none pr-8 cursor-pointer"
+                  >
+                    <option value="">No Folder</option>
+                    {folders.map(f => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
+              </div>
+
               {/* Tags UI */}
               <div className="flex flex-col gap-2 mt-2 animate-fade-in relative z-50">
                 <div className="flex items-center gap-2 text-sm text-slate-900 dark:text-white font-medium">
@@ -742,18 +798,117 @@ const DashboardPage: React.FC = () => {
         ) : (
           <div className="relative z-10">
             <UrlTable
-              urls={activeFilterTagId ? urls.filter(u => u.tags?.some(t => t.id === activeFilterTagId)) : urls}
+              urls={displayedUrls}
               onDeleted={handleDeleted}
               onOpenQr={handleOpenQr}
               onEdit={(idx) => {
-                // Find actual index in `urls` array if filtered
-                if (activeFilterTagId) {
-                  const actualUrl = urls.filter(u => u.tags?.some(t => t.id === activeFilterTagId))[idx];
-                  setEditIndex(urls.indexOf(actualUrl));
-                } else {
-                  setEditIndex(idx);
-                }
+                setEditIndex(urls.indexOf(displayedUrls[idx]));
               }}
+              headerRightNode={
+                <div className="relative z-50 flex items-center">
+                  <button
+                    onClick={() => setIsFolderDropdownOpen(!isFolderDropdownOpen)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 dark:text-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition-colors border border-slate-200 dark:border-slate-700"
+                  >
+                    <FolderIcon className="w-3.5 h-3.5 text-violet-500" />
+                    Folder: {activeFolderId ? folders.find(f => f.id === activeFolderId)?.name || 'Unknown' : 'All Links'}
+                    <ChevronDown className="w-3.5 h-3.5 ml-1 text-slate-400" />
+                  </button>
+
+                  {isFolderDropdownOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden animate-fade-in z-[100]">
+                      <div className="p-1">
+                        <button
+                          onClick={() => { setActiveFolderId(null); setIsFolderDropdownOpen(false); }}
+                          className={`w-full text-left px-3 py-2 text-sm rounded-lg flex items-center gap-2 transition-colors ${
+                            activeFolderId === null ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 font-medium' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <Layers className="w-4 h-4 text-slate-400" />
+                          All Links
+                        </button>
+                      </div>
+                      <div className="p-1 border-t border-slate-100 dark:border-slate-800 max-h-48 overflow-y-auto scrollbar-hide">
+                        {folders.map(folder => (
+                          <div key={folder.id} className="relative group">
+                            <button
+                              onClick={() => { setActiveFolderId(folder.id); setIsFolderDropdownOpen(false); }}
+                              className={`w-full text-left px-3 py-2 text-sm rounded-lg flex items-center gap-2 transition-colors ${
+                                activeFolderId === folder.id ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 font-medium' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                              }`}
+                            >
+                              <FolderIcon className="w-4 h-4 text-slate-400" />
+                              <span className="truncate pr-6">{folder.name}</span>
+                            </button>
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (confirm(`Are you sure you want to delete folder "${folder.name}"? Your links will not be deleted.`)) {
+                                  try {
+                                    await axiosInstance.delete(`/folders/${folder.id}`);
+                                    setFolders(folders.filter(f => f.id !== folder.id));
+                                    if (activeFolderId === folder.id) setActiveFolderId(null);
+                                  } catch (err) {
+                                    console.error("Failed to delete folder", err);
+                                  }
+                                }
+                              }}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Delete Folder"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                        {isCreatingFolder ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              autoFocus
+                              value={newFolderName}
+                              onChange={(e) => setNewFolderName(e.target.value)}
+                              onKeyDown={async (e) => {
+                                if (e.key === 'Enter') {
+                                  if (!newFolderName.trim()) return;
+                                  try {
+                                    const { data } = await axiosInstance.post<Folder>('/folders', { name: newFolderName.trim() });
+                                    setFolders([...folders, data]);
+                                    setNewFolderName('');
+                                    setIsCreatingFolder(false);
+                                  } catch(err) {
+                                    console.error("Failed to create folder", err);
+                                  }
+                                } else if (e.key === 'Escape') {
+                                  setIsCreatingFolder(false);
+                                  setNewFolderName('');
+                                }
+                              }}
+                              className="flex-1 min-w-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md py-1.5 px-2 text-xs focus:outline-none focus:border-violet-500"
+                              placeholder="Folder name..."
+                            />
+                            <button
+                              onClick={() => { setIsCreatingFolder(false); setNewFolderName(''); }}
+                              className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setIsCreatingFolder(true)}
+                            className="w-full text-left px-2 py-1.5 text-xs text-slate-500 hover:text-violet-600 dark:text-slate-400 dark:hover:text-violet-400 font-medium flex items-center gap-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Create new folder
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              }
             />
           </div>
         )}

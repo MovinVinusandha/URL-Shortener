@@ -23,6 +23,13 @@ export interface User {
   createdAt: string;
 }
 
+// ─── Folders ──────────────────────────────────────────────────────────────────
+
+export interface Folder {
+  id: number;
+  name: string;
+}
+
 // ─── Tags ─────────────────────────────────────────────────────────────────────
 
 export interface Tag {
@@ -42,6 +49,8 @@ export interface UrlSend {
   isActive?: boolean;
   hasPassword?: boolean;
   tags?: Tag[];
+  folderId?: number | null;
+  folderName?: string | null;
 }
 
 /** Returned by GET /url/{hash} and GET /url/all */
@@ -56,6 +65,8 @@ export interface UrlDto {
   isActive?: boolean;
   hasPassword?: boolean;
   tags?: Tag[];
+  folderId?: number | null;
+  folderName?: string | null;
 }
 
 /** Returned by PUT /url/{hash} */
@@ -77,4 +88,6 @@ export interface UrlEntry {
   isActive?: boolean;
   hasPassword?: boolean;
   tags?: Tag[];
+  folderId?: number | null;
+  folderName?: string | null;
 }
