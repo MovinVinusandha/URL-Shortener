@@ -27,4 +27,11 @@ public class TagController {
     public ResponseEntity<TagDto> createTag(@RequestBody @Valid TagRequest request) {
         return new ResponseEntity<>(tagService.createTag(request), HttpStatus.CREATED);
     }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete a tag by ID")
+    public ResponseEntity<Void> deleteTag(@PathVariable Long id) {
+        tagService.deleteTag(id);
+        return ResponseEntity.noContent().build();
+    }
 }

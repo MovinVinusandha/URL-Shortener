@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -42,6 +43,10 @@ public class TagService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        if (tagRepository.existsByNameIgnoreCaseAndUserId(request.getName().trim(), userId)) {
+            throw new TagAlreadyExistsException("A tag with this name already exists.");
+        }
+
         Tag tag = Tag.builder()
                 .name(request.getName().trim())
                 .color(request.getColor() != null ? request.getColor().trim() : null)
@@ -50,5 +55,24 @@ public class TagService {
 
         Tag savedTag = tagRepository.save(tag);
         return new TagDto(savedTag.getId(), savedTag.getName(), savedTag.getColor());
+    }
+
+    @Transactional
+    public void deleteTag(Long id) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            throw new AccessDeniedException("You must be logged in to delete tags.");
+        }
+
+        Long userId = (Long) authentication.getPrincipal();
+        Tag tag = tagRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Tag not found"));
+
+        if (!tag.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("You cannot delete a tag you do not own.");
+        }
+
+        tagRepository.deleteTagAssociations(id);
+        tagRepository.deleteById(id);
     }
 }
