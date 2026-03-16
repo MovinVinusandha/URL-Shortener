@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link2, Sparkles, AlertCircle, Clock, Lock, Eye, EyeOff, X, Tag as TagIcon, Trash2, ChevronDown, Check } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import UrlTable from '../components/UrlTable';
+import EditModal from '../components/EditModal';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 import type { UrlEntry, UrlDto, UrlSend, Tag } from '../types';
@@ -44,6 +45,8 @@ const DashboardPage: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loadingAll, setLoadingAll] = useState(true);
   
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+
   // Inline Shorten Form states
   const [longUrl, setLongUrl] = useState('');
   const [customAlias, setCustomAlias] = useState('');
@@ -740,9 +743,17 @@ const DashboardPage: React.FC = () => {
           <div className="relative z-10">
             <UrlTable
               urls={activeFilterTagId ? urls.filter(u => u.tags?.some(t => t.id === activeFilterTagId)) : urls}
-              onUpdated={handleUpdated}
               onDeleted={handleDeleted}
               onOpenQr={handleOpenQr}
+              onEdit={(idx) => {
+                // Find actual index in `urls` array if filtered
+                if (activeFilterTagId) {
+                  const actualUrl = urls.filter(u => u.tags?.some(t => t.id === activeFilterTagId))[idx];
+                  setEditIndex(urls.indexOf(actualUrl));
+                } else {
+                  setEditIndex(idx);
+                }
+              }}
             />
           </div>
         )}
@@ -788,6 +799,18 @@ const DashboardPage: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* ── Edit Modal ───────────────────────────────────── */}
+      {editIndex !== null && (
+        <EditModal
+          entry={urls[editIndex]}
+          onClose={() => setEditIndex(null)}
+          onUpdated={(updatedEntry) => {
+            handleUpdated(editIndex, updatedEntry);
+            setEditIndex(null);
+          }}
+        />
       )}
     </div>
   );

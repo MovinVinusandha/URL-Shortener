@@ -16,15 +16,14 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axiosInstance, { extractBackendError } from '../api/axiosInstance';
-import EditModal from './EditModal';
 import type { UrlEntry } from '../types';
 import { getTagColorClasses } from '../utils/tagColors';
 
 interface Props {
   urls: UrlEntry[];
-  onUpdated: (index: number, entry: UrlEntry) => void;
   onDeleted: (index: number) => void;
   onOpenQr?: (hash: string) => void;
+  onEdit: (index: number) => void;
 }
 
 const extractHash = (shortUrl: string): string =>
@@ -67,8 +66,7 @@ const formatExpiration = (expiresAt: string | null | undefined, isActive: boolea
   return <span className="text-violet-600 bg-violet-100 dark:text-violet-300 dark:bg-violet-500/20 px-2 py-1 rounded-md text-xs font-medium">{timeStr}</span>;
 };
 
-const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted, onOpenQr }) => {
-  const [editIndex, setEditIndex] = useState<number | null>(null);
+const UrlTable: React.FC<Props> = ({ urls, onDeleted, onOpenQr, onEdit }) => {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
@@ -105,61 +103,49 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted, onOpenQr }) => 
       return sortAsc ? dateA - dateB : dateB - dateA;
     });
 
-  if (urls.length === 0) {
+  if (!urls || urls.length === 0) {
     return (
-      <div className="card p-12 text-center animate-slide-up">
-        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center mx-auto mb-4">
+      <div className="card p-12 flex flex-col items-center justify-center animate-slide-up">
+        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
           <Link2 className="w-8 h-8 text-slate-400 dark:text-slate-500" />
         </div>
-        <h3 className="text-slate-700 dark:text-slate-300 font-medium mb-1">No links yet</h3>
-        <p className="text-slate-400 dark:text-slate-500 text-sm">
-          Shorten your first URL above to see it here.
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No links yet</h3>
+        <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm text-center">
+          Shorten your first URL above and it will appear here automatically.
         </p>
       </div>
     );
   }
 
   return (
-    <>
-      {editIndex !== null && (
-        <EditModal
-          entry={urls[editIndex]}
-          onClose={() => setEditIndex(null)}
-          onUpdated={(updated) => {
-            onUpdated(editIndex, updated);
-            setEditIndex(null);
-          }}
-        />
-      )}
-
-      <div className="card overflow-hidden animate-slide-up">
-        {/* Table header controls */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BarChart2 className="w-5 h-5 text-violet-500 dark:text-violet-400" />
-            <h2 className="text-slate-900 dark:text-white font-semibold">Your Links</h2>
-            <span className="ml-1 inline-flex items-center justify-center w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 text-xs font-bold">
-              {urls.length}
-            </span>
-          </div>
-          <button
-            onClick={() => setSortAsc(!sortAsc)}
-            className="flex items-center gap-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white text-xs font-medium transition-colors"
-            title="Toggle sort order"
-          >
-            Date
-            {sortAsc
-              ? <ChevronUp className="w-3.5 h-3.5" />
-              : <ChevronDown className="w-3.5 h-3.5" />}
-          </button>
+    <div className="card overflow-hidden animate-slide-up">
+      {/* Table header controls */}
+      <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <BarChart2 className="w-5 h-5 text-violet-500 dark:text-violet-400" />
+          <h2 className="text-slate-900 dark:text-white font-semibold">Your Links</h2>
+          <span className="ml-1 inline-flex items-center justify-center w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 text-xs font-bold">
+            {urls.length}
+          </span>
         </div>
+        <button
+          onClick={() => setSortAsc(!sortAsc)}
+          className="flex items-center gap-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white text-xs font-medium transition-colors"
+          title="Toggle sort order"
+        >
+          Date
+          {sortAsc
+            ? <ChevronUp className="w-3.5 h-3.5" />
+            : <ChevronDown className="w-3.5 h-3.5" />}
+        </button>
+      </div>
 
-        {deleteError && (
-          <div className="mx-6 mt-4 flex items-start gap-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl p-3 animate-fade-in">
-            <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
-            <p className="text-red-600 dark:text-red-400 text-sm">{deleteError}</p>
-          </div>
-        )}
+      {deleteError && (
+        <div className="mx-6 mt-4 flex items-start gap-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl p-3 animate-fade-in">
+          <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
+          <p className="text-red-600 dark:text-red-400 text-sm">{deleteError}</p>
+        </div>
+      )}
 
         {/* ── Desktop table ─────────────────────────────── */}
         <div className="hidden md:block overflow-x-auto">
@@ -270,7 +256,7 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted, onOpenQr }) => 
 
                       <button
                         id={`edit-btn-${originalIndex}`}
-                        onClick={() => { setEditIndex(originalIndex); setDeleteConfirm(null); }}
+                        onClick={() => { onEdit(originalIndex); setDeleteConfirm(null); }}
                         className="p-2 rounded-lg text-slate-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-all"
                         title="Edit URL"
                       >
@@ -369,7 +355,7 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted, onOpenQr }) => 
                     <QrCode className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => setEditIndex(originalIndex)}
+                    onClick={() => onEdit(originalIndex)}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-all"
                   >
                     <Pencil className="w-4 h-4" />
@@ -410,8 +396,7 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted, onOpenQr }) => 
             </div>
           ))}
         </div>
-      </div>
-    </>
+    </div>
   );
 };
 
