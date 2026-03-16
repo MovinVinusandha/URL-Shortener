@@ -32,6 +32,7 @@ public class UrlService {
     private final ClickEventRepository clickEventRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final TagRepository tagRepository;
+    private final FolderRepository folderRepository;
 
     public UrlSend generateShortUrl(UrlRequest urlRequest) {
         var authForCheck = SecurityContextHolder.getContext().getAuthentication();
@@ -92,6 +93,20 @@ public class UrlService {
                 }
             }
             url.setTags(new HashSet<>(requestedTags));
+        }
+
+        if (urlRequest.getFolderId() != null) {
+            if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+                throw new AccessDeniedException("You must be logged in to assign folders.");
+            }
+            Long userId = (Long) authentication.getPrincipal();
+            Folder folder = folderRepository.findById(urlRequest.getFolderId())
+                    .orElseThrow(FolderNotFoundException::new);
+            
+            if (!folder.getUser().getId().equals(userId)) {
+                throw new AccessDeniedException("You cannot assign a folder you do not own.");
+            }
+            url.setFolder(folder);
         }
 
         var savedUrl = urlRepository.save(url);
@@ -219,7 +234,9 @@ public class UrlService {
                 dto.getUpdatedAt(),
                 url.isActive(),
                 url.getPasswordHash() != null && !url.getPasswordHash().isEmpty(),
-                dto.getTags()
+                dto.getTags(),
+                url.getFolder() != null ? url.getFolder().getId() : null,
+                url.getFolder() != null ? url.getFolder().getName() : null
         );
     }
 

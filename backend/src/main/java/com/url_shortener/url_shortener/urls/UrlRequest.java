@@ -20,4 +20,6 @@ public class UrlRequest {
     private String password;
     
     private List<Long> tagIds;
+    
+    private Long folderId;
 }

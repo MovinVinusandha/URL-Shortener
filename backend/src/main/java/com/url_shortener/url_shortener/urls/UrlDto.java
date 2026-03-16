@@ -25,4 +25,6 @@ public class UrlDto {
     private boolean isActive;
     private boolean hasPassword;
     private List<TagDto> tags;
+    private Long folderId;
+    private String folderName;
 }

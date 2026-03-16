@@ -56,6 +56,10 @@ public class Url {
     @Builder.Default
     private Set<Tag> tags = new HashSet<>();
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "folder_id")
+    private Folder folder;
+
     public void addStatistic(Statistic statistic){
         this.statistic = statistic;
         statistic.setUrls(this);
