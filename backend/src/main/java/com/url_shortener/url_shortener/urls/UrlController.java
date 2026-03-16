@@ -4,18 +4,24 @@ import com.url_shortener.url_shortener.analytics.AnalyticsService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class UrlController {
 
     private final UrlService urlService;
     private final AnalyticsService analyticsService;
+    private final QrCodeService qrCodeService;
+
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
 
     @PostMapping("/shorten")
     @Operation(summary = "Generate short url")
@@ -97,6 +103,18 @@ public class UrlController {
     public ResponseEntity<Void> deleteUrl(@PathVariable String hash) {
         urlService.deleteUrl(hash);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/url/{hash}/qr")
+    @Operation(summary = "Generate a QR code for a short url")
+    public ResponseEntity<byte[]> getQrCode(@PathVariable String hash) {
+        var urlDto = urlService.getUrl(hash);
+        String fullShortUrl = frontendUrl + "/" + urlDto.getShortUrl();
+        byte[] qrCodeImage = qrCodeService.generateQrCode(fullShortUrl, 300, 300);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.IMAGE_PNG);
+        return new ResponseEntity<>(qrCodeImage, headers, HttpStatus.OK);
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
