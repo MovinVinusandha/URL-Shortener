@@ -23,6 +23,14 @@ export interface User {
   createdAt: string;
 }
 
+// ─── Tags ─────────────────────────────────────────────────────────────────────
+
+export interface Tag {
+  id: number;
+  name: string;
+  color?: string;
+}
+
 // ─── URLs ─────────────────────────────────────────────────────────────────────
 
 /** Returned by POST /shorten */
@@ -33,6 +41,7 @@ export interface UrlSend {
   expiresAt?: string | null;
   isActive?: boolean;
   hasPassword?: boolean;
+  tags?: Tag[];
 }
 
 /** Returned by GET /url/{hash} and GET /url/all */
@@ -46,6 +55,7 @@ export interface UrlDto {
   expiresAt?: string | null;
   isActive?: boolean;
   hasPassword?: boolean;
+  tags?: Tag[];
 }
 
 /** Returned by PUT /url/{hash} */
@@ -66,4 +76,5 @@ export interface UrlEntry {
   expiresAt?: string | null;
   isActive?: boolean;
   hasPassword?: boolean;
+  tags?: Tag[];
 }

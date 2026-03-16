@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link2, Sparkles, AlertCircle, Clock, Lock, Eye, EyeOff, X } from 'lucide-react';
+import { Link2, Sparkles, AlertCircle, Clock, Lock, Eye, EyeOff, X, Tag as TagIcon } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import UrlTable from '../components/UrlTable';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
-import type { UrlEntry, UrlDto, UrlSend } from '../types';
+import type { UrlEntry, UrlDto, UrlSend, Tag } from '../types';
 
 /** Helper to extract hash from short URL */
 const extractHash = (shortUrl: string): string =>
@@ -21,6 +21,7 @@ const mapDtoToEntry = (d: UrlDto): UrlEntry => ({
   expiresAt: d.expiresAt,
   isActive: d.isActive ?? true,
   hasPassword: d.hasPassword,
+  tags: d.tags,
 });
 
 /**
@@ -56,6 +57,14 @@ const DashboardPage: React.FC = () => {
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
   const [isQrLoading, setIsQrLoading] = useState(false);
   const [activeQrHash, setActiveQrHash] = useState<string | null>(null);
+
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+  const [activeFilterTagId, setActiveFilterTagId] = useState<number | null>(null);
+  
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState('#6366f1');
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
 
   const urlsRef = useRef(urls);
 
@@ -96,6 +105,7 @@ const DashboardPage: React.FC = () => {
             accessed_times: freshClicks,
             updatedAt: updatedDto.updatedAt,
             hasPassword: updatedDto.hasPassword,
+            tags: updatedDto.tags,
           };
         } catch (err: any) {
           if (err.response?.status === 404) {
@@ -173,7 +183,19 @@ const DashboardPage: React.FC = () => {
       }
     };
 
+    const loadTags = async () => {
+      try {
+        const { data } = await axiosInstance.get<Tag[]>('/tags');
+        if (isMounted) {
+          setTags(data);
+        }
+      } catch (err) {
+        // Tags might fail if anonymous or not supported yet, ignore gracefully
+      }
+    };
+
     loadDashboardData();
+    loadTags();
 
     return () => {
       isMounted = false;
@@ -220,6 +242,7 @@ const DashboardPage: React.FC = () => {
       expiresAt: newEntry.expiresAt,
       isActive: newEntry.isActive ?? true,
       hasPassword: newEntry.hasPassword,
+      tags: newEntry.tags,
     };
     setUrls((prev) => {
       const updatedList = [created, ...prev];
@@ -230,6 +253,7 @@ const DashboardPage: React.FC = () => {
     setExpirationPreset('none');
     setExpiresAt('');
     setPassword('');
+    setSelectedTagIds([]);
   };
 
   const handleExpirationPresetChange = (preset: string) => {
@@ -259,7 +283,8 @@ const DashboardPage: React.FC = () => {
       const payload: any = {
         longUrl: longUrl.trim(),
         customAlias: customAlias.trim() || undefined,
-        password: password.trim() || undefined
+        password: password.trim() || undefined,
+        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined
       };
       
       if (expiresAt) {
@@ -277,6 +302,21 @@ const DashboardPage: React.FC = () => {
       }
     } finally {
       setShortenLoading(false);
+    }
+  };
+
+  const handleCreateTag = async () => {
+    if (!newTagName.trim()) return;
+    setIsCreatingTag(true);
+    try {
+      const { data } = await axiosInstance.post<Tag>('/tags', { name: newTagName, color: newTagColor });
+      setTags([...tags, data]);
+      setSelectedTagIds([...selectedTagIds, data.id]);
+      setNewTagName('');
+    } catch (err) {
+      console.error("Failed to create tag", err);
+    } finally {
+      setIsCreatingTag(false);
     }
   };
 
@@ -525,7 +565,86 @@ const DashboardPage: React.FC = () => {
                   Users will need to enter this password to access the link.
                 </p>
               </div>
+
+              {/* Tags UI */}
+              <div className="flex flex-col gap-2 mt-2 animate-fade-in">
+                <div className="flex items-center gap-2 text-sm text-slate-900 dark:text-white font-medium">
+                  <TagIcon className="w-4 h-4 text-violet-500" />
+                  Tags (Optional)
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {tags.map(tag => (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => setSelectedTagIds(prev => prev.includes(tag.id) ? prev.filter(id => id !== tag.id) : [...prev, tag.id])}
+                      className={`px-3 py-1 text-xs font-medium rounded-full transition-all border ${
+                        selectedTagIds.includes(tag.id)
+                          ? 'border-violet-500 bg-violet-50 dark:bg-violet-500/10'
+                          : 'border-slate-200 bg-transparent hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600 text-slate-600 dark:text-slate-300'
+                      }`}
+                      style={selectedTagIds.includes(tag.id) && tag.color ? { borderColor: tag.color, color: selectedTagIds.includes(tag.id) ? tag.color : 'inherit' } : {}}
+                    >
+                      {tag.name}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <input
+                    type="text"
+                    value={newTagName}
+                    onChange={e => setNewTagName(e.target.value)}
+                    placeholder="New tag name"
+                    className="input-field text-sm w-32 px-2 py-1 h-8"
+                  />
+                  <input
+                    type="color"
+                    value={newTagColor}
+                    onChange={e => setNewTagColor(e.target.value)}
+                    className="w-8 h-8 p-0 border-0 rounded cursor-pointer shrink-0"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateTag}
+                    disabled={isCreatingTag || !newTagName.trim()}
+                    className="text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-md transition-colors disabled:opacity-50 shrink-0"
+                  >
+                    + Add Tag
+                  </button>
+                </div>
+              </div>
             </form>
+          </div>
+        )}
+
+        {/* ── Filter Bar ────────────────────────────────────── */}
+        {tags.length > 0 && (
+          <div className="mt-8 mb-4 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide animate-fade-in">
+            <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mr-2 flex-shrink-0">Filter by Tag:</span>
+            <button
+              onClick={() => setActiveFilterTagId(null)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all flex-shrink-0 ${
+                activeFilterTagId === null
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+              }`}
+            >
+              All
+            </button>
+            {tags.map(tag => (
+              <button
+                key={tag.id}
+                onClick={() => setActiveFilterTagId(tag.id)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all border flex-shrink-0 ${
+                  activeFilterTagId === tag.id
+                    ? 'border-transparent text-white'
+                    : 'border-slate-200 bg-transparent hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600 text-slate-600 dark:text-slate-300'
+                }`}
+                style={activeFilterTagId === tag.id ? { backgroundColor: tag.color || '#6366f1' } : {}}
+              >
+                {tag.name}
+              </button>
+            ))}
           </div>
         )}
 
@@ -537,7 +656,7 @@ const DashboardPage: React.FC = () => {
           </div>
         ) : (
           <UrlTable
-            urls={urls}
+            urls={activeFilterTagId ? urls.filter(u => u.tags?.some(t => t.id === activeFilterTagId)) : urls}
             onUpdated={handleUpdated}
             onDeleted={handleDeleted}
             onOpenQr={handleOpenQr}

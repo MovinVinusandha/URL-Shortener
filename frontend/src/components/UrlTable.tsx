@@ -189,6 +189,19 @@ const UrlTable: React.FC<Props> = ({ urls, onUpdated, onDeleted, onOpenQr }) => 
                     >
                       {truncate(entry.longUrl)}
                     </p>
+                    {entry.tags && entry.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {entry.tags.map(tag => (
+                          <span
+                            key={tag.id}
+                            className="bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-700 text-[10px] px-2 py-0.5 rounded-full inline-flex items-center leading-tight"
+                            style={tag.color ? { borderColor: tag.color, color: tag.color } : {}}
+                          >
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </td>
 
                   {/* Short URL */}
