@@ -450,7 +450,7 @@ const DashboardPage: React.FC = () => {
         <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-indigo-500/5 dark:bg-indigo-900/10 rounded-full blur-3xl" />
       </div>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* ── Greeting ─────────────────────────────────────── */}
         <div className="animate-slide-up">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">

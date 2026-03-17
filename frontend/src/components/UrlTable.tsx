@@ -156,15 +156,21 @@ const UrlTable: React.FC<Props> = ({ urls, onDeleted,  onOpenQr,
 
         {/* ── Desktop table ─────────────────────────────── */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800">
-                {['Original URL', 'Short URL', 'Clicks', 'Status / Expires', 'Actions'].map((h) => (
+                {[
+                  { label: 'Original URL', width: 'w-2/5', align: 'text-left' },
+                  { label: 'Short URL', width: 'w-1/4', align: 'text-left' },
+                  { label: 'Clicks', width: 'w-auto', align: 'text-left whitespace-nowrap' },
+                  { label: 'Status / Expires', width: 'w-auto', align: 'text-left whitespace-nowrap' },
+                  { label: 'Actions', width: 'w-auto', align: 'text-right whitespace-nowrap' }
+                ].map((col) => (
                   <th
-                    key={h}
-                    className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider last:text-right"
+                    key={col.label}
+                    className={`px-6 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider ${col.width} ${col.align}`}
                   >
-                    {h}
+                    {col.label}
                   </th>
                 ))}
               </tr>
@@ -176,12 +182,12 @@ const UrlTable: React.FC<Props> = ({ urls, onDeleted,  onOpenQr,
                   className="group hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
                 >
                   {/* Original URL */}
-                  <td className="px-6 py-4 max-w-xs">
+                  <td className="px-6 py-4">
                     <p
-                      className="text-slate-700 dark:text-slate-200 text-sm truncate"
+                      className="text-slate-700 dark:text-slate-200 text-sm truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px]"
                       title={entry.longUrl}
                     >
-                      {truncate(entry.longUrl)}
+                      {entry.longUrl}
                     </p>
                     {entry.tags && entry.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1.5">
@@ -208,9 +214,10 @@ const UrlTable: React.FC<Props> = ({ urls, onDeleted,  onOpenQr,
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 text-sm font-medium flex items-center gap-1 transition-colors"
+                        title={entry.shortUrl}
                       >
-                        {truncate(entry.shortUrl, 30)}
-                        <ExternalLink className="w-3 h-3" />
+                        <span className="truncate max-w-[120px] sm:max-w-[180px]">{entry.shortUrl}</span>
+                        <ExternalLink className="w-3 h-3 flex-shrink-0" />
                       </a>
                       {entry.hasPassword && (
                         <div title="Password Protected" className="flex items-center justify-center p-1 bg-violet-100 dark:bg-violet-500/20 rounded-md ml-1 text-violet-600 dark:text-violet-400">
@@ -230,7 +237,7 @@ const UrlTable: React.FC<Props> = ({ urls, onDeleted,  onOpenQr,
                   </td>
 
                   {/* Clicks */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-200">
                       <BarChart2 className="w-3 h-3 text-violet-500 dark:text-violet-400" />
                       {entry.accessed_times ?? 0}
@@ -243,8 +250,8 @@ const UrlTable: React.FC<Props> = ({ urls, onDeleted,  onOpenQr,
                   </td>
 
                   {/* Actions */}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-3">
                       <button
                         onClick={() => onOpenQr && onOpenQr(extractHash(entry.shortUrl))}
                         className="p-2 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
