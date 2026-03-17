@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link2, Sparkles, AlertCircle, Clock, Lock, Eye, EyeOff, X, Tag as TagIcon, Trash2, ChevronDown, Check, Folder as FolderIcon, Plus, Layers } from 'lucide-react';
+import { Link2, Sparkles, AlertCircle, AlertTriangle, Clock, Lock, Eye, EyeOff, X, Tag as TagIcon, Trash2, ChevronDown, Check, Folder as FolderIcon, Plus, Layers } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import UrlTable from '../components/UrlTable';
 import EditModal from '../components/EditModal';
@@ -82,6 +82,20 @@ const DashboardPage: React.FC = () => {
   const [isShortenFolderDropdownOpen, setIsShortenFolderDropdownOpen] = useState(false);
   const [folderSearchQuery, setFolderSearchQuery] = useState('');
   const [isCreatingShortenFolder, setIsCreatingShortenFolder] = useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<{id: number, name: string} | null>(null);
+
+  const confirmDeleteFolder = async () => {
+    if (!folderToDelete) return;
+    try {
+      await axiosInstance.delete(`/folders/${folderToDelete.id}`);
+      setFolders(folders.filter(f => f.id !== folderToDelete.id));
+      if (activeFolderId === folderToDelete.id) setActiveFolderId(null);
+      if (selectedFolderId === folderToDelete.id) setSelectedFolderId('');
+      setFolderToDelete(null);
+    } catch(err) {
+      console.error("Failed to delete folder", err);
+    }
+  };
 
   const urlsRef = useRef(urls);
 
@@ -680,18 +694,9 @@ const DashboardPage: React.FC = () => {
                               {selectedFolderId === folder.id && <Check className="w-4 h-4 text-violet-500" />}
                               <button
                                 type="button"
-                                onClick={async (e) => {
+                                onClick={(e) => {
                                   e.stopPropagation();
-                                  if (confirm(`Are you sure you want to delete folder "${folder.name}"? Your links will not be deleted.`)) {
-                                    try {
-                                      await axiosInstance.delete(`/folders/${folder.id}`);
-                                      setFolders(folders.filter(f => f.id !== folder.id));
-                                      if (selectedFolderId === folder.id) setSelectedFolderId('');
-                                      if (activeFolderId === folder.id) setActiveFolderId(null);
-                                    } catch(err) {
-                                      console.error("Failed to delete folder", err);
-                                    }
-                                  }
+                                  setFolderToDelete(folder);
                                 }}
                                 className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-red-500 transition-all"
                                 title="Delete Folder"
@@ -932,17 +937,9 @@ const DashboardPage: React.FC = () => {
                               <span className="truncate pr-6">{folder.name}</span>
                             </button>
                             <button
-                              onClick={async (e) => {
+                              onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm(`Are you sure you want to delete folder "${folder.name}"? Your links will not be deleted.`)) {
-                                  try {
-                                    await axiosInstance.delete(`/folders/${folder.id}`);
-                                    setFolders(folders.filter(f => f.id !== folder.id));
-                                    if (activeFolderId === folder.id) setActiveFolderId(null);
-                                  } catch (err) {
-                                    console.error("Failed to delete folder", err);
-                                  }
-                                }
+                                setFolderToDelete(folder);
                               }}
                               className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                               title="Delete Folder"
@@ -1004,6 +1001,39 @@ const DashboardPage: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* ── Folder Delete Confirmation Modal ──────────────── */}
+      {folderToDelete && (
+        <div className="fixed inset-0 bg-black/50 z-[120] flex items-center justify-center px-4 animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-xl p-6 w-full max-w-sm shadow-2xl relative z-[121] animate-slide-up">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Delete Folder</h3>
+            </div>
+            
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+              Are you sure you want to delete <span className="font-semibold text-slate-700 dark:text-slate-300">"{folderToDelete.name}"</span>? The links inside this folder will NOT be deleted, but will be moved to your main dashboard.
+            </p>
+            
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setFolderToDelete(null)}
+                className="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-gray-300 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteFolder}
+                className="px-4 py-2 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── QR Code Modal ────────────────────────────────── */}
       {isQrModalOpen && (
