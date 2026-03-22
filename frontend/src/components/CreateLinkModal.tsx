@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  ChevronRight, Globe, CheckCircle2, X, HelpCircle, Shuffle, 
-  Settings2, Tag, FolderArchive, ChevronsUpDown, 
-  Lock, Clock, CornerDownLeft, Pencil
+  ChevronRight, Globe, X, HelpCircle, Shuffle, 
+  Tag, FolderArchive, ChevronsUpDown, 
+  Lock, CornerDownLeft, Pencil, Check, FolderPlus, Eye, EyeOff
 } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
 import type { Tag as TagType, Folder as FolderType } from '../types';
@@ -17,6 +17,35 @@ interface CreateLinkModalProps {
 
 const generateRandomHash = () => Math.random().toString(36).substring(2, 8);
 
+const TAG_COLORS = [
+  { name: 'red', classes: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800/50' },
+  { name: 'blue', classes: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800/50' },
+  { name: 'green', classes: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50' },
+  { name: 'purple', classes: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800/50' },
+  { name: 'orange', classes: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800/50' }
+];
+
+const getTagColor = (colorName: string | undefined) => {
+  return TAG_COLORS.find(c => c.name === colorName) || TAG_COLORS[1]; // default blue
+};
+
+function useClickOutside(ref: React.RefObject<any>, handler: () => void) {
+  useEffect(() => {
+    const listener = (event: MouseEvent | TouchEvent) => {
+      if (!ref.current || ref.current.contains(event.target)) {
+        return;
+      }
+      handler();
+    };
+    document.addEventListener('mousedown', listener);
+    document.addEventListener('touchstart', listener);
+    return () => {
+      document.removeEventListener('mousedown', listener);
+      document.removeEventListener('touchstart', listener);
+    };
+  }, [ref, handler]);
+}
+
 const CreateLinkModal: React.FC<CreateLinkModalProps> = ({ 
   isOpen, 
   onClose, 
@@ -27,6 +56,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
   const [longUrl, setLongUrl] = useState('');
   const [customAlias, setCustomAlias] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [expiresAt, setExpiresAt] = useState<string>('');
   const [expirationPreset, setExpirationPreset] = useState<string>('none');
   const [shortenLoading, setShortenLoading] = useState(false);
@@ -35,9 +65,24 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const [tagSearchQuery, setTagSearchQuery] = useState('');
+  const tagRef = useRef<HTMLDivElement>(null);
+  useClickOutside(tagRef, () => setIsTagDropdownOpen(false));
+
+  const [localTags, setLocalTags] = useState<TagType[]>(tags);
+  useEffect(() => {
+    setLocalTags(tags);
+  }, [tags]);
+
+  const [localFolders, setLocalFolders] = useState<FolderType[]>(folders);
+  useEffect(() => {
+    setLocalFolders(folders);
+  }, [folders]);
 
   const [selectedFolderId, setSelectedFolderId] = useState<number | ''>('');
   const [isFolderDropdownOpen, setIsFolderDropdownOpen] = useState(false);
+  const [folderSearchQuery, setFolderSearchQuery] = useState('');
+  const folderRef = useRef<HTMLDivElement>(null);
+  useClickOutside(folderRef, () => setIsFolderDropdownOpen(false));
 
   useEffect(() => {
     if (isOpen) {
@@ -50,6 +95,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
       setSelectedTagIds([]);
       setSelectedFolderId('');
       setTagSearchQuery('');
+      setFolderSearchQuery('');
       setIsTagDropdownOpen(false);
       setIsFolderDropdownOpen(false);
     }
@@ -126,11 +172,38 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
     }
   };
 
-  const filteredTags = tags.filter(t => t.name.toLowerCase().includes(tagSearchQuery.toLowerCase()));
+  const handleCreateTag = async () => {
+    if (!tagSearchQuery.trim()) return;
+    try {
+      const randomColor = TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)].name;
+      const { data } = await axiosInstance.post('/tags', { name: tagSearchQuery.trim(), color: randomColor });
+      setLocalTags([...localTags, data]);
+      setSelectedTagIds([...selectedTagIds, data.id]);
+      setTagSearchQuery('');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCreateFolder = async () => {
+    if (!folderSearchQuery.trim()) return;
+    try {
+      const { data } = await axiosInstance.post('/folders', { name: folderSearchQuery.trim() });
+      setLocalFolders([...localFolders, data]);
+      setSelectedFolderId(data.id);
+      setIsFolderDropdownOpen(false);
+      setFolderSearchQuery('');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const filteredTags = localTags.filter(t => t.name.toLowerCase().includes(tagSearchQuery.toLowerCase()));
+  const filteredFolders = localFolders.filter(f => f.name.toLowerCase().includes(folderSearchQuery.toLowerCase()));
 
   return (
     <div className="fixed inset-0 bg-gray-500/30 backdrop-blur-sm z-[100] transition-opacity flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-[900px] z-[101] overflow-hidden flex flex-col relative max-h-[95vh]">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl z-[101] overflow-hidden flex flex-col relative max-h-[95vh]">
         {/* Header */}
         <header className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2 text-sm">
@@ -144,10 +217,6 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-xs text-gray-400 flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Draft saved
-            </span>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-md hover:bg-gray-100">
               <X className="w-5 h-5" />
             </button>
@@ -163,17 +232,17 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
               </div>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr] gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr] gap-12">
               {/* Left Column */}
               <div className="space-y-6">
                 {/* Destination URL */}
                 <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-                    Destination URL
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-sm font-medium text-gray-700">Destination URL</label>
                     <button type="button" className="text-gray-400 hover:text-gray-600">
                       <HelpCircle className="w-3.5 h-3.5" />
                     </button>
-                  </label>
+                  </div>
                   <input 
                     type="url" 
                     required 
@@ -197,16 +266,11 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                       >
                         <Shuffle className="w-4 h-4" />
                       </button>
-                      <button type="button" className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100" title="Settings">
-                        <Settings2 className="w-4 h-4" />
-                      </button>
                     </div>
                   </div>
                   <div className="flex rounded-md shadow-sm">
-                    <div className="relative flex-grow focus-within:z-10 w-1/3">
-                      <select className="block w-full rounded-none rounded-l-md border border-gray-300 py-2 pl-3 pr-8 text-gray-700 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm bg-gray-50 border-r-0">
-                        <option>dub.sh</option>
-                      </select>
+                    <div className="relative flex-grow focus-within:z-10 w-1/3 border border-gray-300 border-r-0 bg-gray-50 flex items-center justify-center rounded-l-md px-3 text-sm text-gray-500">
+                      trim.sh
                     </div>
                     <input 
                       type="text" 
@@ -218,111 +282,140 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                 </div>
 
                 {/* Tags */}
-                <div className="space-y-1.5 relative">
+                <div className="space-y-1.5 relative" ref={tagRef}>
                   <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-                      Tags
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-sm font-medium text-gray-700">Tags</label>
                       <button type="button" className="text-gray-400 hover:text-gray-600">
                         <HelpCircle className="w-3.5 h-3.5" />
                       </button>
-                    </label>
-                    <button type="button" className="text-xs font-medium text-gray-500 hover:text-gray-700">Manage</button>
-                  </div>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                      <Tag className="w-4 h-4 text-gray-400" />
                     </div>
-                    <input 
-                      type="text" 
-                      readOnly
-                      onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
-                      value={selectedTagIds.length ? `${selectedTagIds.length} tags selected` : ''}
-                      className="block w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 shadow-sm focus:border-black focus:ring-1 focus:ring-black sm:text-sm placeholder:text-gray-400 cursor-pointer" 
-                      placeholder="Select tags..." 
-                    />
                   </div>
+                  <div 
+                    onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
+                    className="relative flex flex-wrap items-center w-full min-h-[38px] rounded-md border border-gray-300 py-1.5 pl-3 pr-8 shadow-sm cursor-pointer bg-white"
+                  >
+                    {selectedTagIds.length === 0 ? (
+                      <span className="text-gray-400 sm:text-sm">Select tags...</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {selectedTagIds.map(id => {
+                          const t = localTags.find(tag => tag.id === id);
+                          if (!t) return null;
+                          return (
+                            <span 
+                              key={id} 
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getTagColor(t.color).classes}`}
+                            >
+                              {t.name}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <ChevronsUpDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  </div>
+                  
                   {isTagDropdownOpen && (
-                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden flex flex-col max-h-60">
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden flex flex-col">
                       <div className="p-2 border-b border-gray-100">
                         <input
                           type="text"
-                          placeholder="Search tags..."
+                          placeholder="Search or create tag..."
                           value={tagSearchQuery}
                           onChange={(e) => setTagSearchQuery(e.target.value)}
                           className="w-full px-2 py-1 text-sm bg-gray-50 rounded border border-gray-200 focus:ring-0 text-gray-900 outline-none"
                         />
                       </div>
-                      <div className="overflow-y-auto flex-1 p-2 space-y-1">
-                        {filteredTags.length === 0 ? (
-                          <div className="text-xs text-gray-500 text-center py-2">No tags found</div>
-                        ) : (
-                          filteredTags.map(tag => (
-                            <button
-                              key={tag.id}
-                              type="button"
-                              onClick={() => toggleTag(tag.id)}
-                              className={`w-full flex items-center justify-between px-2 py-1.5 text-sm rounded-md transition-colors ${selectedTagIds.includes(tag.id) ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-50'}`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color || '#8b5cf6' }}></span>
-                                <span>{tag.name}</span>
-                              </div>
-                              {selectedTagIds.includes(tag.id) && <CheckCircle2 className="w-3.5 h-3.5 text-black" />}
-                            </button>
-                          ))
-                        )}
+                      <div className="max-h-60 overflow-y-auto p-1 space-y-1">
+                        {filteredTags.map(tag => (
+                          <button
+                            key={tag.id}
+                            type="button"
+                            onClick={() => toggleTag(tag.id)}
+                            className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-gray-100 text-gray-700"
+                          >
+                            <div className={`w-4 h-4 rounded-sm border flex items-center justify-center ${selectedTagIds.includes(tag.id) ? 'bg-black border-black' : 'border-gray-300'}`}>
+                              {selectedTagIds.includes(tag.id) && <Check className="w-3 h-3 text-white" />}
+                            </div>
+                            <Tag className={`w-3.5 h-3.5 ${getTagColor(tag.color).classes.split(' ').find(c => c.startsWith('text-') && !c.includes('dark:'))}`} />
+                            <span>{tag.name}</span>
+                          </button>
+                        ))}
                       </div>
+                      {tagSearchQuery && !localTags.some(t => t.name.toLowerCase() === tagSearchQuery.toLowerCase()) && (
+                        <div className="p-1 border-t border-gray-100">
+                          <button
+                            type="button"
+                            className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-gray-100 text-gray-700"
+                            onClick={handleCreateTag}
+                          >
+                            <span className="font-medium">+ Create</span> "{tagSearchQuery}"
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
 
                 {/* Password */}
                 <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-                    Password
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-sm font-medium text-gray-700">Password</label>
                     <button type="button" className="text-gray-400 hover:text-gray-600">
                       <HelpCircle className="w-3.5 h-3.5" />
                     </button>
-                  </label>
+                  </div>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                       <Lock className="w-4 h-4 text-gray-400" />
                     </div>
                     <input 
-                      type="text" 
+                      type={showPassword ? "text" : "password"} 
                       placeholder="Optional password..."
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="block w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 shadow-sm focus:border-black focus:ring-1 focus:ring-black sm:text-sm placeholder:text-gray-400"
+                      className="block w-full rounded-md border border-gray-300 py-2 pl-9 pr-10 shadow-sm focus:border-black focus:ring-1 focus:ring-black sm:text-sm placeholder:text-gray-400"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
                 {/* Expiration */}
                 <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-                    Expiration
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-sm font-medium text-gray-700">Expiration</label>
                     <button type="button" className="text-gray-400 hover:text-gray-600">
                       <HelpCircle className="w-3.5 h-3.5" />
                     </button>
-                  </label>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="relative flex-1">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <Clock className="w-4 h-4 text-gray-400" />
-                      </div>
-                      <select
-                        value={expirationPreset}
-                        onChange={(e) => handleExpirationPresetChange(e.target.value)}
-                        className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-black focus:ring-1 focus:ring-black py-2 pl-9 pr-8 sm:text-sm appearance-none bg-white text-gray-700"
-                      >
-                        <option value="none">Never</option>
-                        <option value="1hour">1 Hour</option>
-                        <option value="24hours">24 Hours</option>
-                        <option value="7days">7 Days</option>
-                        <option value="custom">Custom Date</option>
-                      </select>
-                      <ChevronsUpDown className="w-4 h-4 text-gray-400 absolute right-3 top-2.5 pointer-events-none" />
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {[
+                        { id: 'none', label: 'None' },
+                        { id: '1hour', label: '1 Hour' },
+                        { id: '24hours', label: '24 Hours' },
+                        { id: '7days', label: '7 Days' },
+                        { id: 'custom', label: 'Custom' }
+                      ].map(preset => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => handleExpirationPresetChange(preset.id)}
+                          className={expirationPreset === preset.id 
+                            ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900 border border-transparent px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
+                            : "bg-transparent text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-slate-800 px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
+                          }
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
                     </div>
                     {expirationPreset === 'custom' && (
                       <input
@@ -334,66 +427,80 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                     )}
                   </div>
                 </div>
-
-                {/* Comments */}
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-                    Comments
-                    <button type="button" className="text-gray-400 hover:text-gray-600">
-                      <HelpCircle className="w-3.5 h-3.5" />
-                    </button>
-                  </label>
-                  <textarea className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-black focus:ring-1 focus:ring-black px-3 py-2 sm:text-sm placeholder:text-gray-400 resize-y" placeholder="Add comments" rows={3}></textarea>
-                </div>
               </div>
               
               {/* Right Column */}
               <div className="space-y-6 border-t md:border-t-0 md:border-l border-gray-100 pt-6 md:pt-0 md:pl-8">
                 {/* Folder */}
-                <div className="space-y-1.5 relative">
-                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-                    Folder
+                <div className="space-y-1.5 relative" ref={folderRef}>
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-sm font-medium text-gray-700">Folder</label>
                     <button type="button" className="text-gray-400 hover:text-gray-600">
                       <HelpCircle className="w-3.5 h-3.5" />
                     </button>
-                  </label>
+                  </div>
                   <button 
                     type="button"
                     onClick={() => setIsFolderDropdownOpen(!isFolderDropdownOpen)}
-                    className="relative w-full cursor-default rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-left shadow-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm flex items-center gap-2"
+                    className="relative w-full cursor-pointer rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-left shadow-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm flex items-center gap-2"
                   >
-                    <div className="w-5 h-5 rounded flex items-center justify-center bg-green-100 text-green-600">
-                      <FolderArchive className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="block truncate text-gray-900">
-                      {selectedFolderId === '' ? 'No Folder' : folders.find(f => f.id === selectedFolderId)?.name || 'Unknown'}
-                    </span>
+                    {selectedFolderId === '' ? (
+                      <span className="block truncate text-gray-400">Select a folder...</span>
+                    ) : (
+                      <>
+                        <div className="p-0.5 rounded bg-emerald-100 text-emerald-600">
+                          <FolderArchive className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="block truncate text-gray-900">
+                          {localFolders.find(f => f.id === selectedFolderId)?.name || 'Unknown'}
+                        </span>
+                      </>
+                    )}
                     <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                       <ChevronsUpDown className="w-4 h-4 text-gray-400" />
                     </span>
                   </button>
                   
                   {isFolderDropdownOpen && (
-                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden flex flex-col max-h-60">
-                      <div className="overflow-y-auto flex-1 p-2 space-y-1">
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden flex flex-col p-1">
+                      <div className="p-1 border-b border-gray-100">
+                        <input
+                          type="text"
+                          placeholder="Search folders..."
+                          value={folderSearchQuery}
+                          onChange={(e) => setFolderSearchQuery(e.target.value)}
+                          className="w-full px-2 py-1 text-sm bg-gray-50 rounded border border-gray-200 focus:ring-0 text-gray-900 outline-none"
+                        />
+                      </div>
+                      <div className="max-h-60 overflow-y-auto p-1 space-y-1">
                         <button
                           type="button"
                           onClick={() => { setSelectedFolderId(''); setIsFolderDropdownOpen(false); }}
-                          className="w-full flex items-center justify-between px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-gray-50 text-gray-700"
+                          className="w-full flex items-center justify-between px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-gray-100 text-gray-700"
                         >
-                          No Folder
+                          <span className="truncate">No Folder</span>
+                          {selectedFolderId === '' && <Check className="w-3.5 h-3.5 text-black" />}
                         </button>
-                        {folders.map(folder => (
+                        {filteredFolders.map(folder => (
                           <button
                             key={folder.id}
                             type="button"
                             onClick={() => { setSelectedFolderId(folder.id); setIsFolderDropdownOpen(false); }}
-                            className="w-full flex items-center justify-between px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-gray-50 text-gray-700"
+                            className="w-full flex items-center justify-between px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-gray-100 text-gray-700"
                           >
                             <span className="truncate">{folder.name}</span>
-                            {selectedFolderId === folder.id && <CheckCircle2 className="w-3.5 h-3.5 text-black" />}
+                            {selectedFolderId === folder.id && <Check className="w-3.5 h-3.5 text-black" />}
                           </button>
                         ))}
+                      </div>
+                      <div className="p-1 border-t border-gray-100">
+                        <button
+                          type="button"
+                          onClick={handleCreateFolder}
+                          className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-gray-100 text-gray-700"
+                        >
+                          <FolderPlus className="w-4 h-4" /> Create new folder
+                        </button>
                       </div>
                     </div>
                   )}
@@ -401,12 +508,12 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
 
                 {/* QR Code */}
                 <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-                    QR Code
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-sm font-medium text-gray-700">QR Code</label>
                     <button type="button" className="text-gray-400 hover:text-gray-600">
                       <HelpCircle className="w-3.5 h-3.5" />
                     </button>
-                  </label>
+                  </div>
                   <div className="border border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 flex flex-col items-center justify-center relative group min-h-[140px]">
                     <div className="bg-white p-2 rounded shadow-sm">
                       <div className="grid grid-cols-3 gap-0.5 w-8 h-8">
@@ -426,7 +533,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
         </div>
 
         {/* Footer */}
-        <footer className="border-t border-gray-100 bg-gray-50/50 px-6 py-4 flex items-center justify-between gap-4 shrink-0">
+        <footer className="border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 px-6 py-4 flex items-center justify-between gap-4 shrink-0">
           <div></div>
           <div>
             <button 
