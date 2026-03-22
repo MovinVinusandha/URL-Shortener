@@ -512,11 +512,11 @@ const DashboardPage: React.FC = () => {
       <CreateLinkModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={(newEntry) => {
+          if (newEntry) handleShortened(newEntry);
+        }}
         folders={folders}
         tags={tags}
-        onShortened={handleShortened}
-        onTagCreated={(newTag) => setTags([...tags, newTag])}
-        onFolderCreated={(newFolder) => setFolders([...folders, newFolder])}
       />
     </div>
   );
