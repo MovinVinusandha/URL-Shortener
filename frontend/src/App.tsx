@@ -7,8 +7,11 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import FoldersPage from './pages/FoldersPage';
+import TagsPage from './pages/TagsPage';
 import ExpiredPage from './pages/ExpiredPage';
 import SecurePage from './pages/SecurePage';
+import DashboardLayout from './layouts/DashboardLayout';
 
 function App() {
   return (
@@ -25,8 +28,13 @@ function App() {
 
             {/* ── Protected Routes ──────────────────────────────── */}
             <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/analytics/:hash" element={<AnalyticsPage />} />
+              <Route element={<DashboardLayout />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/analytics" element={<AnalyticsPage />} />
+                <Route path="/analytics/:hash" element={<AnalyticsPage />} />
+                <Route path="/folders" element={<FoldersPage />} />
+                <Route path="/tags" element={<TagsPage />} />
+              </Route>
             </Route>
 
             {/* ── Catch-all ─────────────────────────────────────── */}
