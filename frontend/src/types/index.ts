@@ -28,6 +28,7 @@ export interface User {
 export interface Folder {
   id: number;
   name: string;
+  linkCount?: number;
 }
 
 // ─── Tags ─────────────────────────────────────────────────────────────────────
