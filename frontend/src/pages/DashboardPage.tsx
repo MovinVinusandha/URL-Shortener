@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
-import { X, BarChart2, Search, Copy, QrCode, Edit2, Trash2, CornerDownRight, MoreVertical, Filter, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { X, BarChart2, Search, Copy, QrCode, Edit2, Trash2, CornerDownRight, MoreVertical, Filter, SlidersHorizontal, ChevronDown, ArrowUpDown, Check, ArrowDownWideNarrow } from 'lucide-react';
 import EditModal from '../components/EditModal';
 import type { DashboardLayoutContext } from '../layouts/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
@@ -57,6 +57,27 @@ const DashboardPage: React.FC = () => {
   const [activeFolderId] = useState<number | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [sortBy, setSortBy] = useState('dateCreated');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [displayProps, setDisplayProps] = useState({ destinationUrl: true, tags: true, clicks: true, createdAt: true });
+  const [isDisplayOpen, setIsDisplayOpen] = useState(false);
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+  const displayRef = useRef<HTMLDivElement>(null);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (displayRef.current && !displayRef.current.contains(event.target as Node)) {
+        setIsDisplayOpen(false);
+        setIsSortMenuOpen(false);
+      } else if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
+        setIsSortMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const urlsRef = useRef(urls);
 
@@ -269,7 +290,23 @@ const DashboardPage: React.FC = () => {
     });
   };
 
-  const displayedUrls = urls.filter(u => 
+  const sortedUrls = React.useMemo(() => {
+    return [...urls].sort((a, b) => {
+      if (sortBy === 'dateCreated') {
+        return sortOrder === 'asc' 
+          ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() 
+          : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      if (sortBy === 'totalClicks') {
+        return sortOrder === 'asc' 
+          ? (a.accessed_times || 0) - (b.accessed_times || 0) 
+          : (b.accessed_times || 0) - (a.accessed_times || 0);
+      }
+      return 0;
+    });
+  }, [urls, sortBy, sortOrder]);
+
+  const displayedUrls = sortedUrls.filter(u => 
     (activeFolderId === null || u.folderId === activeFolderId) &&
     (activeFilterTagId === null || u.tags?.some(t => t.id === activeFilterTagId))
   ).filter(u => {
@@ -298,11 +335,109 @@ const DashboardPage: React.FC = () => {
                 Filter
                 <ChevronDown className="w-3 h-3 text-gray-400" />
               </button>
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 shadow-sm transition-colors">
-                <SlidersHorizontal className="w-4 h-4" />
-                Display
-                <ChevronDown className="w-3 h-3 text-gray-400" />
-              </button>
+              <div className="relative" ref={displayRef}>
+                <button 
+                  onClick={() => setIsDisplayOpen(!isDisplayOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 shadow-sm transition-colors"
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  Display
+                  <ChevronDown className="w-3 h-3 text-gray-400" />
+                </button>
+                
+                {isDisplayOpen && (
+                  <div className="absolute top-full left-0 mt-2 bg-white dark:bg-slate-900 rounded-lg shadow-xl ring-1 ring-gray-100 dark:ring-slate-800 border border-gray-200 dark:border-slate-800 w-[320px] z-50 flex flex-col">
+                    {/* Ordering Section */}
+                    <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 text-sm font-medium">
+                        <ArrowUpDown className="h-4 w-4 text-gray-500" />
+                        Ordering
+                      </div>
+                      <div className="relative flex items-center gap-2">
+                        <button 
+                          onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                          className="p-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
+                          title={sortOrder === 'asc' ? 'Sort Ascending' : 'Sort Descending'}
+                        >
+                          <ArrowUpDown className={`h-4 w-4 transform transition-transform ${sortOrder === 'asc' ? 'rotate-180' : ''}`} />
+                        </button>
+                        
+                        <div className="relative" ref={sortMenuRef}>
+                          <button 
+                            onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
+                            className="flex items-center justify-between w-36 px-3 py-1.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            <span className="flex items-center gap-2">
+                              {sortBy === 'dateCreated' ? 'Date created' : 'Total clicks'}
+                            </span>
+                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                          </button>
+                          
+                          {isSortMenuOpen && (
+                            <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-900 rounded-lg shadow-xl ring-1 ring-gray-100 dark:ring-slate-800 border border-gray-200 dark:border-slate-800 z-[60] overflow-hidden py-1">
+                              <button
+                                onClick={() => { setSortBy('dateCreated'); setIsSortMenuOpen(false); }}
+                                className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                              >
+                                <span className="flex items-center gap-2">
+                                  <ArrowDownWideNarrow className="w-4 h-4 text-gray-500" />
+                                  Date created
+                                </span>
+                                {sortBy === 'dateCreated' && <Check className="w-4 h-4 text-gray-900 dark:text-white" />}
+                              </button>
+                              
+                              <button
+                                onClick={() => { setSortBy('totalClicks'); setIsSortMenuOpen(false); }}
+                                className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                              >
+                                <span className="flex items-center gap-2">
+                                  <ArrowDownWideNarrow className="w-4 h-4 text-gray-500" />
+                                  Total clicks
+                                </span>
+                                {sortBy === 'totalClicks' && <Check className="w-4 h-4 text-gray-900 dark:text-white" />}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Display Properties Section */}
+                    <div className="p-4 flex flex-col gap-3">
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Display Properties</h3>
+                      <div className="flex flex-wrap gap-2">
+                        <button className="px-2 py-1 text-xs border border-transparent rounded-md bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 font-medium cursor-not-allowed">
+                          Short link
+                        </button>
+                        <button 
+                          onClick={() => setDisplayProps(prev => ({ ...prev, destinationUrl: !prev.destinationUrl }))}
+                          className={`px-2 py-1 text-xs border rounded-md font-medium transition-colors ${displayProps.destinationUrl ? 'border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-gray-200' : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+                        >
+                          Destination URL
+                        </button>
+                        <button 
+                          onClick={() => setDisplayProps(prev => ({ ...prev, clicks: !prev.clicks }))}
+                          className={`px-2 py-1 text-xs border rounded-md font-medium transition-colors ${displayProps.clicks ? 'border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-gray-200' : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+                        >
+                          Analytics
+                        </button>
+                        <button 
+                          onClick={() => setDisplayProps(prev => ({ ...prev, createdAt: !prev.createdAt }))}
+                          className={`px-2 py-1 text-xs border rounded-md font-medium transition-colors ${displayProps.createdAt ? 'border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-gray-200' : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+                        >
+                          Created Date
+                        </button>
+                        <button 
+                          onClick={() => setDisplayProps(prev => ({ ...prev, tags: !prev.tags }))}
+                          className={`px-2 py-1 text-xs border rounded-md font-medium transition-colors ${displayProps.tags ? 'border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-gray-200' : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+                        >
+                          Tags
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             {/* Search Input */}
             <div className="relative w-full sm:w-auto">
@@ -370,19 +505,23 @@ const DashboardPage: React.FC = () => {
                       </div>
                       
                       <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                        <div className="flex items-center gap-1.5 text-gray-400 text-xs mt-0.5 ml-1">
-                          <CornerDownRight className="w-3 h-3 shrink-0" />
-                          <span className="truncate max-w-[200px] sm:max-w-[300px] lg:max-w-[400px]">
-                            {url.longUrl}
+                        {displayProps.destinationUrl && (
+                          <div className="flex items-center gap-1.5 text-gray-400 text-xs mt-0.5 ml-1">
+                            <CornerDownRight className="w-3 h-3 shrink-0" />
+                            <span className="truncate max-w-[200px] sm:max-w-[300px] lg:max-w-[400px]">
+                              {url.longUrl}
+                            </span>
+                          </div>
+                        )}
+                        {displayProps.destinationUrl && displayProps.createdAt && <span>•</span>}
+                        {displayProps.createdAt && (
+                          <span>
+                            {new Date(url.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                           </span>
-                        </div>
-                        <span>•</span>
-                        <span>
-                          {new Date(url.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
+                        )}
                       </div>
                       
-                      {url.tags && url.tags.length > 0 && (
+                      {displayProps.tags && url.tags && url.tags.length > 0 && (
                         <div className="relative group inline-flex items-center mt-2">
                           <span 
                             className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border"
@@ -420,11 +559,13 @@ const DashboardPage: React.FC = () => {
                     
                     {/* Actions */}
                     <div className="shrink-0 flex items-center gap-3 ml-4">
-                      <Link to={`/analytics/${extractHash(url.shortUrl)}`} className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors px-2 py-1 rounded-md border border-gray-100 dark:border-slate-700">
-                        <BarChart2 className="w-4 h-4 text-gray-400" />
-                        {url.accessed_times}
-                        <span className="hidden sm:inline ml-1 text-gray-400 font-normal">clicks</span>
-                      </Link>
+                      {displayProps.clicks && (
+                        <Link to={`/analytics/${extractHash(url.shortUrl)}`} className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors px-2 py-1 rounded-md border border-gray-100 dark:border-slate-700">
+                          <BarChart2 className="w-4 h-4 text-gray-400" />
+                          {url.accessed_times}
+                          <span className="hidden sm:inline ml-1 text-gray-400 font-normal">clicks</span>
+                        </Link>
+                      )}
                       
                       <div className="relative">
                         <button 
