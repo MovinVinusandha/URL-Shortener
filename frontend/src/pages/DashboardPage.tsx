@@ -56,6 +56,7 @@ const DashboardPage: React.FC = () => {
   const [activeFilterTagId] = useState<number | null>(null);
   const [activeFolderId] = useState<number | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const urlsRef = useRef(urls);
 
@@ -271,13 +272,20 @@ const DashboardPage: React.FC = () => {
   const displayedUrls = urls.filter(u => 
     (activeFolderId === null || u.folderId === activeFolderId) &&
     (activeFilterTagId === null || u.tags?.some(t => t.id === activeFilterTagId))
-  );
+  ).filter(u => {
+    if (searchQuery.trim() === '') return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      u.shortUrl.toLowerCase().includes(query) || 
+      u.longUrl.toLowerCase().includes(query)
+    );
+  });
 
   const totalClicks = displayedUrls.reduce((acc, u) => acc + (u.accessed_times ?? 0), 0);
 
   useEffect(() => {
-    setNavStats({ totalClicks, linkCount: urls.length });
-  }, [totalClicks, urls.length, setNavStats]);
+    setNavStats({ totalClicks, linkCount: displayedUrls.length });
+  }, [totalClicks, displayedUrls.length, setNavStats]);
 
   return (
     <>
@@ -296,12 +304,14 @@ const DashboardPage: React.FC = () => {
                 <ChevronDown className="w-3 h-3 text-gray-400" />
               </button>
             </div>
-            {/* Search Input Placeholder */}
+            {/* Search Input */}
             <div className="relative w-full sm:w-auto">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input 
                 type="text" 
-                placeholder="Search..." 
+                placeholder="Search by short link or URL" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full sm:w-auto pl-9 pr-4 py-1.5 border border-gray-200 dark:border-slate-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black dark:bg-slate-900 dark:text-white"
               />
             </div>
