@@ -51,10 +51,9 @@ const DashboardPage: React.FC = () => {
   const [isQrLoading, setIsQrLoading] = useState(false);
   const [activeQrHash, setActiveQrHash] = useState<string | null>(null);
 
-  const { triggerRefresh, setNavStats, tags } = useOutletContext<DashboardLayoutContext>();
+  const { triggerRefresh, setNavStats, tags, activeFolderId } = useOutletContext<DashboardLayoutContext>();
 
   const [activeFilterTagId] = useState<number | null>(null);
-  const [activeFolderId] = useState<number | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   

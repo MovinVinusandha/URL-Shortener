@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
-import { Link as LinkIcon, BarChart2, Folder as FolderIcon, Tag as TagIcon, Activity, ChevronDown, Gift, HelpCircle } from 'lucide-react';
+import { Link as LinkIcon, BarChart2, Folder as FolderIcon, Tag as TagIcon, Activity, ChevronDown, Gift, HelpCircle, FolderPlus, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 import type { Tag, Folder, UrlEntry } from '../types';
@@ -15,6 +15,8 @@ export type DashboardLayoutContext = {
   setNavStats: (stats: { totalClicks: number; linkCount: number }) => void;
   setTags: React.Dispatch<React.SetStateAction<Tag[]>>;
   setFolders: React.Dispatch<React.SetStateAction<Folder[]>>;
+  activeFolderId: number | null;
+  setActiveFolderId: React.Dispatch<React.SetStateAction<number | null>>;
 };
 
 const DashboardLayout: React.FC = () => {
@@ -27,6 +29,21 @@ const DashboardLayout: React.FC = () => {
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [activeFolderId, setActiveFolderId] = useState<number | null>(null);
+  
+  const [isFolderSwitcherOpen, setIsFolderSwitcherOpen] = useState(false);
+  const [folderSearch, setFolderSearch] = useState('');
+  const folderSwitcherRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (folderSwitcherRef.current && !folderSwitcherRef.current.contains(event.target as Node)) {
+        setIsFolderSwitcherOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   
   // Stats for the sub-nav (populated by children)
   const [navStats, setNavStats] = useState({ totalClicks: 0, linkCount: 0 });
@@ -98,11 +115,87 @@ const DashboardLayout: React.FC = () => {
         
         {/* Top Header */}
         <header className="shrink-0 h-16 border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 flex items-center justify-between z-40">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 px-2 py-1 rounded-md transition-colors">
-              {getTitle()}
-              <ChevronDown className="w-4 h-4 text-gray-400" />
-            </h1>
+          <div className="flex items-center gap-2 relative" ref={folderSwitcherRef}>
+            {location.pathname === '/dashboard' ? (
+              <>
+                <button 
+                  onClick={() => setIsFolderSwitcherOpen(!isFolderSwitcherOpen)}
+                  className="text-lg font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 px-2 py-1 rounded-md transition-colors"
+                >
+                  {activeFolderId ? folders.find(f => f.id === activeFolderId)?.name || 'Links' : 'Links'}
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </button>
+                
+                {isFolderSwitcherOpen && (
+                  <div className="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-lg rounded-lg p-2 z-50 flex flex-col gap-2">
+                    <div className="relative flex items-center justify-between gap-2 border border-gray-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-900 focus-within:ring-2 focus-within:ring-black dark:focus-within:ring-white transition-shadow px-2">
+                      <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <input 
+                        type="text" 
+                        placeholder="Search folders..." 
+                        value={folderSearch}
+                        onChange={(e) => setFolderSearch(e.target.value)}
+                        className="flex-grow w-full py-1.5 bg-transparent border-none focus:ring-0 text-sm dark:text-white px-1"
+                      />
+                      <button
+                        onClick={() => {
+                          navigate('/folders');
+                          setIsFolderSwitcherOpen(false);
+                        }}
+                        className="text-xs font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex-shrink-0 whitespace-nowrap"
+                      >
+                        View All
+                      </button>
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        setActiveFolderId(null);
+                        navigate('/dashboard');
+                        setIsFolderSwitcherOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${activeFolderId === null ? 'bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+                    >
+                      <FolderIcon className="w-4 h-4 text-gray-400" />
+                      All Links
+                    </button>
+                    
+                    <div className="max-h-48 overflow-y-auto flex flex-col gap-1 border-y border-gray-100 dark:border-slate-800 py-1">
+                      {folders.filter(f => f.name.toLowerCase().includes(folderSearch.toLowerCase())).map(folder => (
+                        <button
+                          key={folder.id}
+                          onClick={() => {
+                            setActiveFolderId(folder.id);
+                            navigate('/dashboard');
+                            setIsFolderSwitcherOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${activeFolderId === folder.id ? 'bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+                        >
+                          <FolderIcon className="w-4 h-4 text-emerald-500" />
+                          {folder.name}
+                        </button>
+                      ))}
+                      {folders.length === 0 && <div className="px-3 py-2 text-sm text-gray-500">No folders found</div>}
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        navigate('/folders?create=true');
+                        setIsFolderSwitcherOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-md transition-colors flex items-center gap-2 font-medium"
+                    >
+                      <FolderPlus className="w-4 h-4 text-gray-400" />
+                      Create new folder
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-slate-100 px-2 py-1">
+                {getTitle()}
+              </h1>
+            )}
           </div>
           {location.pathname.startsWith('/folders') ? (
             <button 
@@ -175,7 +268,7 @@ const DashboardLayout: React.FC = () => {
 
         {/* Main Content Rendered Here */}
         <div className="flex-1 overflow-y-auto">
-          <Outlet context={{ triggerRefresh: latestNewEntry, tags, folders, setNavStats, setTags, setFolders } satisfies DashboardLayoutContext} />
+          <Outlet context={{ triggerRefresh: latestNewEntry, tags, folders, setNavStats, setTags, setFolders, activeFolderId, setActiveFolderId } satisfies DashboardLayoutContext} />
         </div>
 
       </div>

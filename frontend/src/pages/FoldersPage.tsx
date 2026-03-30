@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useOutletContext } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
 import { Search, MoreVertical, Trash2, Link as LinkIcon, Folder as FolderIcon, Pen } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
 import type { DashboardLayoutContext } from '../layouts/DashboardLayout';
@@ -12,6 +12,13 @@ const FoldersPage: React.FC = () => {
   const [folderToEdit, setFolderToEdit] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [folderToDelete, setFolderToDelete] = useState<any | null>(null);
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      setIsModalOpen(true);
+    }
+  }, [searchParams]);
 
   const handleDeleteFolder = async (id: number) => {
     try {
