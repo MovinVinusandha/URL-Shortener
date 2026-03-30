@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
-import { Link as LinkIcon, BarChart2, Folder as FolderIcon, Tag as TagIcon, Activity, ChevronDown, Gift, HelpCircle, FolderPlus, Search } from 'lucide-react';
+import { Link as LinkIcon, BarChart2, Folder as FolderIcon, Tag as TagIcon, Activity, ChevronDown, FolderPlus, Search, HelpCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 import type { Tag, Folder, UrlEntry } from '../types';
@@ -99,9 +99,6 @@ const DashboardLayout: React.FC = () => {
         </nav>
         <div className="mt-auto flex flex-col items-center gap-4">
           <button className="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
-            <Gift className="w-5 h-5" />
-          </button>
-          <button className="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
             <HelpCircle className="w-5 h-5" />
           </button>
           <button className="w-8 h-8 rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-200 flex items-center justify-center text-sm font-medium uppercase border border-gray-300 dark:border-slate-600 shadow-sm">
@@ -197,19 +194,11 @@ const DashboardLayout: React.FC = () => {
               </h1>
             )}
           </div>
-          {location.pathname.startsWith('/folders') ? (
+          {location.pathname.includes('/analytics') ? (
             <button 
-              onClick={() => setIsFolderModalOpen(true)}
               className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm"
             >
-              Create folder
-            </button>
-          ) : location.pathname.startsWith('/tags') ? (
-            <button 
-              onClick={() => setIsCreateTagModalOpen(true)}
-              className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm"
-            >
-              Create tag
+              Export
             </button>
           ) : (
             <button 
@@ -222,8 +211,8 @@ const DashboardLayout: React.FC = () => {
         </header>
 
         {/* Top Navigation Tabs */}
-        <div className="shrink-0 h-12 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-900 px-6 flex items-center justify-between overflow-x-auto text-sm z-30">
-          <div className="flex items-center h-12 gap-2">
+        <div className="shrink-0 h-12 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-900 px-6 flex items-center justify-between text-sm z-30">
+          <div className="flex items-center overflow-x-auto whitespace-nowrap h-full gap-2">
             <Link 
               to="/dashboard" 
               className={`flex items-center gap-2 px-4 h-full font-medium transition-colors border-b-2 ${location.pathname === '/dashboard' ? 'text-black dark:text-white border-black dark:border-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 border-transparent'}`}
@@ -233,28 +222,28 @@ const DashboardLayout: React.FC = () => {
             </Link>
             <Link 
               to="/analytics" 
-              className={`flex items-center gap-2 px-4 h-full font-medium transition-colors border-b-2 ${location.pathname.startsWith('/analytics') ? 'text-blue-600 border-blue-600' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 border-transparent'}`}
+              className={`flex items-center gap-2 px-4 h-full font-medium transition-colors border-b-2 ${location.pathname.startsWith('/analytics') ? 'text-black dark:text-white border-black dark:border-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 border-transparent'}`}
             >
               <BarChart2 className="w-4 h-4" />
               Analytics
             </Link>
             <Link 
               to="/folders" 
-              className={`flex items-center gap-2 px-4 h-full font-medium transition-colors border-b-2 cursor-not-allowed ${location.pathname === '/folders' ? 'text-black dark:text-white border-black dark:border-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 border-transparent'}`}
+              className={`flex items-center gap-2 px-4 h-full font-medium transition-colors border-b-2 ${location.pathname === '/folders' ? 'text-black dark:text-white border-black dark:border-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 border-transparent'}`}
             >
               <FolderIcon className="w-4 h-4" />
               Folders
             </Link>
             <Link 
               to="/tags" 
-              className={`flex items-center gap-2 px-4 h-full font-medium transition-colors border-b-2 cursor-not-allowed ${location.pathname === '/tags' ? 'text-black dark:text-white border-black dark:border-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 border-transparent'}`}
+              className={`flex items-center gap-2 px-4 h-full font-medium transition-colors border-b-2 ${location.pathname === '/tags' ? 'text-black dark:text-white border-black dark:border-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 border-transparent'}`}
             >
               <TagIcon className="w-4 h-4" />
               Tags
             </Link>
           </div>
           
-          <div className="flex items-center gap-4 ml-auto text-xs text-gray-500">
+          <div className="flex items-center gap-4 ml-auto pl-4 text-xs text-gray-500 shrink-0">
             <span className="flex items-center gap-1" title={`Total Clicks: ${navStats.totalClicks}`}>
               <Activity className="w-3.5 h-3.5" />
               {navStats.totalClicks}/1K
@@ -267,9 +256,11 @@ const DashboardLayout: React.FC = () => {
         </div>
 
         {/* Main Content Rendered Here */}
-        <div className="flex-1 overflow-y-auto">
-          <Outlet context={{ triggerRefresh: latestNewEntry, tags, folders, setNavStats, setTags, setFolders, activeFolderId, setActiveFolderId } satisfies DashboardLayoutContext} />
-        </div>
+        <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+          <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+            <Outlet context={{ triggerRefresh: latestNewEntry, tags, folders, setNavStats, setTags, setFolders, activeFolderId, setActiveFolderId } satisfies DashboardLayoutContext} />
+          </div>
+        </main>
 
       </div>
 

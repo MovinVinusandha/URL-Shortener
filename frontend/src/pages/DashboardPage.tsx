@@ -352,8 +352,8 @@ const DashboardPage: React.FC = () => {
   return (
     <>
 
-        <div className="flex-1 p-6 max-w-5xl mx-auto w-full">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 mt-6 px-6">
+        <div className="flex-1 py-6 w-full">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 mt-2">
             <div className="flex items-center gap-2 flex-wrap">
               <div className="relative" ref={filterRef}>
                 <button 
@@ -585,12 +585,12 @@ const DashboardPage: React.FC = () => {
               <p className="text-slate-400 dark:text-slate-500 text-sm">Loading your links…</p>
             </div>
           ) : (
-            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm flex flex-col gap-0 divide-y divide-gray-100 dark:divide-slate-800">
+            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl overflow-visible shadow-sm flex flex-col gap-0 divide-y divide-gray-100 dark:divide-slate-800">
               {displayedUrls.length === 0 ? (
                 <div className="p-12 text-center text-gray-500">No links found.</div>
               ) : (
                 displayedUrls.map((url) => (
-                  <div key={url.shortUrl} className="group flex items-center p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <div key={url.shortUrl} className="group relative flex items-center p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                     {/* Favicon */}
                     <div className="shrink-0 mr-4">
                       <div className="w-10 h-10 rounded-full border border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 overflow-hidden flex items-center justify-center p-1">
@@ -703,7 +703,7 @@ const DashboardPage: React.FC = () => {
                         </button>
                         
                         {openMenuId === url.shortUrl && (
-                          <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md shadow-lg z-[60] overflow-hidden">
+                          <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md shadow-lg z-50 overflow-hidden">
                             <Link
                               to={`/analytics/${extractHash(url.shortUrl)}`}
                               className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-2"

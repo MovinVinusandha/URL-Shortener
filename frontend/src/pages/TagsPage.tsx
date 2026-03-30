@@ -39,8 +39,7 @@ const TagsPage: React.FC = () => {
   const filteredTags = tags.filter(t => t.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-8">
-      <div className="max-w-4xl mx-auto flex flex-col gap-4">
+    <div className="flex-1 py-8 flex flex-col gap-4 w-full">
         <div className="relative w-full max-w-md">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input 
@@ -52,7 +51,7 @@ const TagsPage: React.FC = () => {
           />
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm flex flex-col gap-0 divide-y divide-gray-100 dark:divide-slate-800">
+        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl overflow-visible shadow-sm flex flex-col gap-0 divide-y divide-gray-100 dark:divide-slate-800">
           {filteredTags.length === 0 ? (
             <div className="p-12 text-center text-gray-500">No tags found.</div>
           ) : (
@@ -60,7 +59,7 @@ const TagsPage: React.FC = () => {
               <div 
                 key={tag.id} 
                 onClick={() => navigate(`/dashboard?tag=${encodeURIComponent(tag.name)}`)}
-                className="group flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                className="group relative flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-6 h-6 rounded flex items-center justify-center border ${getTagColor(tag.color).classes}`}>
@@ -89,7 +88,7 @@ const TagsPage: React.FC = () => {
                     </button>
                     
                     {openMenuId === tag.id && (
-                      <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md shadow-lg z-[60] overflow-hidden">
+                      <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md shadow-lg z-50 overflow-hidden">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -121,7 +120,6 @@ const TagsPage: React.FC = () => {
             ))
           )}
         </div>
-      </div>
 
       <CreateTagModal 
         isOpen={isModalOpen}
