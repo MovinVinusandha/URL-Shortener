@@ -38,4 +38,20 @@ public class AnalyticsController {
         AnalyticsResponseDto response = analyticsService.getAnalytics(hash, currentUser);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/api/analytics")
+    @Operation(summary = "Get overall analytics for all URLs owned by the current user over the last 30 days")
+    public ResponseEntity<AnalyticsResponseDto> getOverallAnalytics() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            throw new UrlNotFoundException();
+        }
+
+        Long currentUserId = (Long) authentication.getPrincipal();
+        User currentUser = userRepository.findById(currentUserId)
+                .orElseThrow(UrlNotFoundException::new);
+
+        AnalyticsResponseDto response = analyticsService.getOverallAnalytics(currentUser);
+        return ResponseEntity.ok(response);
+    }
 }
