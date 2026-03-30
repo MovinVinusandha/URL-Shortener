@@ -17,6 +17,7 @@ public class TagService {
 
     private final TagRepository tagRepository;
     private final UserRepository userRepository;
+    private final UrlRepository urlRepository;
 
     public List<TagDto> getAllTagsForUser() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -29,7 +30,7 @@ public class TagService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         
         return tagRepository.findByUser(user).stream()
-                .map(t -> new TagDto(t.getId(), t.getName(), t.getColor()))
+                .map(t -> new TagDto(t.getId(), t.getName(), t.getColor(), urlRepository.countByTagsId(t.getId())))
                 .collect(Collectors.toList());
     }
 
@@ -54,7 +55,38 @@ public class TagService {
                 .build();
 
         Tag savedTag = tagRepository.save(tag);
-        return new TagDto(savedTag.getId(), savedTag.getName(), savedTag.getColor());
+        return new TagDto(savedTag.getId(), savedTag.getName(), savedTag.getColor(), 0);
+    }
+
+    @Transactional
+    public TagDto updateTag(Long id, TagRequest request) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            throw new AccessDeniedException("You must be logged in to update tags.");
+        }
+
+        Long userId = (Long) authentication.getPrincipal();
+        Tag tag = tagRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Tag not found"));
+
+        if (!tag.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("You cannot update a tag you do not own.");
+        }
+
+        String newName = request.getName().trim();
+        if (!tag.getName().equalsIgnoreCase(newName)) {
+            if (tagRepository.existsByNameIgnoreCaseAndUserId(newName, userId)) {
+                throw new TagAlreadyExistsException("A tag with this name already exists.");
+            }
+            tag.setName(newName);
+        }
+
+        tag.setColor(request.getColor() != null ? request.getColor().trim() : null);
+
+        Tag savedTag = tagRepository.save(tag);
+        int linkCount = urlRepository.countByTagsId(savedTag.getId());
+        
+        return new TagDto(savedTag.getId(), savedTag.getName(), savedTag.getColor(), linkCount);
     }
 
     @Transactional
