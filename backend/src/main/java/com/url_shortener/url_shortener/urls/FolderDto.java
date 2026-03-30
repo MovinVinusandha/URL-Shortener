@@ -18,4 +18,6 @@ public class FolderDto {
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
+    
+    private int linkCount;
 }

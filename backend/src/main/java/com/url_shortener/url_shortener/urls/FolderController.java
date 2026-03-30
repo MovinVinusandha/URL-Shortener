@@ -35,6 +35,13 @@ public class FolderController {
         return folderService.createFolder(request.getName(), user);
     }
 
+    @PutMapping("/{id}")
+    public FolderDto updateFolder(@PathVariable Long id, @Valid @RequestBody FolderRequestDto request, Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+        return folderService.updateFolder(id, request, user);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteFolder(@PathVariable Long id, Authentication authentication) {

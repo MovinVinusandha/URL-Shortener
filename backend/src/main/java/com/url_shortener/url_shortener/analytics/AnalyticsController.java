@@ -7,6 +7,7 @@ import com.url_shortener.url_shortener.users.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,17 +42,18 @@ public class AnalyticsController {
 
     @GetMapping("/api/analytics")
     @Operation(summary = "Get overall analytics for all URLs owned by the current user over the last 30 days")
-    public ResponseEntity<AnalyticsResponseDto> getOverallAnalytics() {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
-            throw new UrlNotFoundException();
-        }
+    public ResponseEntity<AnalyticsResponseDto> getOverallAnalytics(Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(analyticsService.getOverallAnalytics(currentUser));
+    }
 
-        Long currentUserId = (Long) authentication.getPrincipal();
-        User currentUser = userRepository.findById(currentUserId)
-                .orElseThrow(UrlNotFoundException::new);
-
-        AnalyticsResponseDto response = analyticsService.getOverallAnalytics(currentUser);
-        return ResponseEntity.ok(response);
+    @GetMapping("/api/analytics/folder/{folderId}")
+    public ResponseEntity<AnalyticsResponseDto> getFolderAnalytics(@PathVariable Long folderId, Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(analyticsService.getFolderAnalytics(folderId, currentUser));
     }
 }
