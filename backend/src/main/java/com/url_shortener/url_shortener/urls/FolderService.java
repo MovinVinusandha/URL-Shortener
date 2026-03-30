@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 public class FolderService {
 
     private final FolderRepository folderRepository;
+    private final UrlRepository urlRepository;
 
     public List<FolderDto> getUserFolders(Long userId) {
         return folderRepository.findByUserId(userId)
@@ -47,11 +48,32 @@ public class FolderService {
         folderRepository.delete(folder);
     }
 
+    public FolderDto updateFolder(Long id, FolderRequestDto request, User user) {
+        Folder folder = folderRepository.findById(id)
+                .orElseThrow(FolderNotFoundException::new);
+
+        if (!folder.getUser().getId().equals(user.getId())) {
+            throw new AccessDeniedException("You do not have permission to edit this folder.");
+        }
+
+        String newName = request.getName().trim();
+        if (!folder.getName().equalsIgnoreCase(newName)) {
+            if (folderRepository.existsByNameIgnoreCaseAndUserId(newName, user.getId())) {
+                throw new FolderAlreadyExistsException();
+            }
+            folder.setName(newName);
+            folder = folderRepository.save(folder);
+        }
+
+        return toDto(folder);
+    }
+
     private FolderDto toDto(Folder folder) {
         return new FolderDto(
                 folder.getId(),
                 folder.getName(),
-                folder.getCreatedAt()
+                folder.getCreatedAt(),
+                urlRepository.countByFolderId(folder.getId())
         );
     }
 }

@@ -1,6 +1,7 @@
 package com.url_shortener.url_shortener.analytics;
 
 import com.url_shortener.url_shortener.urls.UrlRepository;
+import com.url_shortener.url_shortener.urls.FolderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -39,6 +40,7 @@ import com.url_shortener.url_shortener.users.Role;
 public class AnalyticsService {
 
     private final UrlRepository            urlRepository;
+    private final FolderRepository         folderRepository;
     private final ClickEventRepository     clickEventRepository;
     private final UserAgentParserService   userAgentParserService;
     private final GeoLocationService       geoLocationService;
@@ -113,6 +115,51 @@ public class AnalyticsService {
                 .collect(Collectors.toList());
 
         List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countOverallClicksByBrowser(userId, startDate)
+                .stream()
+                .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+
+        return new AnalyticsResponseDto(
+                totalClicks,
+                clicksByDate,
+                clicksByCountry,
+                clicksByDevice,
+                clicksByBrowser
+        );
+    }
+
+    public AnalyticsResponseDto getFolderAnalytics(Long folderId, User currentUser) {
+        var folder = folderRepository.findById(folderId)
+                .orElseThrow(() -> new RuntimeException("Folder not found"));
+
+        boolean isRoot = currentUser.getRole() != null && currentUser.getRole() == Role.ROOT;
+
+        if (!isRoot && (folder.getUser() == null || !folder.getUser().getId().equals(currentUser.getId()))) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied");
+        }
+
+        LocalDateTime startDate = LocalDateTime.now().minusDays(30);
+        Long userId = currentUser.getId();
+
+        Long totalClicksRaw = clickEventRepository.countTotalFolderClicks(folderId, userId);
+        Long totalClicks = totalClicksRaw != null ? totalClicksRaw : 0L;
+
+        List<ClickDataPoint> clicksByDate = clickEventRepository.countFolderClicksByDate(folderId, userId, startDate)
+                .stream()
+                .map(row -> new ClickDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+
+        List<CountryDataPoint> clicksByCountry = clickEventRepository.countFolderClicksByCountry(folderId, userId, startDate)
+                .stream()
+                .map(row -> new CountryDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+
+        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countFolderClicksByDevice(folderId, userId, startDate)
+                .stream()
+                .map(row -> new DeviceDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+
+        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countFolderClicksByBrowser(folderId, userId, startDate)
                 .stream()
                 .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
