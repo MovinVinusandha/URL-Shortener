@@ -1,10 +1,9 @@
 package com.url_shortener.url_shortener.analytics;
 
 import com.url_shortener.url_shortener.analytics.dto.AnalyticsResponseDto;
-import com.url_shortener.url_shortener.analytics.dto.DateCountDto;
-import com.url_shortener.url_shortener.analytics.dto.StringCountDto;
 import com.url_shortener.url_shortener.urls.UrlNotFoundException;
-import com.url_shortener.url_shortener.urls.UrlRepository;
+import com.url_shortener.url_shortener.users.User;
+import com.url_shortener.url_shortener.users.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,65 +20,22 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AnalyticsController {
 
-    private final UrlRepository urlRepository;
-    private final ClickEventRepository clickEventRepository;
+    private final AnalyticsService analyticsService;
+    private final UserRepository userRepository;
 
-    @GetMapping("/analytics/{hash}")
+    @GetMapping("/api/analytics/{hash}")
     @Operation(summary = "Get detailed analytics for a short URL over the last 30 days")
     public ResponseEntity<AnalyticsResponseDto> getAnalytics(@PathVariable String hash) {
-        var url = urlRepository.findByShortUrl(hash);
-        if (url == null) {
-            throw new UrlNotFoundException();
-        }
-
-        // Verify ownership (requires Bearer token)
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
             throw new UrlNotFoundException();
         }
 
         Long currentUserId = (Long) authentication.getPrincipal();
-        boolean isRoot = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ROOT") || a.getAuthority().equals("ROOT"));
-        
-        if (!isRoot && (url.getUser() == null || !url.getUser().getId().equals(currentUserId))) {
-            throw new UrlNotFoundException();
-        }
+        User currentUser = userRepository.findById(currentUserId)
+                .orElseThrow(UrlNotFoundException::new);
 
-        LocalDateTime startDate = LocalDateTime.now().minusDays(30);
-        Long urlId = url.getId();
-
-        Long totalClicksRaw = clickEventRepository.countByUrl_Id(urlId);
-        Long totalClicks = totalClicksRaw != null ? totalClicksRaw : 0L;
-
-        List<DateCountDto> clicksByDate = clickEventRepository.countByDateForUrl(urlId, startDate)
-                .stream()
-                .map(row -> new DateCountDto(row[0].toString(), ((Number) row[1]).longValue()))
-                .collect(Collectors.toList());
-
-        List<StringCountDto> clicksByCountry = clickEventRepository.countByCountryForUrl(urlId, startDate)
-                .stream()
-                .map(row -> new StringCountDto(row[0].toString(), ((Number) row[1]).longValue()))
-                .collect(Collectors.toList());
-
-        List<StringCountDto> clicksByDevice = clickEventRepository.countByDeviceForUrl(urlId, startDate)
-                .stream()
-                .map(row -> new StringCountDto(row[0].toString(), ((Number) row[1]).longValue()))
-                .collect(Collectors.toList());
-
-        List<StringCountDto> clicksByBrowser = clickEventRepository.countByBrowserForUrl(urlId, startDate)
-                .stream()
-                .map(row -> new StringCountDto(row[0].toString(), ((Number) row[1]).longValue()))
-                .collect(Collectors.toList());
-
-        var response = new AnalyticsResponseDto(
-                totalClicks,
-                clicksByDate,
-                clicksByCountry,
-                clicksByDevice,
-                clicksByBrowser
-        );
-
+        AnalyticsResponseDto response = analyticsService.getAnalytics(hash, currentUser);
         return ResponseEntity.ok(response);
     }
 }
