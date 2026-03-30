@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, Link } from 'react-router-dom';
 import { X, BarChart2, Search, Copy, QrCode, Edit2, Trash2, CornerDownRight, MoreVertical, Filter, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import EditModal from '../components/EditModal';
 import type { DashboardLayoutContext } from '../layouts/DashboardLayout';
@@ -410,11 +410,11 @@ const DashboardPage: React.FC = () => {
                     
                     {/* Actions */}
                     <div className="shrink-0 flex items-center gap-3 ml-4">
-                      <div className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-slate-800 px-2 py-1 rounded-md border border-gray-100 dark:border-slate-700">
+                      <Link to={`/analytics/${extractHash(url.shortUrl)}`} className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors px-2 py-1 rounded-md border border-gray-100 dark:border-slate-700">
                         <BarChart2 className="w-4 h-4 text-gray-400" />
                         {url.accessed_times}
                         <span className="hidden sm:inline ml-1 text-gray-400 font-normal">clicks</span>
-                      </div>
+                      </Link>
                       
                       <div className="relative">
                         <button 
@@ -425,7 +425,14 @@ const DashboardPage: React.FC = () => {
                         </button>
                         
                         {openMenuId === url.shortUrl && (
-                          <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md shadow-lg z-[60] overflow-hidden">
+                          <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md shadow-lg z-[60] overflow-hidden">
+                            <Link
+                              to={`/analytics/${extractHash(url.shortUrl)}`}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                            >
+                              <BarChart2 className="w-4 h-4" />
+                              View Analytics
+                            </Link>
                             <button
                               onClick={() => {
                                 setEditIndex(urls.indexOf(url));
