@@ -90,6 +90,42 @@ public class AnalyticsService {
         );
     }
 
+    public AnalyticsResponseDto getOverallAnalytics(User currentUser) {
+        LocalDateTime startDate = LocalDateTime.now().minusDays(30);
+        Long userId = currentUser.getId();
+
+        Long totalClicksRaw = clickEventRepository.countTotalOverallClicks(userId);
+        Long totalClicks = totalClicksRaw != null ? totalClicksRaw : 0L;
+
+        List<ClickDataPoint> clicksByDate = clickEventRepository.countOverallClicksByDate(userId, startDate)
+                .stream()
+                .map(row -> new ClickDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+
+        List<CountryDataPoint> clicksByCountry = clickEventRepository.countOverallClicksByCountry(userId, startDate)
+                .stream()
+                .map(row -> new CountryDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+
+        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countOverallClicksByDevice(userId, startDate)
+                .stream()
+                .map(row -> new DeviceDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+
+        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countOverallClicksByBrowser(userId, startDate)
+                .stream()
+                .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+
+        return new AnalyticsResponseDto(
+                totalClicks,
+                clicksByDate,
+                clicksByCountry,
+                clicksByDevice,
+                clicksByBrowser
+        );
+    }
+
     /**
      * Records a click event for the given short URL hash asynchronously.
      * <p>
