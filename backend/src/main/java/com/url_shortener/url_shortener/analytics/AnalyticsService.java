@@ -10,6 +10,16 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import com.url_shortener.url_shortener.analytics.dto.AnalyticsResponseDto;
+import com.url_shortener.url_shortener.analytics.dto.ClickDataPoint;
+import com.url_shortener.url_shortener.analytics.dto.CountryDataPoint;
+import com.url_shortener.url_shortener.analytics.dto.DeviceDataPoint;
+import com.url_shortener.url_shortener.analytics.dto.BrowserDataPoint;
+import com.url_shortener.url_shortener.users.User;
+import com.url_shortener.url_shortener.users.Role;
 
 /**
  * Asynchronous analytics orchestrator that records a {@link ClickEvent}
@@ -32,6 +42,53 @@ public class AnalyticsService {
     private final ClickEventRepository     clickEventRepository;
     private final UserAgentParserService   userAgentParserService;
     private final GeoLocationService       geoLocationService;
+
+    public AnalyticsResponseDto getAnalytics(String hash, User currentUser) {
+        var url = urlRepository.findByShortUrl(hash);
+        if (url == null) {
+            throw new com.url_shortener.url_shortener.urls.UrlNotFoundException();
+        }
+
+        boolean isRoot = currentUser.getRole() != null && currentUser.getRole() == Role.ROOT;
+
+        if (!isRoot && (url.getUser() == null || !url.getUser().getId().equals(currentUser.getId()))) {
+            throw new com.url_shortener.url_shortener.urls.UrlNotFoundException();
+        }
+
+        LocalDateTime startDate = LocalDateTime.now().minusDays(30);
+        Long urlId = url.getId();
+
+        Long totalClicksRaw = clickEventRepository.countByUrl_Id(urlId);
+        Long totalClicks = totalClicksRaw != null ? totalClicksRaw : 0L;
+
+        List<ClickDataPoint> clicksByDate = clickEventRepository.countByDateForUrl(urlId, startDate)
+                .stream()
+                .map(row -> new ClickDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+
+        List<CountryDataPoint> clicksByCountry = clickEventRepository.countByCountryForUrl(urlId, startDate)
+                .stream()
+                .map(row -> new CountryDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+
+        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countByDeviceForUrl(urlId, startDate)
+                .stream()
+                .map(row -> new DeviceDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+
+        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countByBrowserForUrl(urlId, startDate)
+                .stream()
+                .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+
+        return new AnalyticsResponseDto(
+                totalClicks,
+                clicksByDate,
+                clicksByCountry,
+                clicksByDevice,
+                clicksByBrowser
+        );
+    }
 
     /**
      * Records a click event for the given short URL hash asynchronously.

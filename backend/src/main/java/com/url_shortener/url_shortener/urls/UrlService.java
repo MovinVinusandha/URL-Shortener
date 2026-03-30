@@ -144,6 +144,11 @@ public class UrlService {
     public String getLongUrlForRedirect(String shortUrl) {
         // Enforce strict lazy evaluation first
         var url = isExistsShortUrl(shortUrl);
+        
+        if (!url.isActive()) {
+            throw new LinkExpiredException();
+        }
+        
         log.info("Evaluating URL hash: {}. IsActive: {}, ExpiresAt: {}", url.getShortUrl(), url.isActive(), url.getExpiresAt());
 
         if (url.getPasswordHash() != null && !url.getPasswordHash().isEmpty()) {
@@ -172,6 +177,10 @@ public class UrlService {
 
     public String getUrlForUnlock(String shortUrl, String password) {
         var url = isExistsShortUrl(shortUrl);
+        
+        if (!url.isActive()) {
+            throw new LinkExpiredException();
+        }
         
         if (url.getPasswordHash() == null || url.getPasswordHash().isEmpty()) {
             throw new IllegalArgumentException("URL is not password protected.");
@@ -288,15 +297,10 @@ public class UrlService {
             throw new UrlNotFoundException();
         }
         
-        if (!url.isActive()) {
-            throw new LinkExpiredException();
-        }
-        
         if (url.isActive() && url.getExpiresAt() != null && url.getExpiresAt().isBefore(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC))) {
             url.setActive(false);
             urlRepository.save(url);
             redisTemplate.delete("urls::" + url.getShortUrl());
-            throw new LinkExpiredException();
         }
         
         return url;
