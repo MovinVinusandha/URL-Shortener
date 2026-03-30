@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useOutletContext } from 'react-router-dom';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 import { Search, MoreVertical, Trash2, Link as LinkIcon, Tag as TagIcon, Pen } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
 import type { DashboardLayoutContext } from '../layouts/DashboardLayout';
@@ -19,6 +19,7 @@ const getTagColor = (colorName: string | undefined) => {
 
 const TagsPage: React.FC = () => {
   const { tags, setTags } = useOutletContext<DashboardLayoutContext>();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [tagToEdit, setTagToEdit] = useState<any | null>(null);
@@ -56,7 +57,11 @@ const TagsPage: React.FC = () => {
             <div className="p-12 text-center text-gray-500">No tags found.</div>
           ) : (
             filteredTags.map((tag) => (
-              <div key={tag.id} className="group flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+              <div 
+                key={tag.id} 
+                onClick={() => navigate(`/dashboard?tag=${encodeURIComponent(tag.name)}`)}
+                className="group flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+              >
                 <div className="flex items-center gap-3">
                   <div className={`w-6 h-6 rounded flex items-center justify-center border ${getTagColor(tag.color).classes}`}>
                     <TagIcon className={`w-3.5 h-3.5 ${getTagColor(tag.color).classes.split(' ').find(c => c.startsWith('text-') && !c.includes('dark:'))}`} />
@@ -65,17 +70,19 @@ const TagsPage: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Link 
-                    to="/dashboard"
+                  <div 
                     className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
                   >
                     <LinkIcon className="w-3.5 h-3.5" />
                     {tag.linkCount || 0} {(tag.linkCount || 0) === 1 ? 'link' : 'links'}
-                  </Link>
+                  </div>
                   
                   <div className="relative">
                     <button 
-                      onClick={() => setOpenMenuId(openMenuId === tag.id ? null : tag.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenuId(openMenuId === tag.id ? null : tag.id);
+                      }}
                       className="p-1.5 text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-slate-700 rounded-md transition-colors"
                     >
                       <MoreVertical className="w-4 h-4" />
@@ -84,7 +91,8 @@ const TagsPage: React.FC = () => {
                     {openMenuId === tag.id && (
                       <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md shadow-lg z-[60] overflow-hidden">
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setOpenMenuId(null);
                             setTagToEdit(tag);
                             setIsModalOpen(true);
@@ -95,7 +103,8 @@ const TagsPage: React.FC = () => {
                           Edit
                         </button>
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setOpenMenuId(null);
                             setTagToDelete(tag);
                           }}

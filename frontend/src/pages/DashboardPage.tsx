@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useOutletContext, Link } from 'react-router-dom';
-import { X, BarChart2, Search, Copy, QrCode, Edit2, Trash2, CornerDownRight, MoreVertical, Filter, SlidersHorizontal, ChevronDown, ArrowUpDown, Check, ArrowDownWideNarrow } from 'lucide-react';
+import { useOutletContext, Link, useSearchParams } from 'react-router-dom';
+import { X, BarChart2, Search, Copy, QrCode, Edit2, Trash2, CornerDownRight, MoreVertical, Filter, SlidersHorizontal, ChevronDown, ArrowUpDown, Check, ArrowDownWideNarrow, Tag, ChevronLeft } from 'lucide-react';
 import EditModal from '../components/EditModal';
 import type { DashboardLayoutContext } from '../layouts/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
@@ -51,7 +51,7 @@ const DashboardPage: React.FC = () => {
   const [isQrLoading, setIsQrLoading] = useState(false);
   const [activeQrHash, setActiveQrHash] = useState<string | null>(null);
 
-  const { triggerRefresh, setNavStats } = useOutletContext<DashboardLayoutContext>();
+  const { triggerRefresh, setNavStats, tags } = useOutletContext<DashboardLayoutContext>();
 
   const [activeFilterTagId] = useState<number | null>(null);
   const [activeFolderId] = useState<number | null>(null);
@@ -63,8 +63,26 @@ const DashboardPage: React.FC = () => {
   const [displayProps, setDisplayProps] = useState({ destinationUrl: true, tags: true, clicks: true, createdAt: true });
   const [isDisplayOpen, setIsDisplayOpen] = useState(false);
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('none');
+  const [selectedFilterTags, setSelectedFilterTags] = useState<number[]>([]);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [tagSearch, setTagSearch] = useState('');
+  
   const displayRef = useRef<HTMLDivElement>(null);
   const sortMenuRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
+
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const tagFromUrl = searchParams.get('tag');
+    if (tagFromUrl && tags.length > 0) {
+      const tagToFilter = tags.find(t => t.name.toLowerCase() === tagFromUrl.toLowerCase());
+      if (tagToFilter) {
+        setSelectedFilterTags([tagToFilter.id]);
+      }
+    }
+  }, [searchParams, tags]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -73,6 +91,11 @@ const DashboardPage: React.FC = () => {
         setIsSortMenuOpen(false);
       } else if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
         setIsSortMenuOpen(false);
+      }
+      
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+        setIsFilterOpen(false);
+        setActiveFilter('none');
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -316,6 +339,9 @@ const DashboardPage: React.FC = () => {
       u.shortUrl.toLowerCase().includes(query) || 
       u.longUrl.toLowerCase().includes(query)
     );
+  }).filter(u => {
+    if (selectedFilterTags.length === 0) return true;
+    return u.tags?.some(tag => selectedFilterTags.includes(tag.id));
   });
 
   const totalClicks = displayedUrls.reduce((acc, u) => acc + (u.accessed_times ?? 0), 0);
@@ -329,12 +355,114 @@ const DashboardPage: React.FC = () => {
 
         <div className="flex-1 p-6 max-w-5xl mx-auto w-full">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 mt-6 px-6">
-            <div className="flex items-center gap-2">
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 shadow-sm transition-colors">
-                <Filter className="w-4 h-4" />
-                Filter
-                <ChevronDown className="w-3 h-3 text-gray-400" />
-              </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative" ref={filterRef}>
+                <button 
+                  onClick={() => setIsFilterOpen(!isFilterOpen)}
+                  className={`flex items-center gap-2 px-3 py-1.5 border rounded-md text-sm font-medium shadow-sm transition-colors ${selectedFilterTags.length > 0 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}
+                >
+                  <Filter className="w-4 h-4" />
+                  Filter
+                  {selectedFilterTags.length > 0 && <span className="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs px-1.5 py-0.5 rounded-full leading-none">{selectedFilterTags.length}</span>}
+                  <ChevronDown className="w-3 h-3 opacity-70" />
+                </button>
+
+                {isFilterOpen && (
+                  <div className="absolute left-0 top-full mt-2 w-64 rounded-lg shadow-xl bg-white dark:bg-slate-900 ring-1 ring-black/5 dark:ring-white/10 border border-gray-200 dark:border-slate-800 divide-y divide-gray-100 dark:divide-slate-800 focus:outline-none z-[60] overflow-hidden">
+                    {activeFilter === 'none' ? (
+                      <>
+                        <div className="p-2">
+                          <div className="relative">
+                            <input 
+                              type="text"
+                              placeholder="Filter..." 
+                              className="block w-full pl-3 pr-8 py-2 border-none bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-0"
+                            />
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                              <kbd className="inline-flex items-center border border-gray-200 dark:border-slate-700 rounded px-1.5 text-xs font-medium text-gray-400 bg-gray-50 dark:bg-slate-800">F</kbd>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="py-1 p-1">
+                          <button 
+                            onClick={() => setActiveFilter('tag')}
+                            className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-md transition-colors group"
+                          >
+                            <div className="flex items-center">
+                              <Tag className="mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+                              Tag
+                            </div>
+                            <span className="text-xs text-gray-400 group-hover:text-gray-500">T</span>
+                          </button>
+                        </div>
+                      </>
+                    ) : activeFilter === 'tag' ? (
+                      <>
+                        <div className="p-2 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2">
+                          <button 
+                            onClick={() => { setActiveFilter('none'); setTagSearch(''); }} 
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded text-gray-500"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <div className="relative flex-1">
+                            <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input 
+                              type="text"
+                              value={tagSearch}
+                              onChange={e => setTagSearch(e.target.value)}
+                              placeholder="Search tags..." 
+                              className="block w-full pl-9 pr-3 py-1.5 border border-gray-200 dark:border-slate-700 rounded-md text-sm bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                        </div>
+                        <div className="py-1 p-1 max-h-48 overflow-y-auto">
+                          {tags.filter(t => t.name.toLowerCase().includes(tagSearch.toLowerCase())).map(t => (
+                            <label key={t.id} className="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-md cursor-pointer group">
+                              <input 
+                                type="checkbox" 
+                                checked={selectedFilterTags.includes(t.id)}
+                                onChange={() => {
+                                  setSelectedFilterTags(prev => 
+                                    prev.includes(t.id) ? prev.filter(id => id !== t.id) : [...prev, t.id]
+                                  )
+                                }}
+                                className="rounded border-gray-300 dark:border-slate-600 text-black dark:text-white focus:ring-black dark:focus:ring-white mr-3 bg-white dark:bg-slate-900"
+                              />
+                              <span className="flex-1 flex items-center gap-2">
+                                <span 
+                                  className="w-2.5 h-2.5 rounded-full" 
+                                  style={{ backgroundColor: t.color || '#374151' }}
+                                />
+                                {t.name}
+                              </span>
+                            </label>
+                          ))}
+                          {tags.length === 0 && <div className="px-3 py-2 text-sm text-gray-500">No tags found</div>}
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+              
+              {/* Active Filters Pills */}
+              {selectedFilterTags.map(tagId => {
+                const tag = tags.find(t => t.id === tagId);
+                if (!tag) return null;
+                return (
+                  <div key={tag.id} className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color || '#374151' }} />
+                    {tag.name}
+                    <button 
+                      onClick={() => setSelectedFilterTags(prev => prev.filter(id => id !== tag.id))}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                );
+              })}
               <div className="relative" ref={displayRef}>
                 <button 
                   onClick={() => setIsDisplayOpen(!isDisplayOpen)}
