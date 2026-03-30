@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -9,7 +9,7 @@ import { useOutletContext } from 'react-router-dom';
 import type { DashboardLayoutContext } from '../layouts/DashboardLayout';
 import { 
   ArrowLeft, MousePointerClick, Globe, Monitor, 
-  Link as LinkIcon, Activity, BarChart2,
+  Link as LinkIcon, Activity,
   Users, Percent, Share2
 } from 'lucide-react';
 
@@ -33,12 +33,11 @@ const AnalyticsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!hash) return;
-    
     const fetchAnalytics = async () => {
       setLoading(true);
       try {
-        const response = await axiosInstance.get<AnalyticsData>(`/api/analytics/${hash}`);
+        const endpoint = hash ? `/api/analytics/${hash}` : '/api/analytics';
+        const response = await axiosInstance.get<AnalyticsData>(endpoint);
         setData(response.data);
         setError(null);
       } catch (err: any) {
@@ -56,21 +55,6 @@ const AnalyticsPage: React.FC = () => {
       setNavStats({ totalClicks: data.totalClicks || 0, linkCount: 0 });
     }
   }, [data, setNavStats]);
-
-  if (!hash) {
-    return (
-      <div className="flex flex-col items-center justify-center flex-1 h-[60vh]">
-        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-8 max-w-md w-full text-center shadow-sm">
-          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4">
-            <BarChart2 className="w-6 h-6" />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Select a link</h2>
-          <p className="text-sm text-gray-500 mb-6">Please select a link from your dashboard to view its detailed analytics.</p>
-          <Link to="/dashboard" className="bg-black text-white dark:bg-white dark:text-black px-4 py-2 rounded-md font-medium inline-block">Go to Links</Link>
-        </div>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -127,7 +111,13 @@ const AnalyticsPage: React.FC = () => {
         
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Analytics for <span className="text-[#7c3aed]">/{hash}</span></h2>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+              {hash ? (
+                <>Analytics for <span className="text-[#7c3aed]">/{hash}</span></>
+              ) : (
+                'Overall Analytics'
+              )}
+            </h1>
           </div>
         </div>
 
