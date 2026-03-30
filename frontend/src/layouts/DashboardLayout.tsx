@@ -5,12 +5,14 @@ import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 import type { Tag, Folder, UrlEntry } from '../types';
 import CreateLinkModal from '../components/CreateLinkModal';
+import CreateTagModal from '../components/CreateTagModal';
 
 export type DashboardLayoutContext = {
   triggerRefresh: UrlEntry | null;
   tags: Tag[];
   folders: Folder[];
   setNavStats: (stats: { totalClicks: number; linkCount: number }) => void;
+  setTags: React.Dispatch<React.SetStateAction<Tag[]>>;
 };
 
 const DashboardLayout: React.FC = () => {
@@ -19,6 +21,7 @@ const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreateTagModalOpen, setIsCreateTagModalOpen] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   
@@ -98,12 +101,21 @@ const DashboardLayout: React.FC = () => {
               <ChevronDown className="w-4 h-4 text-gray-400" />
             </h1>
           </div>
-          <button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm"
-          >
-            Create link
-          </button>
+          {location.pathname.startsWith('/tags') ? (
+            <button 
+              onClick={() => setIsCreateTagModalOpen(true)}
+              className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm"
+            >
+              Create tag
+            </button>
+          ) : (
+            <button 
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm"
+            >
+              Create link
+            </button>
+          )}
         </header>
 
         {/* Top Navigation Tabs */}
@@ -153,7 +165,7 @@ const DashboardLayout: React.FC = () => {
 
         {/* Main Content Rendered Here */}
         <div className="flex-1 overflow-y-auto">
-          <Outlet context={{ triggerRefresh: latestNewEntry, tags, folders, setNavStats } satisfies DashboardLayoutContext} />
+          <Outlet context={{ triggerRefresh: latestNewEntry, tags, folders, setNavStats, setTags } satisfies DashboardLayoutContext} />
         </div>
 
       </div>
@@ -167,6 +179,15 @@ const DashboardLayout: React.FC = () => {
         }}
         folders={folders}
         tags={tags}
+      />
+
+      {/* ── Create Tag Modal ────────────────────────────── */}
+      <CreateTagModal
+        isOpen={isCreateTagModalOpen}
+        onClose={() => setIsCreateTagModalOpen(false)}
+        onSuccess={(newTag) => {
+          setTags([...tags, newTag]);
+        }}
       />
     </div>
   );
