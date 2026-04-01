@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
-import { Link as LinkIcon, BarChart2, Folder as FolderIcon, Tag as TagIcon, Activity, ChevronDown, FolderPlus, Search, HelpCircle, User, Settings, Gift, LogOut, ArrowLeft, Shield } from 'lucide-react';
+import { Link as LinkIcon, BarChart2, Folder as FolderIcon, Tag as TagIcon, Activity, ChevronDown, FolderPlus, Search, HelpCircle, User, Settings, Gift, LogOut, ArrowLeft, Shield, Download } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 import type { Tag, Folder, UrlEntry } from '../types';
 import CreateLinkModal from '../components/CreateLinkModal';
 import CreateTagModal from '../components/CreateTagModal';
 import FolderModal from '../components/FolderModal';
+import BrandLogo from '../components/BrandLogo';
 
 export type DashboardLayoutContext = {
   triggerRefresh: UrlEntry | null;
@@ -17,6 +18,10 @@ export type DashboardLayoutContext = {
   setFolders: React.Dispatch<React.SetStateAction<Folder[]>>;
   activeFolderId: number | null;
   setActiveFolderId: React.Dispatch<React.SetStateAction<number | null>>;
+  setIsFolderModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsCreateTagModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setFolderToEdit: React.Dispatch<React.SetStateAction<any | null>>;
+  setTagToEdit: React.Dispatch<React.SetStateAction<any | null>>;
 };
 
 const DashboardLayout: React.FC = () => {
@@ -27,6 +32,10 @@ const DashboardLayout: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreateTagModalOpen, setIsCreateTagModalOpen] = useState(false);
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
+  
+  const [folderToEdit, setFolderToEdit] = useState<any | null>(null);
+  const [tagToEdit, setTagToEdit] = useState<any | null>(null);
+
   const [tags, setTags] = useState<Tag[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [activeFolderId, setActiveFolderId] = useState<number | null>(null);
@@ -92,26 +101,69 @@ const DashboardLayout: React.FC = () => {
     return 'Links';
   };
 
+  const renderHeaderButton = () => {
+    if (location.pathname.startsWith('/analytics')) {
+      return (
+        <button className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm">
+          <Download className="w-4 h-4" /> Export
+        </button>
+      );
+    }
+    if (location.pathname.startsWith('/folders')) {
+      return (
+        <button 
+          onClick={() => {
+            setFolderToEdit(null);
+            setIsFolderModalOpen(true);
+          }} 
+          className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm"
+        >
+          <FolderPlus className="w-4 h-4" /> Create folder
+        </button>
+      );
+    }
+    if (location.pathname.startsWith('/tags')) {
+      return (
+        <button 
+          onClick={() => {
+            setTagToEdit(null);
+            setIsCreateTagModalOpen(true);
+          }} 
+          className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm"
+        >
+          <TagIcon className="w-4 h-4" /> Create tag
+        </button>
+      );
+    }
+    // Default case for /dashboard
+    return (
+      <button 
+        onClick={() => setIsCreateModalOpen(true)}
+        className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm"
+      >
+        <LinkIcon className="w-4 h-4" /> Create link
+      </button>
+    );
+  };
+
   return (
     <div className="h-screen flex overflow-hidden bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 font-sans">
       {/* ── Sidebar ────────────────────────────────────────── */}
-      <aside className="w-16 shrink-0 border-r border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 hidden sm:flex flex-col items-center py-4 z-20">
+      <aside className="w-20 shrink-0 border-r border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 hidden sm:flex flex-col items-center py-4 z-20">
         <div className="mb-8 flex items-center justify-center w-full px-2 cursor-pointer" onClick={() => navigate('/dashboard')}>
-          <div className="w-8 h-8 flex items-center justify-center bg-black dark:bg-white rounded-lg text-white dark:text-black font-bold">
-            <LinkIcon className="w-5 h-5" />
-          </div>
+          <BrandLogo className="w-10 h-10 text-black dark:text-white" />
         </div>
         <nav className="flex-1 flex flex-col items-center gap-4">
         </nav>
         <div className="mt-auto flex flex-col items-center gap-4">
           <button className="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
-            <HelpCircle className="w-5 h-5" />
+            <HelpCircle className="w-6 h-6" />
           </button>
           
           <div className="relative" ref={userMenuRef}>
             <button 
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="w-8 h-8 rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-200 flex items-center justify-center text-sm font-medium uppercase border border-gray-300 dark:border-slate-600 shadow-sm cursor-pointer"
+              className="w-10 h-10 rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-200 flex items-center justify-center text-sm font-medium uppercase border border-gray-300 dark:border-slate-600 shadow-sm cursor-pointer"
             >
               {user?.name ? user.name.charAt(0) : user?.email ? user.email.charAt(0) : 'U'}
             </button>
@@ -264,22 +316,7 @@ const DashboardLayout: React.FC = () => {
               </h1>
             )}
           </div>
-          {!location.pathname.startsWith('/settings') && (
-            location.pathname.includes('/analytics') ? (
-              <button 
-                className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm"
-              >
-                Export
-              </button>
-            ) : (
-              <button 
-                onClick={() => setIsCreateModalOpen(true)}
-                className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm"
-              >
-                Create link
-              </button>
-            )
-          )}
+          {!location.pathname.startsWith('/settings') && renderHeaderButton()}
         </header>
 
         {/* Top Navigation Tabs */}
@@ -353,7 +390,20 @@ const DashboardLayout: React.FC = () => {
         {/* Main Content Rendered Here */}
         <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
           <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-            <Outlet context={{ triggerRefresh: latestNewEntry, tags, folders, setNavStats, setTags, setFolders, activeFolderId, setActiveFolderId } satisfies DashboardLayoutContext} />
+            <Outlet context={{ 
+              triggerRefresh: latestNewEntry, 
+              tags, 
+              folders, 
+              setNavStats, 
+              setTags, 
+              setFolders, 
+              activeFolderId, 
+              setActiveFolderId,
+              setIsFolderModalOpen,
+              setIsCreateTagModalOpen,
+              setFolderToEdit,
+              setTagToEdit
+            } satisfies DashboardLayoutContext} />
           </div>
         </main>
 
@@ -373,18 +423,34 @@ const DashboardLayout: React.FC = () => {
       {/* ── Create Tag Modal ────────────────────────────── */}
       <CreateTagModal
         isOpen={isCreateTagModalOpen}
-        onClose={() => setIsCreateTagModalOpen(false)}
-        onSuccess={(newTag) => {
-          setTags([...tags, newTag]);
+        tagToEdit={tagToEdit}
+        onClose={() => {
+          setIsCreateTagModalOpen(false);
+          setTagToEdit(null);
+        }}
+        onSuccess={(updatedTag) => {
+          if (tagToEdit) {
+            setTags(tags.map(t => t.id === updatedTag.id ? updatedTag : t));
+          } else {
+            setTags([...tags, updatedTag]);
+          }
         }}
       />
 
       {/* ── Create Folder Modal ────────────────────────────── */}
       <FolderModal
         isOpen={isFolderModalOpen}
-        onClose={() => setIsFolderModalOpen(false)}
-        onSuccess={(newFolder) => {
-          setFolders([...folders, newFolder]);
+        folderToEdit={folderToEdit}
+        onClose={() => {
+          setIsFolderModalOpen(false);
+          setFolderToEdit(null);
+        }}
+        onSuccess={(updatedFolder) => {
+          if (folderToEdit) {
+            setFolders(folders.map(f => f.id === updatedFolder.id ? updatedFolder : f));
+          } else {
+            setFolders([...folders, updatedFolder]);
+          }
         }}
       />
     </div>
