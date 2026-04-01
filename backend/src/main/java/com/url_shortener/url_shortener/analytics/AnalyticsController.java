@@ -11,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
@@ -25,8 +26,10 @@ public class AnalyticsController {
     private final UserRepository userRepository;
 
     @GetMapping("/api/analytics/{hash}")
-    @Operation(summary = "Get detailed analytics for a short URL over the last 30 days")
-    public ResponseEntity<AnalyticsResponseDto> getAnalytics(@PathVariable String hash) {
+    @Operation(summary = "Get detailed analytics for a short URL")
+    public ResponseEntity<AnalyticsResponseDto> getAnalytics(
+            @PathVariable String hash,
+            @RequestParam(name = "period", defaultValue = "all") String period) {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
             throw new UrlNotFoundException();
@@ -36,24 +39,29 @@ public class AnalyticsController {
         User currentUser = userRepository.findById(currentUserId)
                 .orElseThrow(UrlNotFoundException::new);
 
-        AnalyticsResponseDto response = analyticsService.getAnalytics(hash, currentUser);
+        AnalyticsResponseDto response = analyticsService.getAnalytics(hash, currentUser, period);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/api/analytics")
-    @Operation(summary = "Get overall analytics for all URLs owned by the current user over the last 30 days")
-    public ResponseEntity<AnalyticsResponseDto> getOverallAnalytics(Authentication authentication) {
+    @Operation(summary = "Get overall analytics for all URLs owned by the current user")
+    public ResponseEntity<AnalyticsResponseDto> getOverallAnalytics(
+            Authentication authentication,
+            @RequestParam(name = "period", defaultValue = "all") String period) {
         Long userId = (Long) authentication.getPrincipal();
         User currentUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return ResponseEntity.ok(analyticsService.getOverallAnalytics(currentUser));
+        return ResponseEntity.ok(analyticsService.getOverallAnalytics(currentUser, period));
     }
 
     @GetMapping("/api/analytics/folder/{folderId}")
-    public ResponseEntity<AnalyticsResponseDto> getFolderAnalytics(@PathVariable Long folderId, Authentication authentication) {
+    public ResponseEntity<AnalyticsResponseDto> getFolderAnalytics(
+            @PathVariable Long folderId, 
+            Authentication authentication,
+            @RequestParam(name = "period", defaultValue = "all") String period) {
         Long userId = (Long) authentication.getPrincipal();
         User currentUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return ResponseEntity.ok(analyticsService.getFolderAnalytics(folderId, currentUser));
+        return ResponseEntity.ok(analyticsService.getFolderAnalytics(folderId, currentUser, period));
     }
 }

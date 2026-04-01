@@ -23,7 +23,8 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
     Page<ClickEvent> findByUrl_Id(Long urlId, Pageable pageable);
 
     /** Total click count for a specific URL. */
-    long countByUrl_Id(Long urlId);
+    @Query("SELECT COUNT(c) FROM ClickEvent c WHERE c.url.id = :urlId AND c.timestamp >= :startDate")
+    long countByUrl_Id(@Param("urlId") Long urlId, @Param("startDate") LocalDateTime startDate);
 
     /** Click events for a URL within a time range (for time-series charts). */
     List<ClickEvent> findByUrl_IdAndTimestampBetween(
@@ -36,51 +37,51 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
     @Query("""
             SELECT c.device, COUNT(c) AS cnt
             FROM ClickEvent c
-            WHERE c.url.id = :urlId
+            WHERE c.url.id = :urlId AND c.timestamp >= :startDate
             GROUP BY c.device
             ORDER BY cnt DESC
             """)
-    List<Object[]> countByDeviceForUrl(@Param("urlId") Long urlId);
+    List<Object[]> countByDeviceForUrl(@Param("urlId") Long urlId, @Param("startDate") LocalDateTime startDate);
 
     /** Count clicks grouped by browser for a URL. */
     @Query("""
             SELECT c.browser, COUNT(c) AS cnt
             FROM ClickEvent c
-            WHERE c.url.id = :urlId
+            WHERE c.url.id = :urlId AND c.timestamp >= :startDate
             GROUP BY c.browser
             ORDER BY cnt DESC
             """)
-    List<Object[]> countByBrowserForUrl(@Param("urlId") Long urlId);
+    List<Object[]> countByBrowserForUrl(@Param("urlId") Long urlId, @Param("startDate") LocalDateTime startDate);
 
     /** Count clicks grouped by country for a URL. */
     @Query("""
             SELECT c.country, COUNT(c) AS cnt
             FROM ClickEvent c
-            WHERE c.url.id = :urlId
+            WHERE c.url.id = :urlId AND c.timestamp >= :startDate
             GROUP BY c.country
             ORDER BY cnt DESC
             """)
-    List<Object[]> countByCountryForUrl(@Param("urlId") Long urlId);
+    List<Object[]> countByCountryForUrl(@Param("urlId") Long urlId, @Param("startDate") LocalDateTime startDate);
 
     /** Count clicks grouped by OS for a URL. */
     @Query("""
             SELECT c.os, COUNT(c) AS cnt
             FROM ClickEvent c
-            WHERE c.url.id = :urlId
+            WHERE c.url.id = :urlId AND c.timestamp >= :startDate
             GROUP BY c.os
             ORDER BY cnt DESC
             """)
-    List<Object[]> countByOsForUrl(@Param("urlId") Long urlId);
+    List<Object[]> countByOsForUrl(@Param("urlId") Long urlId, @Param("startDate") LocalDateTime startDate);
 
     /** Count clicks grouped by date for a URL over a time range. */
     @Query("""
             SELECT DATE(c.timestamp) as date, COUNT(c) as cnt
             FROM ClickEvent c
-            WHERE c.url.id = :urlId
+            WHERE c.url.id = :urlId AND c.timestamp >= :startDate
             GROUP BY DATE(c.timestamp)
             ORDER BY date ASC
             """)
-    List<Object[]> countByDateForUrl(@Param("urlId") Long urlId);
+    List<Object[]> countByDateForUrl(@Param("urlId") Long urlId, @Param("startDate") LocalDateTime startDate);
 
     /** Total click count across ALL URLs (admin overview). */
     @Query("SELECT COUNT(c) FROM ClickEvent c")
@@ -92,40 +93,44 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
             SELECT DATE(c.timestamp) as date, COUNT(c) as cnt
             FROM ClickEvent c
             WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.user.id = :userId)
+              AND c.timestamp >= :startDate
             GROUP BY DATE(c.timestamp)
             ORDER BY date ASC
             """)
-    List<Object[]> countOverallClicksByDate(@Param("userId") Long userId);
+    List<Object[]> countOverallClicksByDate(@Param("userId") Long userId, @Param("startDate") LocalDateTime startDate);
 
     @Query("""
             SELECT c.country, COUNT(c) AS cnt
             FROM ClickEvent c
             WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.user.id = :userId)
+              AND c.timestamp >= :startDate
             GROUP BY c.country
             ORDER BY cnt DESC
             """)
-    List<Object[]> countOverallClicksByCountry(@Param("userId") Long userId);
+    List<Object[]> countOverallClicksByCountry(@Param("userId") Long userId, @Param("startDate") LocalDateTime startDate);
 
     @Query("""
             SELECT c.device, COUNT(c) AS cnt
             FROM ClickEvent c
             WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.user.id = :userId)
+              AND c.timestamp >= :startDate
             GROUP BY c.device
             ORDER BY cnt DESC
             """)
-    List<Object[]> countOverallClicksByDevice(@Param("userId") Long userId);
+    List<Object[]> countOverallClicksByDevice(@Param("userId") Long userId, @Param("startDate") LocalDateTime startDate);
 
     @Query("""
             SELECT c.browser, COUNT(c) AS cnt
             FROM ClickEvent c
             WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.user.id = :userId)
+              AND c.timestamp >= :startDate
             GROUP BY c.browser
             ORDER BY cnt DESC
             """)
-    List<Object[]> countOverallClicksByBrowser(@Param("userId") Long userId);
+    List<Object[]> countOverallClicksByBrowser(@Param("userId") Long userId, @Param("startDate") LocalDateTime startDate);
 
-    @Query("SELECT COUNT(c) FROM ClickEvent c WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.user.id = :userId)")
-    Long countTotalOverallClicks(@Param("userId") Long userId);
+    @Query("SELECT COUNT(c) FROM ClickEvent c WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.user.id = :userId) AND c.timestamp >= :startDate")
+    Long countTotalOverallClicks(@Param("userId") Long userId, @Param("startDate") LocalDateTime startDate);
 
     // ── FOLDER ANALYTICS QUERIES (User specific) ───────────────────────────
 
@@ -133,40 +138,44 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
             SELECT DATE(c.timestamp) as date, COUNT(c) as cnt
             FROM ClickEvent c
             WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.folder.id = :folderId AND u.user.id = :userId)
+              AND c.timestamp >= :startDate
             GROUP BY DATE(c.timestamp)
             ORDER BY date ASC
             """)
-    List<Object[]> countFolderClicksByDate(@Param("folderId") Long folderId, @Param("userId") Long userId);
+    List<Object[]> countFolderClicksByDate(@Param("folderId") Long folderId, @Param("userId") Long userId, @Param("startDate") LocalDateTime startDate);
 
     @Query("""
             SELECT c.country, COUNT(c) AS cnt
             FROM ClickEvent c
             WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.folder.id = :folderId AND u.user.id = :userId)
+              AND c.timestamp >= :startDate
             GROUP BY c.country
             ORDER BY cnt DESC
             """)
-    List<Object[]> countFolderClicksByCountry(@Param("folderId") Long folderId, @Param("userId") Long userId);
+    List<Object[]> countFolderClicksByCountry(@Param("folderId") Long folderId, @Param("userId") Long userId, @Param("startDate") LocalDateTime startDate);
 
     @Query("""
             SELECT c.device, COUNT(c) AS cnt
             FROM ClickEvent c
             WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.folder.id = :folderId AND u.user.id = :userId)
+              AND c.timestamp >= :startDate
             GROUP BY c.device
             ORDER BY cnt DESC
             """)
-    List<Object[]> countFolderClicksByDevice(@Param("folderId") Long folderId, @Param("userId") Long userId);
+    List<Object[]> countFolderClicksByDevice(@Param("folderId") Long folderId, @Param("userId") Long userId, @Param("startDate") LocalDateTime startDate);
 
     @Query("""
             SELECT c.browser, COUNT(c) AS cnt
             FROM ClickEvent c
             WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.folder.id = :folderId AND u.user.id = :userId)
+              AND c.timestamp >= :startDate
             GROUP BY c.browser
             ORDER BY cnt DESC
             """)
-    List<Object[]> countFolderClicksByBrowser(@Param("folderId") Long folderId, @Param("userId") Long userId);
+    List<Object[]> countFolderClicksByBrowser(@Param("folderId") Long folderId, @Param("userId") Long userId, @Param("startDate") LocalDateTime startDate);
 
-    @Query("SELECT COUNT(c) FROM ClickEvent c WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.folder.id = :folderId AND u.user.id = :userId)")
-    Long countTotalFolderClicks(@Param("folderId") Long folderId, @Param("userId") Long userId);
+    @Query("SELECT COUNT(c) FROM ClickEvent c WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.folder.id = :folderId AND u.user.id = :userId) AND c.timestamp >= :startDate")
+    Long countTotalFolderClicks(@Param("folderId") Long folderId, @Param("userId") Long userId, @Param("startDate") LocalDateTime startDate);
 
     @org.springframework.data.jpa.repository.Modifying
     @Query("DELETE FROM ClickEvent c WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.user.id = :userId)")

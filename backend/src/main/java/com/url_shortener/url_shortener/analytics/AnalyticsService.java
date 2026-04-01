@@ -45,7 +45,7 @@ public class AnalyticsService {
     private final UserAgentParserService   userAgentParserService;
     private final GeoLocationService       geoLocationService;
 
-    public AnalyticsResponseDto getAnalytics(String hash, User currentUser) {
+    public AnalyticsResponseDto getAnalytics(String hash, User currentUser, String period) {
         var url = urlRepository.findByShortUrl(hash);
         if (url == null) {
             throw new com.url_shortener.url_shortener.urls.UrlNotFoundException();
@@ -58,26 +58,27 @@ public class AnalyticsService {
         }
 
         Long urlId = url.getId();
+        LocalDateTime startDate = getStartDateFromPeriod(period);
 
-        Long totalClicksRaw = clickEventRepository.countByUrl_Id(urlId);
+        Long totalClicksRaw = clickEventRepository.countByUrl_Id(urlId, startDate);
         Long totalClicks = totalClicksRaw != null ? totalClicksRaw : 0L;
 
-        List<ClickDataPoint> clicksByDate = clickEventRepository.countByDateForUrl(urlId)
+        List<ClickDataPoint> clicksByDate = clickEventRepository.countByDateForUrl(urlId, startDate)
                 .stream()
                 .map(row -> new ClickDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<CountryDataPoint> clicksByCountry = clickEventRepository.countByCountryForUrl(urlId)
+        List<CountryDataPoint> clicksByCountry = clickEventRepository.countByCountryForUrl(urlId, startDate)
                 .stream()
                 .map(row -> new CountryDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countByDeviceForUrl(urlId)
+        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countByDeviceForUrl(urlId, startDate)
                 .stream()
                 .map(row -> new DeviceDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countByBrowserForUrl(urlId)
+        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countByBrowserForUrl(urlId, startDate)
                 .stream()
                 .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
@@ -91,28 +92,29 @@ public class AnalyticsService {
         );
     }
 
-    public AnalyticsResponseDto getOverallAnalytics(User currentUser) {
+    public AnalyticsResponseDto getOverallAnalytics(User currentUser, String period) {
         Long userId = currentUser.getId();
+        LocalDateTime startDate = getStartDateFromPeriod(period);
 
-        Long totalClicksRaw = clickEventRepository.countTotalOverallClicks(userId);
+        Long totalClicksRaw = clickEventRepository.countTotalOverallClicks(userId, startDate);
         Long totalClicks = totalClicksRaw != null ? totalClicksRaw : 0L;
 
-        List<ClickDataPoint> clicksByDate = clickEventRepository.countOverallClicksByDate(userId)
+        List<ClickDataPoint> clicksByDate = clickEventRepository.countOverallClicksByDate(userId, startDate)
                 .stream()
                 .map(row -> new ClickDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<CountryDataPoint> clicksByCountry = clickEventRepository.countOverallClicksByCountry(userId)
+        List<CountryDataPoint> clicksByCountry = clickEventRepository.countOverallClicksByCountry(userId, startDate)
                 .stream()
                 .map(row -> new CountryDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countOverallClicksByDevice(userId)
+        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countOverallClicksByDevice(userId, startDate)
                 .stream()
                 .map(row -> new DeviceDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countOverallClicksByBrowser(userId)
+        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countOverallClicksByBrowser(userId, startDate)
                 .stream()
                 .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
@@ -126,7 +128,7 @@ public class AnalyticsService {
         );
     }
 
-    public AnalyticsResponseDto getFolderAnalytics(Long folderId, User currentUser) {
+    public AnalyticsResponseDto getFolderAnalytics(Long folderId, User currentUser, String period) {
         var folder = folderRepository.findById(folderId)
                 .orElseThrow(() -> new RuntimeException("Folder not found"));
 
@@ -137,26 +139,27 @@ public class AnalyticsService {
         }
 
         Long userId = currentUser.getId();
+        LocalDateTime startDate = getStartDateFromPeriod(period);
 
-        Long totalClicksRaw = clickEventRepository.countTotalFolderClicks(folderId, userId);
+        Long totalClicksRaw = clickEventRepository.countTotalFolderClicks(folderId, userId, startDate);
         Long totalClicks = totalClicksRaw != null ? totalClicksRaw : 0L;
 
-        List<ClickDataPoint> clicksByDate = clickEventRepository.countFolderClicksByDate(folderId, userId)
+        List<ClickDataPoint> clicksByDate = clickEventRepository.countFolderClicksByDate(folderId, userId, startDate)
                 .stream()
                 .map(row -> new ClickDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<CountryDataPoint> clicksByCountry = clickEventRepository.countFolderClicksByCountry(folderId, userId)
+        List<CountryDataPoint> clicksByCountry = clickEventRepository.countFolderClicksByCountry(folderId, userId, startDate)
                 .stream()
                 .map(row -> new CountryDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countFolderClicksByDevice(folderId, userId)
+        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countFolderClicksByDevice(folderId, userId, startDate)
                 .stream()
                 .map(row -> new DeviceDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countFolderClicksByBrowser(folderId, userId)
+        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countFolderClicksByBrowser(folderId, userId, startDate)
                 .stream()
                 .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
@@ -235,7 +238,8 @@ public class AnalyticsService {
 
             // Keep legacy statistic column in sync for any code paths that still read it
             if (url.getStatistic() != null) {
-                url.getStatistic().setAccessedTimes(clickEventRepository.countByUrl_Id(url.getId()));
+                // Total clicks count should be from all time for legacy statistic column
+                url.getStatistic().setAccessedTimes(clickEventRepository.countByUrl_Id(url.getId(), LocalDateTime.of(1970, 1, 1, 0, 0)));
                 urlRepository.save(url);
             }
 
@@ -250,6 +254,16 @@ public class AnalyticsService {
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    private LocalDateTime getStartDateFromPeriod(String period) {
+        if (period == null) return LocalDateTime.of(1970, 1, 1, 0, 0);
+        return switch (period) {
+            case "24h" -> LocalDateTime.now(java.time.ZoneOffset.UTC).minusDays(1);
+            case "7d" -> LocalDateTime.now(java.time.ZoneOffset.UTC).minusDays(7);
+            case "30d" -> LocalDateTime.now(java.time.ZoneOffset.UTC).minusDays(30);
+            default -> LocalDateTime.of(1970, 1, 1, 0, 0);
+        };
+    }
 
     /**
      * Pseudonymizes an IP address using SHA-256, retaining only the first 16
