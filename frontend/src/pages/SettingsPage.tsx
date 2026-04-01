@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 
 const SettingsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -17,6 +17,9 @@ const SettingsPage: React.FC = () => {
 
   const [copied, setCopied] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [confirmationText, setConfirmationText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Fallback id logic if publicId is missing
   const userIdDisplay = (user as any)?.publicId || user?.id || 'Unknown ID';
@@ -59,6 +62,21 @@ const SettingsPage: React.FC = () => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await axiosInstance.delete('/api/users/me');
+      logout();
+    } catch (error: any) {
+      setDeleteError(error.response?.data?.message || 'Failed to delete account.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const isConfirmationMatch = confirmationText === 'confirm delete account';
 
   return (
     <div className="py-8 max-w-4xl mx-auto space-y-6">
@@ -180,8 +198,63 @@ const SettingsPage: React.FC = () => {
           </button>
         </div>
       </div>
+
       {isDeleteModalOpen && (
-        <div className="text-sm text-red-600 mt-2">Delete modal will be implemented here.</div>
+        <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 max-w-md w-full rounded-xl p-6 shadow-2xl relative">
+            <button 
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+               <AlertTriangle className="w-6 h-6 text-red-500" /> Delete Account
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              Warning: This will permanently delete your account, along with all your links, analytics, and folders. This action cannot be undone.
+            </p>
+
+            <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-lg flex items-center gap-3 mb-6 border border-gray-100 dark:border-slate-800">
+               <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold uppercase shadow-sm shrink-0">
+                 {user?.name ? user.name.charAt(0) : user?.email ? user.email.charAt(0) : 'U'}
+               </div>
+               <div className="min-w-0">
+                 <div className="font-medium text-gray-900 dark:text-white truncate">{user?.name || 'User'}</div>
+                 <div className="text-sm text-gray-500 dark:text-gray-400 truncate">{user?.email}</div>
+               </div>
+            </div>
+
+            <div className="mb-6">
+               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                 To verify, type <span className="font-bold">confirm delete account</span> below
+               </label>
+               <input
+                 type="text"
+                 value={confirmationText}
+                 onChange={(e) => setConfirmationText(e.target.value)}
+                 className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                 placeholder="confirm delete account"
+               />
+            </div>
+
+            {deleteError && (
+              <div className="mb-4 text-sm text-red-600 flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4" /> {deleteError}
+              </div>
+            )}
+
+            <button
+               disabled={!isConfirmationMatch || isDeleting}
+               onClick={handleDeleteAccount}
+               className="w-full py-2.5 rounded-md font-medium text-sm transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed dark:disabled:bg-slate-800 dark:disabled:text-slate-600 bg-red-600 text-white hover:bg-red-700"
+            >
+               {isDeleting ? 'Deleting...' : 'Delete Account'}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
