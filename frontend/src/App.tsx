@@ -14,10 +14,12 @@ import SecurePage from './pages/SecurePage';
 import SettingsPage from './pages/SettingsPage';
 import SecurityPage from './pages/SecurityPage';
 import DashboardLayout from './layouts/DashboardLayout';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
     <ThemeProvider>
+      <Toaster position="bottom-center" toastOptions={{ duration: 3000 }} />
       <BrowserRouter>
         <AuthProvider>
           <Routes>

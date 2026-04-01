@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, CheckCircle } from 'lucide-react';
 import axiosInstance, { extractBackendError } from '../api/axiosInstance';
 import type { RegisterPayload } from '../types';
+import { toast } from 'react-hot-toast';
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -143,7 +144,7 @@ const RegisterPage: React.FC = () => {
             <div className="space-y-3">
               <button 
                 type="button"
-                onClick={() => alert('OAuth integration coming soon!')}
+                onClick={() => toast('Social login is coming soon!', { icon: '🚧' })}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm bg-white dark:bg-black text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
               >
                 <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24">
@@ -156,7 +157,7 @@ const RegisterPage: React.FC = () => {
               </button>
               <button 
                 type="button"
-                onClick={() => alert('OAuth integration coming soon!')}
+                onClick={() => toast('Social login is coming soon!', { icon: '🚧' })}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm bg-white dark:bg-black text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
               >
                 <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
