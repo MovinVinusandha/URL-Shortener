@@ -42,7 +42,6 @@ const DashboardPage: React.FC = () => {
   const { user } = useAuth();
 
   const [urls, setUrls] = useState<UrlEntry[]>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [loadingAll, setLoadingAll] = useState(true);
   
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -112,7 +111,7 @@ const DashboardPage: React.FC = () => {
   /** Save URLs to localStorage for regular users */
   const saveToStorage = useCallback(
     (newUrls: UrlEntry[]) => {
-      if (storageKey && !isAdmin) {
+      if (storageKey) {
         try {
           localStorage.setItem(storageKey, JSON.stringify(newUrls));
         } catch {
@@ -120,7 +119,7 @@ const DashboardPage: React.FC = () => {
         }
       }
     },
-    [storageKey, isAdmin]
+    [storageKey]
   );
 
   /** Refresh live click counts via GET /url/{hash} for each entry */
@@ -167,54 +166,35 @@ const DashboardPage: React.FC = () => {
     const loadDashboardData = async () => {
       setLoadingAll(true);
 
-      // STEP 1: Try Admin endpoint GET /url/all
       try {
         const { data } = await axiosInstance.get<UrlDto[]>('/url/all');
         if (isMounted) {
-          setIsAdmin(true);
           const serverUrls = data.map(mapDtoToEntry);
           setUrls(serverUrls);
-          setLoadingAll(false);
-
-          // Background refresh so click counts stay live while the dashboard is open
-          syncClickCounts(serverUrls).then((freshUrls) => {
-            if (isMounted) {
-              setUrls(freshUrls);
-            }
-          });
-          return;
-        }
-      } catch {
-        // 403 Forbidden = Regular User (NO server-side list endpoint)
-        if (isMounted) {
-          setIsAdmin(false);
-        }
-      }
-
-      // STEP 2: Regular User — Load from user-scoped localStorage
-      if (storageKey) {
-        try {
-          const raw = localStorage.getItem(storageKey);
-          if (raw) {
-            const cached: UrlEntry[] = JSON.parse(raw);
-            if (isMounted && Array.isArray(cached)) {
-              setUrls(cached);
-            }
-
-            // Background sync: Fetch latest click counts via GET /url/{hash}
-            const freshUrls = await syncClickCounts(cached);
-            if (isMounted) {
-              setUrls(freshUrls);
-              localStorage.setItem(storageKey, JSON.stringify(freshUrls));
-            }
+          if (storageKey) {
+            localStorage.setItem(storageKey, JSON.stringify(serverUrls));
           }
-        } catch {
-          // If storage parsing fails, start empty
         }
-      }
-
-      if (isMounted) {
-        setLoadingAll(false);
+      } catch (error) {
+        console.error('Failed to fetch URLs from server:', error);
+        // Fallback to localStorage if server fetch fails
+        if (storageKey && isMounted) {
+          try {
+            const raw = localStorage.getItem(storageKey);
+            if (raw) {
+              const cached = JSON.parse(raw);
+              if (Array.isArray(cached)) {
+                setUrls(cached);
+              }
+            }
+          } catch (e) {
+            // If storage parsing fails, start empty
+          }
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingAll(false);
+        }
       }
     };
 
@@ -224,7 +204,7 @@ const DashboardPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [storageKey, syncClickCounts]);
+  }, [storageKey]);
 
   // Periodically refresh click counts while the dashboard is visible
   useEffect(() => {
