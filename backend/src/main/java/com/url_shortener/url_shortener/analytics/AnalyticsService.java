@@ -57,28 +57,27 @@ public class AnalyticsService {
             throw new com.url_shortener.url_shortener.urls.UrlNotFoundException();
         }
 
-        LocalDateTime startDate = LocalDateTime.now().minusDays(30);
         Long urlId = url.getId();
 
         Long totalClicksRaw = clickEventRepository.countByUrl_Id(urlId);
         Long totalClicks = totalClicksRaw != null ? totalClicksRaw : 0L;
 
-        List<ClickDataPoint> clicksByDate = clickEventRepository.countByDateForUrl(urlId, startDate)
+        List<ClickDataPoint> clicksByDate = clickEventRepository.countByDateForUrl(urlId)
                 .stream()
                 .map(row -> new ClickDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<CountryDataPoint> clicksByCountry = clickEventRepository.countByCountryForUrl(urlId, startDate)
+        List<CountryDataPoint> clicksByCountry = clickEventRepository.countByCountryForUrl(urlId)
                 .stream()
                 .map(row -> new CountryDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countByDeviceForUrl(urlId, startDate)
+        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countByDeviceForUrl(urlId)
                 .stream()
                 .map(row -> new DeviceDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countByBrowserForUrl(urlId, startDate)
+        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countByBrowserForUrl(urlId)
                 .stream()
                 .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
@@ -93,28 +92,27 @@ public class AnalyticsService {
     }
 
     public AnalyticsResponseDto getOverallAnalytics(User currentUser) {
-        LocalDateTime startDate = LocalDateTime.now().minusDays(30);
         Long userId = currentUser.getId();
 
         Long totalClicksRaw = clickEventRepository.countTotalOverallClicks(userId);
         Long totalClicks = totalClicksRaw != null ? totalClicksRaw : 0L;
 
-        List<ClickDataPoint> clicksByDate = clickEventRepository.countOverallClicksByDate(userId, startDate)
+        List<ClickDataPoint> clicksByDate = clickEventRepository.countOverallClicksByDate(userId)
                 .stream()
                 .map(row -> new ClickDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<CountryDataPoint> clicksByCountry = clickEventRepository.countOverallClicksByCountry(userId, startDate)
+        List<CountryDataPoint> clicksByCountry = clickEventRepository.countOverallClicksByCountry(userId)
                 .stream()
                 .map(row -> new CountryDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countOverallClicksByDevice(userId, startDate)
+        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countOverallClicksByDevice(userId)
                 .stream()
                 .map(row -> new DeviceDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countOverallClicksByBrowser(userId, startDate)
+        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countOverallClicksByBrowser(userId)
                 .stream()
                 .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
@@ -138,28 +136,27 @@ public class AnalyticsService {
             throw new org.springframework.security.access.AccessDeniedException("Access denied");
         }
 
-        LocalDateTime startDate = LocalDateTime.now().minusDays(30);
         Long userId = currentUser.getId();
 
         Long totalClicksRaw = clickEventRepository.countTotalFolderClicks(folderId, userId);
         Long totalClicks = totalClicksRaw != null ? totalClicksRaw : 0L;
 
-        List<ClickDataPoint> clicksByDate = clickEventRepository.countFolderClicksByDate(folderId, userId, startDate)
+        List<ClickDataPoint> clicksByDate = clickEventRepository.countFolderClicksByDate(folderId, userId)
                 .stream()
                 .map(row -> new ClickDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<CountryDataPoint> clicksByCountry = clickEventRepository.countFolderClicksByCountry(folderId, userId, startDate)
+        List<CountryDataPoint> clicksByCountry = clickEventRepository.countFolderClicksByCountry(folderId, userId)
                 .stream()
                 .map(row -> new CountryDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countFolderClicksByDevice(folderId, userId, startDate)
+        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countFolderClicksByDevice(folderId, userId)
                 .stream()
                 .map(row -> new DeviceDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countFolderClicksByBrowser(folderId, userId, startDate)
+        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countFolderClicksByBrowser(folderId, userId)
                 .stream()
                 .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
