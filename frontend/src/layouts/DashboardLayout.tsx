@@ -387,13 +387,13 @@ const DashboardLayout: React.FC = () => {
           
           {!location.pathname.startsWith('/settings') && (
             <div className="flex items-center gap-4 ml-auto pl-4 text-xs text-gray-500 shrink-0">
-              <span className="flex items-center gap-1" title={`Total Clicks: ${navStats.totalClicks}`}>
-                <Activity className="w-3.5 h-3.5" />
-                {navStats.totalClicks}/1K
+              <span className="flex items-center gap-1.5" title={`Total Clicks: ${navStats.totalClicks}`}>
+                <Activity className="w-4 h-4" />
+                {navStats.totalClicks}
               </span>
-              <span className="flex items-center gap-1">
-                <LinkIcon className="w-3.5 h-3.5" />
-                {navStats.linkCount}/25
+              <span className="flex items-center gap-1.5" title={`Total Links: ${navStats.linkCount}`}>
+                <LinkIcon className="w-4 h-4" />
+                {navStats.linkCount}
               </span>
             </div>
           )}
