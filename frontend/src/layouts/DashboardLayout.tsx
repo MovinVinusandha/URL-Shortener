@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
-import { Link as LinkIcon, BarChart2, Folder as FolderIcon, Tag as TagIcon, Activity, ChevronDown, FolderPlus, Search, HelpCircle, User, Settings, Gift, LogOut } from 'lucide-react';
+import { Link as LinkIcon, BarChart2, Folder as FolderIcon, Tag as TagIcon, Activity, ChevronDown, FolderPlus, Search, HelpCircle, User, Settings, Gift, LogOut, ArrowLeft, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 import type { Tag, Folder, UrlEntry } from '../types';
@@ -171,7 +171,19 @@ const DashboardLayout: React.FC = () => {
         {/* Top Header */}
         <header className="shrink-0 h-16 border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 flex items-center justify-between z-40">
           <div className="flex items-center gap-2 relative" ref={folderSwitcherRef}>
-            {location.pathname === '/dashboard' ? (
+            {location.pathname.startsWith('/settings') ? (
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => navigate('/dashboard')}
+                  className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <h1 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
+                  Settings
+                </h1>
+              </div>
+            ) : location.pathname === '/dashboard' ? (
               <>
                 <button 
                   onClick={() => setIsFolderSwitcherOpen(!isFolderSwitcherOpen)}
@@ -252,27 +264,48 @@ const DashboardLayout: React.FC = () => {
               </h1>
             )}
           </div>
-          {location.pathname.includes('/analytics') ? (
-            <button 
-              className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm"
-            >
-              Export
-            </button>
-          ) : (
-            <button 
-              onClick={() => setIsCreateModalOpen(true)}
-              className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm"
-            >
-              Create link
-            </button>
+          {!location.pathname.startsWith('/settings') && (
+            location.pathname.includes('/analytics') ? (
+              <button 
+                className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm"
+              >
+                Export
+              </button>
+            ) : (
+              <button 
+                onClick={() => setIsCreateModalOpen(true)}
+                className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm"
+              >
+                Create link
+              </button>
+            )
           )}
         </header>
 
         {/* Top Navigation Tabs */}
         <div className="shrink-0 h-12 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-900 px-6 flex items-center justify-between text-sm z-30">
           <div className="flex items-center overflow-x-auto whitespace-nowrap h-full gap-2">
-            <Link 
-              to="/dashboard" 
+            {location.pathname.startsWith('/settings') ? (
+              <>
+                <Link 
+                  to="/settings" 
+                  className={`flex items-center gap-2 px-4 h-full font-medium transition-colors border-b-2 ${location.pathname === '/settings' ? 'text-black dark:text-white border-black dark:border-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 border-transparent'}`}
+                >
+                  <Settings className="w-4 h-4" />
+                  General
+                </Link>
+                <Link 
+                  to="/settings/security" 
+                  className={`flex items-center gap-2 px-4 h-full font-medium transition-colors border-b-2 ${location.pathname === '/settings/security' ? 'text-black dark:text-white border-black dark:border-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 border-transparent'}`}
+                >
+                  <Shield className="w-4 h-4" />
+                  Security
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link 
+                  to="/dashboard" 
               className={`flex items-center gap-2 px-4 h-full font-medium transition-colors border-b-2 ${location.pathname === '/dashboard' ? 'text-black dark:text-white border-black dark:border-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 border-transparent'}`}
             >
               <LinkIcon className="w-4 h-4" />
@@ -298,19 +331,23 @@ const DashboardLayout: React.FC = () => {
             >
               <TagIcon className="w-4 h-4" />
               Tags
-            </Link>
+                </Link>
+              </>
+            )}
           </div>
           
-          <div className="flex items-center gap-4 ml-auto pl-4 text-xs text-gray-500 shrink-0">
-            <span className="flex items-center gap-1" title={`Total Clicks: ${navStats.totalClicks}`}>
-              <Activity className="w-3.5 h-3.5" />
-              {navStats.totalClicks}/1K
-            </span>
-            <span className="flex items-center gap-1">
-              <LinkIcon className="w-3.5 h-3.5" />
-              {navStats.linkCount}/25
-            </span>
-          </div>
+          {!location.pathname.startsWith('/settings') && (
+            <div className="flex items-center gap-4 ml-auto pl-4 text-xs text-gray-500 shrink-0">
+              <span className="flex items-center gap-1" title={`Total Clicks: ${navStats.totalClicks}`}>
+                <Activity className="w-3.5 h-3.5" />
+                {navStats.totalClicks}/1K
+              </span>
+              <span className="flex items-center gap-1">
+                <LinkIcon className="w-3.5 h-3.5" />
+                {navStats.linkCount}/25
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Main Content Rendered Here */}

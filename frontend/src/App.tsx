@@ -12,6 +12,7 @@ import TagsPage from './pages/TagsPage';
 import ExpiredPage from './pages/ExpiredPage';
 import SecurePage from './pages/SecurePage';
 import SettingsPage from './pages/SettingsPage';
+import SecurityPage from './pages/SecurityPage';
 import DashboardLayout from './layouts/DashboardLayout';
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
                 <Route path="/folders" element={<FoldersPage />} />
                 <Route path="/tags" element={<TagsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/settings/security" element={<SecurityPage />} />
               </Route>
             </Route>
 
