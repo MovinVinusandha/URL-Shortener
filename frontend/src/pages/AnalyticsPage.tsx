@@ -31,13 +31,14 @@ const AnalyticsPage: React.FC = () => {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [period, setPeriod] = useState('30d');
 
   useEffect(() => {
     const fetchAnalytics = async () => {
       setLoading(true);
       try {
         const endpoint = hash ? `/api/analytics/${hash}` : '/api/analytics';
-        const response = await axiosInstance.get<AnalyticsData>(endpoint);
+        const response = await axiosInstance.get<AnalyticsData>(endpoint, { params: { period } });
         setData(response.data);
         setError(null);
       } catch (err: any) {
@@ -48,7 +49,7 @@ const AnalyticsPage: React.FC = () => {
     };
 
     fetchAnalytics();
-  }, [hash]);
+  }, [hash, period]);
 
   useEffect(() => {
     if (data) {
@@ -183,11 +184,20 @@ const AnalyticsPage: React.FC = () => {
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Clicks over time</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">Daily breakdown of link performance</p>
             </div>
-            <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1">
-              <button className="px-3 py-1.5 text-xs font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700">24h</button>
-              <button className="px-3 py-1.5 text-xs font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700">7d</button>
-              <button className="px-3 py-1.5 text-xs font-medium rounded-md bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm">30d</button>
-              <button className="px-3 py-1.5 text-xs font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700">All</button>
+            <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 p-1">
+              {['24h', '7d', '30d', 'all'].map(p => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                    period === p 
+                    ? 'bg-white dark:bg-slate-700 text-black dark:text-white shadow-sm' 
+                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  {p === 'all' ? 'All time' : p}
+                </button>
+              ))}
             </div>
           </div>
           
