@@ -11,6 +11,7 @@ import FoldersPage from './pages/FoldersPage';
 import TagsPage from './pages/TagsPage';
 import ExpiredPage from './pages/ExpiredPage';
 import SecurePage from './pages/SecurePage';
+import SettingsPage from './pages/SettingsPage';
 import DashboardLayout from './layouts/DashboardLayout';
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
                 <Route path="/analytics/:hash" element={<AnalyticsPage />} />
                 <Route path="/folders" element={<FoldersPage />} />
                 <Route path="/tags" element={<TagsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
               </Route>
             </Route>
 
