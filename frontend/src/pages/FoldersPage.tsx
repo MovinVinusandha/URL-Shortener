@@ -3,15 +3,12 @@ import { useOutletContext, useSearchParams, useNavigate } from 'react-router-dom
 import { Search, MoreVertical, Trash2, Link as LinkIcon, Folder as FolderIcon, Pen } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
 import type { DashboardLayoutContext } from '../layouts/DashboardLayout';
-import FolderModal from '../components/FolderModal';
 
 const FoldersPage: React.FC = () => {
-  const { folders, setFolders, setActiveFolderId } = useOutletContext<DashboardLayoutContext>();
+  const { folders, setFolders, setActiveFolderId, setFolderToEdit, setIsFolderModalOpen } = useOutletContext<DashboardLayoutContext>();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-  const [folderToEdit, setFolderToEdit] = useState<any | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [folderToDelete, setFolderToDelete] = useState<any | null>(null);
   const [searchParams] = useSearchParams();
 
@@ -22,7 +19,7 @@ const FoldersPage: React.FC = () => {
 
   useEffect(() => {
     if (searchParams.get('create') === 'true') {
-      setIsModalOpen(true);
+      setIsFolderModalOpen(true);
     }
   }, [searchParams]);
 
@@ -86,7 +83,7 @@ const FoldersPage: React.FC = () => {
                           e.stopPropagation();
                           setOpenMenuId(null);
                           setFolderToEdit(folder);
-                          setIsModalOpen(true);
+                          setIsFolderModalOpen(true);
                         }}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-2"
                       >
@@ -128,15 +125,6 @@ const FoldersPage: React.FC = () => {
           )}
         </div>
       </div>
-
-      <FolderModal 
-        isOpen={isModalOpen}
-        folderToEdit={folderToEdit}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={(updatedFolder) => {
-          setFolders(folders.map(f => f.id === updatedFolder.id ? updatedFolder : f));
-        }}
-      />
 
       {folderToDelete && (
         <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">

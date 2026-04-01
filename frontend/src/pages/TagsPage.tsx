@@ -3,7 +3,6 @@ import { useOutletContext, useNavigate } from 'react-router-dom';
 import { Search, MoreVertical, Trash2, Link as LinkIcon, Tag as TagIcon, Pen } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
 import type { DashboardLayoutContext } from '../layouts/DashboardLayout';
-import CreateTagModal from '../components/CreateTagModal';
 
 const TAG_COLORS = [
   { name: 'red', classes: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800/50' },
@@ -18,12 +17,10 @@ const getTagColor = (colorName: string | undefined) => {
 };
 
 const TagsPage: React.FC = () => {
-  const { tags, setTags } = useOutletContext<DashboardLayoutContext>();
+  const { tags, setTags, setTagToEdit, setIsCreateTagModalOpen } = useOutletContext<DashboardLayoutContext>();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-  const [tagToEdit, setTagToEdit] = useState<any | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [tagToDelete, setTagToDelete] = useState<any | null>(null);
 
   const handleDeleteTag = async (id: number) => {
@@ -94,7 +91,7 @@ const TagsPage: React.FC = () => {
                             e.stopPropagation();
                             setOpenMenuId(null);
                             setTagToEdit(tag);
-                            setIsModalOpen(true);
+                            setIsCreateTagModalOpen(true);
                           }}
                           className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-2"
                         >
@@ -120,15 +117,6 @@ const TagsPage: React.FC = () => {
             ))
           )}
         </div>
-
-      <CreateTagModal 
-        isOpen={isModalOpen}
-        tagToEdit={tagToEdit}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={(updatedTag) => {
-          setTags(tags.map(t => t.id === updatedTag.id ? updatedTag : t));
-        }}
-      />
 
       {tagToDelete && (
         <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
