@@ -81,12 +81,14 @@ const ExpiredPage: React.FC = () => {
               >
                 Try trim today
               </Link>
-              <Link 
-                to="/"
+              <a 
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="px-6 py-3 bg-white text-gray-800 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full sm:w-auto text-center shadow-sm"
               >
                 Learn more
-              </Link>
+              </a>
             </div>
           </div>
         </section>

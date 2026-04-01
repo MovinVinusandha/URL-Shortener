@@ -8,6 +8,7 @@ import CreateLinkModal from '../components/CreateLinkModal';
 import CreateTagModal from '../components/CreateTagModal';
 import FolderModal from '../components/FolderModal';
 import BrandLogo from '../components/BrandLogo';
+import { Toaster, toast } from 'react-hot-toast';
 
 export type DashboardLayoutContext = {
   triggerRefresh: UrlEntry | null;
@@ -104,7 +105,10 @@ const DashboardLayout: React.FC = () => {
   const renderHeaderButton = () => {
     if (location.pathname.startsWith('/analytics')) {
       return (
-        <button className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm">
+        <button 
+          onClick={() => toast.success('Export functionality coming soon!')}
+          className="bg-black text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-slate-200 transition-colors shadow-sm"
+        >
           <Download className="w-4 h-4" /> Export
         </button>
       );
@@ -156,7 +160,10 @@ const DashboardLayout: React.FC = () => {
         <nav className="flex-1 flex flex-col items-center gap-4">
         </nav>
         <div className="mt-auto flex flex-col items-center gap-4">
-          <button className="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
+          <button 
+            onClick={() => toast('Help & Support coming soon!', { icon: '👋' })}
+            className="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
             <HelpCircle className="w-6 h-6" />
           </button>
           
@@ -176,14 +183,16 @@ const DashboardLayout: React.FC = () => {
                 </div>
                 
                 <div className="flex flex-col gap-1">
-                  <Link
-                    to="/profile"
-                    onClick={() => setIsUserMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      toast('Profile page coming soon!', { icon: '👤' });
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-md transition-colors w-full text-left"
                   >
                     <User className="w-4 h-4 text-gray-400" />
                     Profile
-                  </Link>
+                  </button>
                   <Link
                     to="/settings"
                     onClick={() => setIsUserMenuOpen(false)}
@@ -193,7 +202,10 @@ const DashboardLayout: React.FC = () => {
                     Account settings
                   </Link>
                   <button
-                    onClick={() => setIsUserMenuOpen(false)}
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      toast("What's new coming soon!", { icon: '🎁' });
+                    }}
                     className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-md transition-colors w-full text-left"
                   >
                     <Gift className="w-4 h-4 text-gray-400" />
@@ -453,6 +465,8 @@ const DashboardLayout: React.FC = () => {
           }
         }}
       />
+      
+      <Toaster position="bottom-center" />
     </div>
   );
 };
