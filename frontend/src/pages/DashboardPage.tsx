@@ -3,6 +3,7 @@ import { useOutletContext, Link, useSearchParams } from 'react-router-dom';
 import { X, BarChart2, Search, Copy, QrCode, Edit2, Trash2, CornerDownRight, MoreVertical, Filter, SlidersHorizontal, ChevronDown, ArrowUpDown, Check, ArrowDownWideNarrow, Tag, ChevronLeft } from 'lucide-react';
 
 import EditModal from '../components/EditModal';
+import ClickArrowIcon from '../components/icons/ClickArrowIcon';
 import type { DashboardLayoutContext } from '../layouts/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
@@ -669,7 +670,7 @@ const DashboardPage: React.FC = () => {
                     <div className="shrink-0 flex items-center gap-3 ml-4">
                       {displayProps.clicks && (
                         <Link to={`/analytics/${extractHash(url.shortUrl)}`} className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors px-2 py-1 rounded-md border border-gray-100 dark:border-slate-700">
-                          <BarChart2 className="w-4 h-4 text-gray-400" />
+                          <ClickArrowIcon className="w-3 h-3 text-blue-500" />
                           {url.accessed_times}
                           <span className="hidden sm:inline ml-1 text-gray-400 font-normal">clicks</span>
                         </Link>

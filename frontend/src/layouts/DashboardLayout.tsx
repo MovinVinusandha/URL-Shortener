@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
-import { Link as LinkIcon, BarChart2, Folder as FolderIcon, Tag as TagIcon, Activity, ChevronDown, FolderPlus, Search, HelpCircle, User, Settings, Gift, LogOut, ArrowLeft, Shield, Download } from 'lucide-react';
+import { Link as LinkIcon, BarChart2, Folder as FolderIcon, Tag as TagIcon, ChevronDown, FolderPlus, Search, HelpCircle, User, Settings, Gift, LogOut, ArrowLeft, Shield, Download } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 import type { Tag, Folder, UrlEntry } from '../types';
@@ -8,6 +8,7 @@ import CreateLinkModal from '../components/CreateLinkModal';
 import CreateTagModal from '../components/CreateTagModal';
 import FolderModal from '../components/FolderModal';
 import BrandLogo from '../components/BrandLogo';
+import ClickArrowIcon from '../components/icons/ClickArrowIcon';
 import { Toaster, toast } from 'react-hot-toast';
 
 export type DashboardLayoutContext = {
@@ -388,7 +389,7 @@ const DashboardLayout: React.FC = () => {
           {!location.pathname.startsWith('/settings') && (
             <div className="flex items-center gap-4 ml-auto pl-4 text-xs text-gray-500 shrink-0">
               <span className="flex items-center gap-1.5" title={`Total Clicks: ${navStats.totalClicks}`}>
-                <Activity className="w-4 h-4" />
+                <ClickArrowIcon className="w-4 h-4 text-gray-500" />
                 {navStats.totalClicks}
               </span>
               <span className="flex items-center gap-1.5" title={`Total Links: ${navStats.linkCount}`}>
