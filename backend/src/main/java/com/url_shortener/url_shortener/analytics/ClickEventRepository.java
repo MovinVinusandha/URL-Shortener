@@ -175,4 +175,8 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
 
     @Query("SELECT COUNT(c) FROM ClickEvent c WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.folder.id = :folderId AND u.user.id = :userId)")
     Long countTotalFolderClicks(@Param("folderId") Long folderId, @Param("userId") Long userId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM ClickEvent c WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.user.id = :userId)")
+    void deleteByUserId(@Param("userId") Long userId);
 }

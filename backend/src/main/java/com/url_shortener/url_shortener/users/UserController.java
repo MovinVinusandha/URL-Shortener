@@ -25,18 +25,18 @@ public class UserController {
         return userService.getAllUsers(sortBy);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{publicId}")
     public ResponseEntity<UserDto> updateUser(
-            @PathVariable(name = "id") Long id,
+            @PathVariable(name = "publicId") String publicId,
             @RequestBody UpdateUserRequest request
     ) {
-        var user = userService.updateUser(id, request);
+        var user = userService.updateUser(publicId, request);
         return ResponseEntity.ok(userMapper.toDto(user));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable(name = "id") Long id) {
-        userService.deleteUser(id);
+    @DeleteMapping("/{publicId}")
+    public ResponseEntity<Void> deleteUser(@PathVariable(name = "publicId") String publicId) {
+        userService.deleteUser(publicId);
         return ResponseEntity.noContent().build();
     }
 }

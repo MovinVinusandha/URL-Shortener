@@ -30,6 +30,7 @@ public class CommandLineAppStartupRunner implements CommandLineRunner {
         User rootAdmin = new User();
         rootAdmin.setName("Root");
         rootAdmin.setEmail(rootUserEmail);
+        rootAdmin.setPublicId("root_" + org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric(16));
         rootAdmin.setPassword(passwordEncoder.encode(rootUserPassword));
         rootAdmin.setRole(Role.ROOT);
 
