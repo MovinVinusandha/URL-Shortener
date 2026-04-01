@@ -13,4 +13,6 @@ public interface UrlRepository extends JpaRepository<Url, Long> {
     int countByTagsId(@org.springframework.data.repository.query.Param("tagId") Long tagId);
 
     int countByFolderId(Long folderId);
+
+    java.util.List<Url> findByUserId(Long userId);
 }
