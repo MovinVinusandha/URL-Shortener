@@ -212,8 +212,19 @@ public class UrlService {
             sortBy = "id";
         }
 
-        var dtos = urlRepository.findAll(Sort.by(sortBy).descending())
-                .stream()
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ROOT") || a.getAuthority().equals("ROOT"));
+
+        List<Url> urls;
+        if (isAdmin) {
+            urls = urlRepository.findAll(Sort.by(sortBy).descending());
+        } else {
+            urls = urlRepository.findByUserId(getUserId());
+            urls.sort(Comparator.comparing(Url::getId).reversed());
+        }
+
+        var dtos = urls.stream()
                 .map(this::toDtoWithClickCount)
                 .toList();
 
