@@ -243,7 +243,7 @@ public class UrlService {
      */
     private UrlDto toDtoWithClickCount(Url url) {
         var dto = urlMapper.toDto(url);
-        long clicks = clickEventRepository.countByUrl_Id(url.getId());
+        long clicks = clickEventRepository.countByUrl_Id(url.getId(), java.time.LocalDateTime.of(1970, 1, 1, 0, 0));
 
         return new UrlDto(
                 dto.getId(),
