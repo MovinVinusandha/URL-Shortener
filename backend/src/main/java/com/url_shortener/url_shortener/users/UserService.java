@@ -45,15 +45,12 @@ public class UserService {
                 .toList();
     }
 
-    public User updateUser(Long id, UpdateUserRequest request) {
+    public User updateUser(String publicId, UpdateUserRequest request) {
         var userId = getUserId();
 
-        isIdIdentical(id, userId);
-
-        var user = userRepository.findById(userId).orElse(null);
-        if (user == null) {
-            throw new UserNotFoundException();
-        }
+        var user = userRepository.findByPublicId(publicId).orElseThrow(UserNotFoundException::new);
+        
+        isIdIdentical(user.getId(), userId);
 
         if (userRepository.existsUserByEmail(request.getEmail()) && !(user.getEmail().equals(request.getEmail()))) {
             throw new UserAlreadyExist();
@@ -71,15 +68,12 @@ public class UserService {
         return user;
     }
 
-    public void deleteUser(Long id) {
+    public void deleteUser(String publicId) {
         var userId = getUserId();
 
-        isIdIdentical(id, userId);
-
-        var user = userRepository.findById(userId).orElse(null);
-        if (user == null) {
-            throw new UserNotFoundException();
-        }
+        var user = userRepository.findByPublicId(publicId).orElseThrow(UserNotFoundException::new);
+        
+        isIdIdentical(user.getId(), userId);
 
         userRepository.delete(user);
     }

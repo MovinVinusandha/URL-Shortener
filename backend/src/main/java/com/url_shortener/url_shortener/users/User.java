@@ -19,6 +19,9 @@ public class User {
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "public_id", nullable = false, unique = true)
+    private String publicId;
+
     @Column(name = "name")
     private String name;
 
@@ -41,5 +44,9 @@ public class User {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.publicId == null) {
+            String randomPart = org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric(16);
+            this.publicId = this.getRole().name().toLowerCase() + "_" + randomPart;
+        }
     }
 }
