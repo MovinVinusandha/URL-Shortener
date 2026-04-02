@@ -220,12 +220,13 @@ public class UrlService {
         if (isAdmin) {
             urls = urlRepository.findAll(Sort.by(sortBy).descending());
         } else {
-            urls = urlRepository.findByUserId(getUserId());
+            urls = urlRepository.findAllByUserIdWithDetails(getUserId());
             urls.sort(Comparator.comparing(Url::getId).reversed());
         }
 
         var dtos = urls.stream()
-                .map(this::toDtoWithClickCount)
+                .map(this::toDtoWithClickCountSafe)
+                .filter(java.util.Objects::nonNull)
                 .toList();
 
         if (sortByClickCount) {
@@ -235,6 +236,15 @@ public class UrlService {
         }
 
         return dtos;
+    }
+
+    private UrlDto toDtoWithClickCountSafe(Url url) {
+        try {
+            return toDtoWithClickCount(url);
+        } catch (Exception e) {
+            log.error("Failed to map URL id: {}", url.getId(), e);
+            return null;
+        }
     }
 
     /**

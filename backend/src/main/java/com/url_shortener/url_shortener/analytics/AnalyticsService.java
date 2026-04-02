@@ -45,6 +45,15 @@ public class AnalyticsService {
     private final UserAgentParserService   userAgentParserService;
     private final GeoLocationService       geoLocationService;
 
+    public UserUsageStatsDto getUserUsageStats(User currentUser) {
+        long totalLinks = urlRepository.countByUserId(currentUser.getId());
+        long totalClicks = clickEventRepository.countTotalClicksByUserId(currentUser.getId());
+        return UserUsageStatsDto.builder()
+                .totalLinks(totalLinks)
+                .totalClicks(totalClicks)
+                .build();
+    }
+
     public AnalyticsResponseDto getAnalytics(String hash, User currentUser, String period) {
         var url = urlRepository.findByShortUrl(hash);
         if (url == null) {

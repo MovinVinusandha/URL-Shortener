@@ -64,4 +64,12 @@ public class AnalyticsController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return ResponseEntity.ok(analyticsService.getFolderAnalytics(folderId, currentUser, period));
     }
+    @GetMapping("/api/analytics/usage")
+    @Operation(summary = "Get global usage stats for the current user")
+    public ResponseEntity<UserUsageStatsDto> getUserUsageStats(Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(analyticsService.getUserUsageStats(currentUser));
+    }
 }
