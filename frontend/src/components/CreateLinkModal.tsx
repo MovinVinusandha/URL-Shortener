@@ -61,6 +61,8 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
   const [expirationPreset, setExpirationPreset] = useState<string>('none');
   const [shortenLoading, setShortenLoading] = useState(false);
   const [shortenError, setShortenError] = useState('');
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [isQrLoading, setIsQrLoading] = useState(true);
 
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
@@ -100,6 +102,18 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
       setIsFolderDropdownOpen(false);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const fetchQrCode = async () => {
+      if (!customAlias) return;
+      setIsQrLoading(true);
+      const fullShortUrl = `http://localhost:8080/${customAlias}`;
+      const previewUrl = `http://localhost:8080/api/public/qr/preview?text=${encodeURIComponent(fullShortUrl)}`;
+      setQrCodeUrl(previewUrl);
+      setIsQrLoading(false);
+    };
+    fetchQrCode();
+  }, [customAlias]);
 
   if (!isOpen) return null;
 
@@ -515,13 +529,19 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                     </button>
                   </div>
                   <div className="border border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 flex flex-col items-center justify-center relative group min-h-[140px]">
-                    <div className="bg-white p-2 rounded shadow-sm">
-                      <div className="grid grid-cols-3 gap-0.5 w-8 h-8">
-                        <div className="bg-gray-800 rounded-sm"></div><div className="bg-gray-800 rounded-sm"></div><div className="bg-gray-800 rounded-sm"></div>
-                        <div className="bg-gray-800 rounded-sm"></div><div className="bg-white rounded-sm"></div><div className="bg-gray-800 rounded-sm"></div>
-                        <div className="bg-gray-800 rounded-sm"></div><div className="bg-gray-800 rounded-sm"></div><div className="bg-gray-800 rounded-sm"></div>
+                    {isQrLoading ? (
+                      <div className="w-8 h-8 border-4 border-gray-200 border-t-gray-400 rounded-full animate-spin"></div>
+                    ) : qrCodeUrl ? (
+                      <img src={qrCodeUrl} alt="QR Code Preview" className="w-full h-full rounded-md object-contain max-h-[120px]" />
+                    ) : (
+                      <div className="bg-white p-2 rounded shadow-sm">
+                        <div className="grid grid-cols-3 gap-0.5 w-8 h-8">
+                          <div className="bg-gray-800 rounded-sm"></div><div className="bg-gray-800 rounded-sm"></div><div className="bg-gray-800 rounded-sm"></div>
+                          <div className="bg-gray-800 rounded-sm"></div><div className="bg-white rounded-sm"></div><div className="bg-gray-800 rounded-sm"></div>
+                          <div className="bg-gray-800 rounded-sm"></div><div className="bg-gray-800 rounded-sm"></div><div className="bg-gray-800 rounded-sm"></div>
+                        </div>
                       </div>
-                    </div>
+                    )}
                     <button type="button" className="absolute top-2 right-2 p-1.5 bg-white border border-gray-200 rounded-md shadow-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
