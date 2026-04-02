@@ -5,7 +5,8 @@ import {
   Lock, CornerDownLeft, Pencil, Check, FolderPlus, Eye, EyeOff
 } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
-import type { Tag as TagType, Folder as FolderType } from '../types';
+import axios from 'axios';
+import type { Tag as TagType, Folder as FolderType, UrlEntry } from '../types';
 
 interface CreateLinkModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface CreateLinkModalProps {
   onSuccess: (newUrl?: any) => void;
   folders: FolderType[];
   tags: TagType[];
+  urlToEdit?: UrlEntry | null;
 }
 
 const generateRandomHash = () => Math.random().toString(36).substring(2, 8);
@@ -51,20 +53,34 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
   onClose, 
   onSuccess,
   folders, 
-  tags
+  tags,
+  urlToEdit
 }) => {
-  const [longUrl, setLongUrl] = useState('');
-  const [customAlias, setCustomAlias] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [expiresAt, setExpiresAt] = useState<string>('');
-  const [expirationPreset, setExpirationPreset] = useState<string>('none');
-  const [shortenLoading, setShortenLoading] = useState(false);
-  const [shortenError, setShortenError] = useState('');
+  const [longUrl, setLongUrl] = useState(urlToEdit?.longUrl || '');
+  const [customAlias, setCustomAlias] = useState(urlToEdit ? urlToEdit.shortUrl.split('/').pop() || '' : '');
+  const [selectedFolderId, setSelectedFolderId] = useState<number | ''>(urlToEdit?.folderId || '');
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>(urlToEdit?.tags?.map(t => t.id) || []);
+  const [password, setPassword] = useState(''); // Always start blank for security
+  const [expiresAt, setExpiresAt] = useState(urlToEdit?.expiresAt || '');
+
+  // --- DERIVED STATE FOR EXPIRATION PRESET ---
+  const getInitialExpirationPreset = (expDate: string | null | undefined): string => {
+    if (!expDate) return 'None';
+    // Add logic here later to detect if it matches 1h/24h/7d if needed.
+    // For now, if a date exists, it's 'Custom'.
+    return 'Custom';
+  };
+  const [expirationPreset, setExpirationPreset] = useState(getInitialExpirationPreset(urlToEdit?.expiresAt));
+  // --- END DERIVED STATE ---
+
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [isQrLoading, setIsQrLoading] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const [tagSearchQuery, setTagSearchQuery] = useState('');
   const tagRef = useRef<HTMLDivElement>(null);
@@ -80,7 +96,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
     setLocalFolders(folders);
   }, [folders]);
 
-  const [selectedFolderId, setSelectedFolderId] = useState<number | ''>('');
+
   const [isFolderDropdownOpen, setIsFolderDropdownOpen] = useState(false);
   const [folderSearchQuery, setFolderSearchQuery] = useState('');
   const folderRef = useRef<HTMLDivElement>(null);
@@ -88,20 +104,30 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setCustomAlias(generateRandomHash());
-      setLongUrl('');
-      setPassword('');
-      setExpiresAt('');
-      setExpirationPreset('none');
-      setShortenError('');
-      setSelectedTagIds([]);
-      setSelectedFolderId('');
+      if (urlToEdit) {
+        setCustomAlias(urlToEdit.shortUrl || '');
+        setLongUrl(urlToEdit.longUrl || '');
+        setPassword('');
+        setExpiresAt(urlToEdit.expiresAt ? urlToEdit.expiresAt.substring(0, 16) : '');
+        setExpirationPreset(getInitialExpirationPreset(urlToEdit.expiresAt));
+        setSelectedTagIds(urlToEdit.tags?.map(t => t.id) || []);
+        setSelectedFolderId(urlToEdit.folderId || '');
+      } else {
+        setCustomAlias(generateRandomHash());
+        setLongUrl('');
+        setPassword('');
+        setExpiresAt('');
+        setExpirationPreset('none');
+        setSelectedTagIds([]);
+        setSelectedFolderId('');
+      }
+      setError('');
       setTagSearchQuery('');
       setFolderSearchQuery('');
       setIsTagDropdownOpen(false);
       setIsFolderDropdownOpen(false);
     }
-  }, [isOpen]);
+  }, [isOpen, urlToEdit]);
 
   useEffect(() => {
     const fetchQrCode = async () => {
@@ -143,46 +169,78 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
   const handleShortenSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!longUrl.trim()) return;
-    setShortenError('');
-    setShortenLoading(true);
+    setError('');
+    setLoading(true);
     try {
-      const payload: any = {
-        longUrl: longUrl.trim(),
-        customAlias: customAlias.trim() || undefined,
-        password: password.trim() || undefined,
-        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
-        folderId: selectedFolderId !== '' ? selectedFolderId : undefined
-      };
-      
-      if (expiresAt) {
-        payload.expiresAt = new Date(expiresAt).toISOString().substring(0, 19);
+      if (urlToEdit) {
+        const hash = urlToEdit.shortUrl.split('/').pop();
+        if (!hash) {
+          setError("Could not determine the link's hash to update.");
+          setLoading(false);
+          return;
+        }
+        console.log("Attempting to update hash:", hash);
+        
+        const updatePayload = {
+          longUrl: longUrl.trim(),
+          password: password.trim() || null,
+          expiresAt: expiresAt ? new Date(expiresAt).toISOString().substring(0, 19) : null,
+          tagIds: selectedTagIds.length > 0 ? selectedTagIds : []
+        };
+
+        const { data } = await axiosInstance.put(`/url/${hash}`, updatePayload);
+        const mappedEntry = {
+          longUrl: data.longUrl,
+          shortUrl: data.shortUrl,
+          accessed_times: urlToEdit.accessed_times,
+          createdAt: urlToEdit.createdAt,
+          expiresAt: data.expiresAt,
+          isActive: data.isActive ?? true,
+          hasPassword: !!password.trim() || urlToEdit.hasPassword,
+          tags: data.tags,
+          folderId: urlToEdit.folderId, // Folder wasn't updated via API
+          folderName: urlToEdit.folderName
+        };
+        onSuccess(mappedEntry);
+      } else {
+        const createPayload: any = {
+          longUrl: longUrl.trim(),
+          customAlias: customAlias.trim() || undefined,
+          password: password.trim() || undefined,
+          tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
+          folderId: selectedFolderId !== '' ? selectedFolderId : undefined
+        };
+        if (expiresAt) {
+          createPayload.expiresAt = new Date(expiresAt).toISOString().substring(0, 19);
+        }
+        
+        const { data } = await axiosInstance.post('/shorten', createPayload);
+        
+        const mappedEntry = {
+          longUrl: data.longUrl,
+          shortUrl: data.shortUrl,
+          accessed_times: 0,
+          createdAt: data.createdAt,
+          expiresAt: data.expiresAt,
+          isActive: data.isActive ?? true,
+          hasPassword: !!password.trim(),
+          tags: data.tags,
+          folderId: data.folderId,
+          folderName: data.folderName
+        };
+        onSuccess(mappedEntry);
       }
-
-      const { data } = await axiosInstance.post('/shorten', payload);
-      
-      const mappedEntry = {
-        longUrl: data.longUrl,
-        shortUrl: data.shortUrl,
-        accessed_times: 0,
-        createdAt: data.createdAt,
-        expiresAt: data.expiresAt,
-        isActive: data.isActive ?? true,
-        hasPassword: !!password.trim(),
-        tags: data.tags,
-        folderId: data.folderId,
-        folderName: data.folderName
-      };
-
-      onSuccess(mappedEntry);
       onClose();
     } catch (err: any) {
-      if (err.response?.status === 409 || err.response?.status === 400) {
-        setShortenError('This custom alias is already taken. Please choose another one.');
+      if (!urlToEdit && (err.response?.status === 409 || err.response?.status === 400)) {
+        setError('This custom alias is already taken. Please choose another one.');
       } else {
-        setShortenError(err.response?.data?.message || 'Failed to shorten URL. Please try again.');
+        const defaultMessage = urlToEdit ? "Failed to update URL. Please try again." : "Failed to shorten URL. Please try again.";
+        const backendMessage = (axios.isAxiosError(err) && err.response?.data?.message) || defaultMessage;
+        setError(backendMessage);
       }
     } finally {
-      setShortenLoading(false);
+      setLoading(false);
     }
   };
 
@@ -227,7 +285,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
             </span>
             <div className="flex items-center gap-2 text-gray-900 font-medium">
               <Globe className="w-4 h-4" />
-              New link
+              {urlToEdit ? 'Edit URL' : 'New link'}
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -240,9 +298,9 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
         {/* Main Content Area */}
         <div className="flex-1 overflow-y-auto p-6" style={{ scrollbarWidth: 'thin' }}>
           <form id="create-link-form" onSubmit={handleShortenSubmit}>
-            {shortenError && (
+            {error && (
               <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
-                {shortenError}
+                {error}
               </div>
             )}
             
@@ -272,14 +330,16 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-medium text-gray-700">Short Link</label>
                     <div className="flex gap-2">
-                      <button 
-                        type="button" 
-                        onClick={() => setCustomAlias(generateRandomHash())}
-                        className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100" 
-                        title="Randomize"
-                      >
-                        <Shuffle className="w-4 h-4" />
-                      </button>
+                      {!urlToEdit && (
+                        <button 
+                          type="button" 
+                          onClick={() => setCustomAlias(generateRandomHash())}
+                          className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100" 
+                          title="Randomize"
+                        >
+                          <Shuffle className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="flex rounded-md shadow-sm">
@@ -290,7 +350,8 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                       type="text" 
                       value={customAlias}
                       onChange={(e) => setCustomAlias(e.target.value)}
-                      className="block w-full rounded-none rounded-r-md border border-gray-300 focus:border-black focus:ring-1 focus:ring-black px-3 py-2 sm:text-sm w-2/3" 
+                      disabled={!!urlToEdit}
+                      className="block w-full rounded-none rounded-r-md border border-gray-300 focus:border-black focus:ring-1 focus:ring-black px-3 py-2 sm:text-sm w-2/3 disabled:bg-gray-100 disabled:text-gray-500 dark:disabled:bg-slate-800" 
                     />
                   </div>
                 </div>
@@ -314,7 +375,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                     ) : (
                       <div className="flex flex-wrap gap-1">
                         {selectedTagIds.map(id => {
-                          const t = localTags.find(tag => tag.id === id);
+                          const t = localTags.find(tag => tag.id === id) || urlToEdit?.tags?.find(tag => tag.id === id);
                           if (!t) return null;
                           return (
                             <span 
@@ -386,7 +447,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                     </div>
                     <input 
                       type={showPassword ? "text" : "password"} 
-                      placeholder="Optional password..."
+                      placeholder={urlToEdit?.hasPassword ? "Password is set. Enter a new one to change." : "Optional password..."}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="block w-full rounded-md border border-gray-300 py-2 pl-9 pr-10 shadow-sm focus:border-black focus:ring-1 focus:ring-black sm:text-sm placeholder:text-gray-400"
@@ -422,7 +483,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                           key={preset.id}
                           type="button"
                           onClick={() => handleExpirationPresetChange(preset.id)}
-                          className={expirationPreset === preset.id 
+                          className={expirationPreset.toLowerCase() === preset.id.toLowerCase() 
                             ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900 border border-transparent px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
                             : "bg-transparent text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-slate-800 px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
                           }
@@ -466,7 +527,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                           <FolderArchive className="w-3.5 h-3.5" />
                         </div>
                         <span className="block truncate text-gray-900">
-                          {localFolders.find(f => f.id === selectedFolderId)?.name || 'Unknown'}
+                          {localFolders.find(f => f.id === selectedFolderId)?.name || (urlToEdit?.folderId === selectedFolderId && urlToEdit?.folderName ? urlToEdit.folderName : 'Unknown')}
                         </span>
                       </>
                     )}
@@ -521,7 +582,8 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                 </div>
 
                 {/* QR Code */}
-                <div className="space-y-1.5">
+                {!urlToEdit && (
+                  <div className="space-y-1.5">
                   <div className="flex items-center gap-1.5">
                     <label className="text-sm font-medium text-gray-700">QR Code</label>
                     <button type="button" className="text-gray-400 hover:text-gray-600">
@@ -547,6 +609,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                     </button>
                   </div>
                 </div>
+                )}
               </div>
             </div>
           </form>
@@ -558,11 +621,11 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
           <div>
             <button 
               type="submit" 
-              form="create-link-form" 
-              disabled={shortenLoading}
+              form="create-link-form"
+              disabled={loading}
               className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 transition-colors disabled:opacity-50"
             >
-              {shortenLoading ? 'Creating...' : 'Create link'}
+              {loading ? (urlToEdit ? 'Saving...' : 'Creating...') : (urlToEdit ? 'Save changes' : 'Create link')}
               <span className="flex items-center text-[10px] text-gray-400 border border-gray-700 px-1 rounded bg-gray-900 ml-1">
                 <CornerDownLeft className="w-3 h-3" />
               </span>

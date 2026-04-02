@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useOutletContext, Link, useSearchParams } from 'react-router-dom';
 import { X, BarChart2, Search, Copy, QrCode, Edit2, Trash2, CornerDownRight, MoreVertical, Filter, SlidersHorizontal, ChevronDown, ArrowUpDown, Check, ArrowDownWideNarrow, Tag, ChevronLeft } from 'lucide-react';
 
-import EditModal from '../components/EditModal';
+import CreateLinkModal from '../components/CreateLinkModal';
 import ClickArrowIcon from '../components/icons/ClickArrowIcon';
 import type { DashboardLayoutContext } from '../layouts/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
@@ -45,14 +45,15 @@ const DashboardPage: React.FC = () => {
   const [urls, setUrls] = useState<UrlEntry[]>([]);
   const [loadingAll, setLoadingAll] = useState(true);
   
-  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editingUrl, setEditingUrl] = useState<UrlEntry | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
   const [isQrLoading, setIsQrLoading] = useState(false);
   const [activeQrHash, setActiveQrHash] = useState<string | null>(null);
 
-  const { triggerRefresh, setNavStats, tags, activeFolderId } = useOutletContext<DashboardLayoutContext>();
+  const { triggerRefresh, setNavStats, tags, folders, activeFolderId } = useOutletContext<DashboardLayoutContext>();
 
   const [activeFilterTagId] = useState<number | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -695,7 +696,8 @@ const DashboardPage: React.FC = () => {
                             </Link>
                             <button
                               onClick={() => {
-                                setEditIndex(urls.indexOf(url));
+                                setEditingUrl(url);
+                                setIsCreateModalOpen(true);
                                 setOpenMenuId(null);
                               }}
                               className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-2"
@@ -772,13 +774,21 @@ const DashboardPage: React.FC = () => {
       )}
 
       {/* ── Edit Modal ───────────────────────────────────── */}
-      {editIndex !== null && (
-        <EditModal
-          entry={urls[editIndex]}
-          onClose={() => setEditIndex(null)}
-          onUpdated={(updatedEntry) => {
-            handleUpdated(editIndex, updatedEntry);
-            setEditIndex(null);
+      {isCreateModalOpen && editingUrl && (
+        <CreateLinkModal
+          isOpen={isCreateModalOpen}
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            setEditingUrl(null);
+          }}
+          folders={folders}
+          tags={tags}
+          urlToEdit={editingUrl}
+          onSuccess={(updatedEntry) => {
+            const idx = urls.findIndex(u => u.shortUrl === editingUrl.shortUrl);
+            if (idx !== -1) {
+              handleUpdated(idx, updatedEntry);
+            }
           }}
         />
       )}
