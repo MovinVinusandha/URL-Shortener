@@ -23,6 +23,10 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
     Page<ClickEvent> findByUrl_Id(Long urlId, Pageable pageable);
 
     /** Total click count for a specific URL. */
+    long countByUrl_Id(Long urlId);
+
+    @Query("SELECT COUNT(c) FROM ClickEvent c WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.user.id = :userId)")
+    long countTotalClicksByUserId(@Param("userId") Long userId);
     @Query("SELECT COUNT(c) FROM ClickEvent c WHERE c.url.id = :urlId AND c.timestamp >= :startDate")
     long countByUrl_Id(@Param("urlId") Long urlId, @Param("startDate") LocalDateTime startDate);
 
