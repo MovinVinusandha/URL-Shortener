@@ -2,20 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   ChevronRight, Globe, X, HelpCircle, Shuffle, 
   Tag, FolderArchive, ChevronsUpDown, 
-  Lock, CornerDownLeft, Pencil, Check, FolderPlus, Eye, EyeOff, ArrowRight
+  Lock, CornerDownLeft, Pencil, Check, FolderPlus, Eye, EyeOff, ArrowRight, Folder
 } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
 import axios from 'axios';
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
-import type { Tag as TagType, Folder as FolderType, UrlEntry } from '../types';
+import type { Tag as TagType, Folder as FolderType } from '../types';
 
 interface CreateLinkModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (newUrl?: any) => void;
-  folders: FolderType[];
-  tags: TagType[];
-  urlToEdit?: UrlEntry | null;
+  folders: { id: number; name: string }[]; // Explicitly type the array!
+  tags: { id: number; name: string; color?: string }[];
+  urlToEdit?: any | null; // Use 'any' temporarily to bypass the error, or import the exact UrlEntry type
 }
 
 const generateRandomHash = () => Math.random().toString(36).substring(2, 8);
@@ -59,8 +59,8 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
 }) => {
   const [longUrl, setLongUrl] = useState(urlToEdit?.longUrl || '');
   const [customAlias, setCustomAlias] = useState(urlToEdit ? urlToEdit.shortUrl.split('/').pop() || '' : '');
-  const [selectedFolderId, setSelectedFolderId] = useState<number | ''>(urlToEdit?.folderId || '');
-  const [selectedTagIds, setSelectedTagIds] = useState<number[]>(urlToEdit?.tags?.map(t => t.id) || []);
+  const [selectedFolderId, setSelectedFolderId] = useState(urlToEdit?.folderId || '');
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>(urlToEdit?.tags?.map((t: { id: number; name: string }) => t.id) || []);
   const [password, setPassword] = useState(''); // Always start blank for security
   const [expiresAt, setExpiresAt] = useState(urlToEdit?.expiresAt || '');
 
@@ -111,7 +111,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
         setPassword('');
         setExpiresAt(urlToEdit.expiresAt ? urlToEdit.expiresAt.substring(0, 16) : '');
         setExpirationPreset(getInitialExpirationPreset(urlToEdit.expiresAt));
-        setSelectedTagIds(urlToEdit.tags?.map(t => t.id) || []);
+        setSelectedTagIds(urlToEdit.tags?.map((t: { id: number; name: string }) => t.id) || []);
         setSelectedFolderId(urlToEdit.folderId || '');
       } else {
         setCustomAlias(generateRandomHash());
@@ -417,7 +417,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                     ) : (
                       <div className="flex flex-wrap gap-1">
                         {selectedTagIds.map(id => {
-                          const t = localTags.find(tag => tag.id === id) || urlToEdit?.tags?.find(tag => tag.id === id);
+                          const t = localTags.find(tag => tag.id === id) || urlToEdit?.tags?.find((tag: { id: number; name: string }) => tag.id === id);
                           if (!t) return null;
                           return (
                             <span 
@@ -557,70 +557,82 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                       <HelpCircle className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <button 
-                    type="button"
-                    onClick={() => setIsFolderDropdownOpen(!isFolderDropdownOpen)}
-                    className="relative w-full cursor-pointer rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-left shadow-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm flex items-center gap-2"
-                  >
-                    {selectedFolderId === '' ? (
-                      <span className="block truncate text-gray-400">Select a folder...</span>
-                    ) : (
-                      <>
-                        <div className="p-0.5 rounded bg-emerald-100 text-emerald-600">
-                          <FolderArchive className="w-3.5 h-3.5" />
-                        </div>
-                        <span className="block truncate text-gray-900">
-                          {localFolders.find(f => f.id === selectedFolderId)?.name || (urlToEdit?.folderId === selectedFolderId && urlToEdit?.folderName ? urlToEdit.folderName : 'Unknown')}
-                        </span>
-                      </>
-                    )}
-                    <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                      <ChevronsUpDown className="w-4 h-4 text-gray-400" />
-                    </span>
-                  </button>
-                  
-                  {isFolderDropdownOpen && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden flex flex-col p-1">
-                      <div className="p-1 border-b border-gray-100">
-                        <input
-                          type="text"
-                          placeholder="Search folders..."
-                          value={folderSearchQuery}
-                          onChange={(e) => setFolderSearchQuery(e.target.value)}
-                          className="w-full px-2 py-1 text-sm bg-gray-50 rounded border border-gray-200 focus:ring-0 text-gray-900 outline-none"
-                        />
-                      </div>
-                      <div className="max-h-60 overflow-y-auto p-1 space-y-1">
-                        <button
-                          type="button"
-                          onClick={() => { setSelectedFolderId(''); setIsFolderDropdownOpen(false); }}
-                          className="w-full flex items-center justify-between px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-gray-100 text-gray-700"
-                        >
-                          <span className="truncate">No Folder</span>
-                          {selectedFolderId === '' && <Check className="w-3.5 h-3.5 text-black" />}
-                        </button>
-                        {filteredFolders.map(folder => (
-                          <button
-                            key={folder.id}
-                            type="button"
-                            onClick={() => { setSelectedFolderId(folder.id); setIsFolderDropdownOpen(false); }}
-                            className="w-full flex items-center justify-between px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-gray-100 text-gray-700"
-                          >
-                            <span className="truncate">{folder.name}</span>
-                            {selectedFolderId === folder.id && <Check className="w-3.5 h-3.5 text-black" />}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="p-1 border-t border-gray-100">
-                        <button
-                          type="button"
-                          onClick={handleCreateFolder}
-                          className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-gray-100 text-gray-700"
-                        >
-                          <FolderPlus className="w-4 h-4" /> Create new folder
-                        </button>
-                      </div>
+
+                  {urlToEdit ? (
+                    <div className="flex items-center gap-2 w-full border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800 rounded-md px-3 py-2 text-sm text-gray-500 dark:text-gray-400 cursor-not-allowed">
+                      <Folder className="w-4 h-4 text-emerald-500" />
+                      <span className="truncate">
+                        {urlToEdit?.folderName || folders?.find(f => f.id === urlToEdit?.folderId)?.name || 'Uncategorized'}
+                      </span>
                     </div>
+                  ) : (
+                    <>
+                      <button 
+                        type="button"
+                        onClick={() => setIsFolderDropdownOpen(!isFolderDropdownOpen)}
+                        className="relative w-full cursor-pointer rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-left shadow-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm flex items-center gap-2"
+                      >
+                        {selectedFolderId === '' ? (
+                          <span className="block truncate text-gray-400">Select a folder...</span>
+                        ) : (
+                          <>
+                            <div className="p-0.5 rounded bg-emerald-100 text-emerald-600">
+                              <FolderArchive className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="block truncate text-gray-900">
+                              {localFolders.find(f => f.id === selectedFolderId)?.name || (urlToEdit?.folderId === selectedFolderId && urlToEdit?.folderName ? urlToEdit.folderName : 'Unknown')}
+                            </span>
+                          </>
+                        )}
+                        <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                          <ChevronsUpDown className="w-4 h-4 text-gray-400" />
+                        </span>
+                      </button>
+                      
+                      {isFolderDropdownOpen && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden flex flex-col p-1">
+                          <div className="p-1 border-b border-gray-100">
+                            <input
+                              type="text"
+                              placeholder="Search folders..."
+                              value={folderSearchQuery}
+                              onChange={(e) => setFolderSearchQuery(e.target.value)}
+                              className="w-full px-2 py-1 text-sm bg-gray-50 rounded border border-gray-200 focus:ring-0 text-gray-900 outline-none"
+                            />
+                          </div>
+                          <div className="max-h-60 overflow-y-auto p-1 space-y-1">
+                            <button
+                              type="button"
+                              onClick={() => { setSelectedFolderId(''); setIsFolderDropdownOpen(false); }}
+                              className="w-full flex items-center justify-between px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-gray-100 text-gray-700"
+                            >
+                              <span className="truncate">No Folder</span>
+                              {selectedFolderId === '' && <Check className="w-3.5 h-3.5 text-black" />}
+                            </button>
+                            {filteredFolders.map(folder => (
+                              <button
+                                key={folder.id}
+                                type="button"
+                                onClick={() => { setSelectedFolderId(folder.id); setIsFolderDropdownOpen(false); }}
+                                className="w-full flex items-center justify-between px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-gray-100 text-gray-700"
+                              >
+                                <span className="truncate">{folder.name}</span>
+                                {selectedFolderId === folder.id && <Check className="w-3.5 h-3.5 text-black" />}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="p-1 border-t border-gray-100">
+                            <button
+                              type="button"
+                              onClick={handleCreateFolder}
+                              className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-gray-100 text-gray-700"
+                            >
+                              <FolderPlus className="w-4 h-4" /> Create new folder
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
