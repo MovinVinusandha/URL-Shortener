@@ -16,6 +16,7 @@ interface CreateLinkModalProps {
   folders: { id: number; name: string }[]; // Explicitly type the array!
   tags: { id: number; name: string; color?: string }[];
   urlToEdit?: any | null; // Use 'any' temporarily to bypass the error, or import the exact UrlEntry type
+  onOpenFolderModal?: () => void;
 }
 
 const generateRandomHash = () => Math.random().toString(36).substring(2, 8);
@@ -55,7 +56,8 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
   onSuccess,
   folders, 
   tags,
-  urlToEdit
+  urlToEdit,
+  onOpenFolderModal
 }) => {
   const [longUrl, setLongUrl] = useState(urlToEdit?.longUrl || '');
   const [customAlias, setCustomAlias] = useState(urlToEdit ? urlToEdit.shortUrl.split('/').pop() || '' : '');
@@ -256,18 +258,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
     }
   };
 
-  const handleCreateFolder = async () => {
-    if (!folderSearchQuery.trim()) return;
-    try {
-      const { data } = await axiosInstance.post('/folders', { name: folderSearchQuery.trim() });
-      setLocalFolders([...localFolders, data]);
-      setSelectedFolderId(data.id);
-      setIsFolderDropdownOpen(false);
-      setFolderSearchQuery('');
-    } catch (err) {
-      console.error(err);
-    }
-  };
+
 
   const filteredTags = localTags.filter(t => t.name.toLowerCase().includes(tagSearchQuery.toLowerCase()));
   const filteredFolders = localFolders.filter(f => f.name.toLowerCase().includes(folderSearchQuery.toLowerCase()));
@@ -624,7 +615,10 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                           <div className="p-1 border-t border-gray-100">
                             <button
                               type="button"
-                              onClick={handleCreateFolder}
+                              onClick={() => {
+                                setIsFolderDropdownOpen(false); // Close the dropdown
+                                if (onOpenFolderModal) onOpenFolderModal(); // Open the Folder modal
+                              }}
                               className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-gray-100 text-gray-700"
                             >
                               <FolderPlus className="w-4 h-4" /> Create new folder

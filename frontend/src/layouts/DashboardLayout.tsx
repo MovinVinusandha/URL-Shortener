@@ -431,6 +431,7 @@ const DashboardLayout: React.FC = () => {
         }}
         folders={folders}
         tags={tags}
+        onOpenFolderModal={() => setIsFolderModalOpen(true)}
       />
 
       {/* ── Create Tag Modal ────────────────────────────── */}
