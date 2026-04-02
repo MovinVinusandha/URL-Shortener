@@ -15,4 +15,7 @@ public interface UrlRepository extends JpaRepository<Url, Long> {
     int countByFolderId(Long folderId);
 
     java.util.List<Url> findByUserId(Long userId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT DISTINCT u FROM Url u LEFT JOIN FETCH u.tags LEFT JOIN FETCH u.folder WHERE u.user.id = :userId")
+    java.util.List<Url> findAllByUserIdWithDetails(@org.springframework.data.repository.query.Param("userId") Long userId);
 }
