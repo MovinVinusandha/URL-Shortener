@@ -282,6 +282,51 @@ public class UrlService {
         return urlMapper.toUpdateDto(url);
     }
 
+    public UrlDto updateUrl(String hash, UrlUpdateRequestDto request, User currentUser) {
+        var url = isExistsShortUrl(hash);
+
+        boolean isAdmin = currentUser.getRole() == com.url_shortener.url_shortener.users.Role.ROOT || currentUser.getRole() == com.url_shortener.url_shortener.users.Role.ADMIN;
+
+        if (!isAdmin && !url.getUser().getId().equals(currentUser.getId())) {
+            throw new org.springframework.security.access.AccessDeniedException("You do not own this URL.");
+        }
+
+        if (request.getLongUrl() != null && !request.getLongUrl().trim().isEmpty()) {
+            url.setLongUrl(request.getLongUrl().trim());
+        }
+        if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+            url.setPasswordHash(passwordEncoder.encode(request.getPassword().trim()));
+        }
+        if (request.getExpiresAt() != null) {
+            url.setExpiresAt(request.getExpiresAt());
+        }
+        if (request.getTagIds() != null) {
+            List<Tag> tags = tagRepository.findAllById(request.getTagIds());
+            for (Tag t : tags) {
+                if (!isAdmin && !t.getUser().getId().equals(currentUser.getId())) {
+                    throw new org.springframework.security.access.AccessDeniedException("You cannot assign a tag you do not own.");
+                }
+            }
+            url.setTags(new java.util.HashSet<>(tags));
+        }
+
+        url = urlRepository.save(url);
+        
+        // CRITICAL CACHE INVALIDATION
+        redisTemplate.delete("urls::" + url.getShortUrl());
+        
+        if (url.getExpiresAt() != null) {
+            java.time.Duration ttl = java.time.Duration.between(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC), url.getExpiresAt());
+            if (!ttl.isNegative()) {
+                redisTemplate.opsForValue().set("urls::" + url.getShortUrl(), url.getLongUrl(), ttl);
+            }
+        } else {
+            redisTemplate.opsForValue().set("urls::" + url.getShortUrl(), url.getLongUrl(), java.time.Duration.ofHours(24));
+        }
+
+        return toDtoWithClickCount(url);
+    }
+
     @CacheEvict(value = "urls", key = "#shortUrl")
     public void deleteUrl(String shortUrl) {
         var url = isExistsShortUrl(shortUrl);
