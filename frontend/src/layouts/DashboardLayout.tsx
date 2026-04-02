@@ -378,7 +378,7 @@ const DashboardLayout: React.FC = () => {
               Links
             </Link>
             <Link 
-              to="/analytics" 
+              to={activeFolderId ? `/analytics?folderId=${activeFolderId}` : "/analytics"} 
               className={`flex items-center gap-2 px-4 h-full font-medium transition-colors border-b-2 ${location.pathname.startsWith('/analytics') ? 'text-black dark:text-white border-black dark:border-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 border-transparent'}`}
             >
               <BarChart2 className="w-4 h-4" />

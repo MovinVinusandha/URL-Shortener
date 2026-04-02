@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -27,6 +27,8 @@ const AnalyticsPage: React.FC = () => {
   const { hash } = useParams<{ hash: string }>();
   const navigate = useNavigate();
   const {} = useOutletContext<DashboardLayoutContext>();
+  const [searchParams] = useSearchParams();
+  const folderId = searchParams.get('folderId');
   
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,7 +39,12 @@ const AnalyticsPage: React.FC = () => {
     const fetchAnalytics = async () => {
       setLoading(true);
       try {
-        const endpoint = hash ? `/api/analytics/${hash}` : '/api/analytics';
+        let endpoint = '/api/analytics';
+        if (hash) {
+          endpoint = `/api/analytics/${hash}`;
+        } else if (folderId) {
+          endpoint = `/api/analytics/folder/${folderId}`;
+        }
         const response = await axiosInstance.get<AnalyticsData>(endpoint, { params: { period } });
         setData(response.data);
         setError(null);
@@ -49,7 +56,7 @@ const AnalyticsPage: React.FC = () => {
     };
 
     fetchAnalytics();
-  }, [hash, period]);
+  }, [hash, period, folderId]);
 
   if (loading) {
     return (
@@ -109,6 +116,8 @@ const AnalyticsPage: React.FC = () => {
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
               {hash ? (
                 <>Analytics for <span className="text-[#7c3aed]">/{hash}</span></>
+              ) : folderId ? (
+                'Folder Analytics'
               ) : (
                 'Overall Analytics'
               )}
