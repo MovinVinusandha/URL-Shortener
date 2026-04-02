@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
 import axios from 'axios';
+import { format, formatDistanceToNow, parseISO } from 'date-fns';
 import type { Tag as TagType, Folder as FolderType, UrlEntry } from '../types';
 
 interface CreateLinkModalProps {
@@ -151,18 +152,16 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
 
   const handleExpirationPresetChange = (preset: string) => {
     setExpirationPreset(preset);
-    const tzOffset = new Date().getTimezoneOffset() * 60000;
-    const localNow = Date.now() - tzOffset;
     if (preset === 'none') {
       setExpiresAt('');
     } else if (preset === '1hour') {
-      setExpiresAt(new Date(localNow + 60 * 60 * 1000).toISOString().substring(0, 16));
+      setExpiresAt(new Date(Date.now() + 60 * 60 * 1000).toISOString().substring(0, 19));
     } else if (preset === '24hours') {
-      setExpiresAt(new Date(localNow + 24 * 60 * 60 * 1000).toISOString().substring(0, 16));
+      setExpiresAt(new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().substring(0, 19));
     } else if (preset === '7days') {
-      setExpiresAt(new Date(localNow + 7 * 24 * 60 * 60 * 1000).toISOString().substring(0, 16));
+      setExpiresAt(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().substring(0, 19));
     } else if (preset === 'custom') {
-      setExpiresAt(new Date(localNow + 60 * 60 * 1000).toISOString().substring(0, 16));
+      setExpiresAt(new Date(Date.now() + 60 * 60 * 1000).toISOString().substring(0, 19));
     }
   };
 
@@ -272,6 +271,26 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
 
   const filteredTags = localTags.filter(t => t.name.toLowerCase().includes(tagSearchQuery.toLowerCase()));
   const filteredFolders = localFolders.filter(f => f.name.toLowerCase().includes(folderSearchQuery.toLowerCase()));
+
+  const renderExpirationStatus = () => {
+    if (!expiresAt || expirationPreset.toLowerCase() === 'none') {
+      return null; 
+    }
+    
+    const expireDate = parseISO(expiresAt + 'Z');
+    const hasExpired = expireDate < new Date();
+
+    return (
+      <div className="mt-2 flex flex-col min-h-[2.5rem]">
+        <span className={`text-sm font-medium ${hasExpired ? 'text-red-500' : 'text-gray-800 dark:text-gray-200'}`}>
+          {hasExpired ? 'This link has expired' : `Expires ${formatDistanceToNow(expireDate, { addSuffix: true })}`}
+        </span>
+        <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          {format(expireDate, "PPpp")}
+        </span>
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 bg-gray-500/30 backdrop-blur-sm z-[100] transition-opacity flex items-center justify-center p-4">
@@ -492,7 +511,8 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                         </button>
                       ))}
                     </div>
-                    {expirationPreset === 'custom' && (
+                    {renderExpirationStatus()}
+                    {expirationPreset.toLowerCase() === 'custom' && (
                       <input
                         type="datetime-local"
                         value={expiresAt}
