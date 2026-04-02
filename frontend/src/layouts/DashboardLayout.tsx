@@ -15,7 +15,6 @@ export type DashboardLayoutContext = {
   triggerRefresh: UrlEntry | null;
   tags: Tag[];
   folders: Folder[];
-  setNavStats: (stats: { totalClicks: number; linkCount: number }) => void;
   setTags: React.Dispatch<React.SetStateAction<Tag[]>>;
   setFolders: React.Dispatch<React.SetStateAction<Folder[]>>;
   activeFolderId: number | null;
@@ -95,6 +94,23 @@ const DashboardLayout: React.FC = () => {
 
     return () => { isMounted = false; };
   }, [user]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadUsageStats = async () => {
+      try {
+        const { data } = await axiosInstance.get('/api/analytics/usage');
+        if (isMounted) setNavStats({ totalClicks: data.totalClicks, linkCount: data.totalLinks });
+      } catch (err) {
+        console.error("Failed to load usage stats", err);
+      }
+    };
+
+    if (user && user.role !== 'ROOT' && user.role !== 'ROLE_ROOT') {
+      loadUsageStats();
+    }
+    return () => { isMounted = false; };
+  }, [user, latestNewEntry]);
 
   const getTitle = () => {
     if (location.pathname.startsWith('/analytics')) return 'Analytics';
@@ -407,7 +423,6 @@ const DashboardLayout: React.FC = () => {
               triggerRefresh: latestNewEntry, 
               tags, 
               folders, 
-              setNavStats, 
               setTags, 
               setFolders, 
               activeFolderId, 

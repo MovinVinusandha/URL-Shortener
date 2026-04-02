@@ -26,7 +26,7 @@ const COLORS = ['#7c3aed', '#c4b5fd', '#8b5cf6', '#a78bfa', '#ddd6fe'];
 const AnalyticsPage: React.FC = () => {
   const { hash } = useParams<{ hash: string }>();
   const navigate = useNavigate();
-  const { setNavStats } = useOutletContext<DashboardLayoutContext>();
+  const {} = useOutletContext<DashboardLayoutContext>();
   
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,12 +50,6 @@ const AnalyticsPage: React.FC = () => {
 
     fetchAnalytics();
   }, [hash, period]);
-
-  useEffect(() => {
-    if (data) {
-      setNavStats({ totalClicks: data.totalClicks || 0, linkCount: 0 });
-    }
-  }, [data, setNavStats]);
 
   if (loading) {
     return (

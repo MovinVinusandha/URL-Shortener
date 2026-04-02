@@ -53,7 +53,7 @@ const DashboardPage: React.FC = () => {
   const [isQrLoading, setIsQrLoading] = useState(false);
   const [activeQrHash, setActiveQrHash] = useState<string | null>(null);
 
-  const { triggerRefresh, setNavStats, tags, folders, activeFolderId } = useOutletContext<DashboardLayoutContext>();
+  const { triggerRefresh, tags, folders, activeFolderId } = useOutletContext<DashboardLayoutContext>();
 
   const [activeFilterTagId] = useState<number | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -326,11 +326,9 @@ const DashboardPage: React.FC = () => {
     return u.tags?.some(tag => selectedFilterTags.includes(tag.id));
   });
 
-  const totalClicks = displayedUrls.reduce((acc, u) => acc + (u.accessed_times ?? 0), 0);
 
-  useEffect(() => {
-    setNavStats({ totalClicks, linkCount: displayedUrls.length });
-  }, [totalClicks, displayedUrls.length, setNavStats]);
+
+
 
   return (
     <>
