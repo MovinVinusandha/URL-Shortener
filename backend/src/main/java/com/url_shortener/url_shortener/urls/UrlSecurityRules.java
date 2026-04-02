@@ -14,6 +14,7 @@ public class UrlSecurityRules implements SecurityRules {
         registry.requestMatchers("/{hash:[a-zA-Z0-9]+}").permitAll()
                 .requestMatchers(HttpMethod.POST, "/unlock/{hash:[a-zA-Z0-9]+}").permitAll()
                 .requestMatchers("/shorten").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/public/qr/preview").permitAll()
                 .requestMatchers(HttpMethod.GET, "/url/all").hasAnyRole(Role.ROOT.name(), Role.ADMIN.name());
     }
 }
