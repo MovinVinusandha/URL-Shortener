@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.url_shortener.url_shortener.users.UserRepository;
+import com.url_shortener.url_shortener.users.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
 
 @RestController
@@ -19,6 +21,7 @@ public class UrlController {
     private final UrlService urlService;
     private final AnalyticsService analyticsService;
     private final QrCodeService qrCodeService;
+    private final UserRepository userRepository;
 
     @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
@@ -91,12 +94,19 @@ public class UrlController {
     }
 
     @PutMapping("/url/{hash}")
-    public ResponseEntity<UrlUpdateDto> updateUrl(
+    public ResponseEntity<UrlDto> updateUrl(
             @PathVariable String hash,
-            @Valid @RequestBody UrlRequest urlRequest
+            @RequestBody UrlUpdateRequestDto request
     ) {
-        var urlUpdateDto = urlService.updateUrl(urlRequest, hash);
-        return ResponseEntity.ok(urlUpdateDto);
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            throw new org.springframework.security.access.AccessDeniedException("You must be logged in to update a URL.");
+        }
+        Long userId = (Long) auth.getPrincipal();
+        var currentUser = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+        
+        var urlDto = urlService.updateUrl(hash, request, currentUser);
+        return ResponseEntity.ok(urlDto);
     }
 
     @DeleteMapping("/url/{hash}")
