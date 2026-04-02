@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   ChevronRight, Globe, X, HelpCircle, Shuffle, 
   Tag, FolderArchive, ChevronsUpDown, 
-  Lock, CornerDownLeft, Pencil, Check, FolderPlus, Eye, EyeOff
+  Lock, CornerDownLeft, Pencil, Check, FolderPlus, Eye, EyeOff, ArrowRight
 } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
 import axios from 'axios';
@@ -273,17 +273,40 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
   const filteredFolders = localFolders.filter(f => f.name.toLowerCase().includes(folderSearchQuery.toLowerCase()));
 
   const renderExpirationStatus = () => {
-    if (!expiresAt || expirationPreset.toLowerCase() === 'none') {
-      return null; 
+    // --- EDIT MODE ---
+    if (urlToEdit) {
+      const originalExpireDate = urlToEdit.expiresAt ? parseISO(urlToEdit.expiresAt + 'Z') : null;
+      const newExpireDate = expiresAt ? parseISO(expiresAt + 'Z') : null;
+
+      return (
+        <div className="mt-2 flex items-center gap-3 text-sm min-h-[2rem]">
+          {/* "Before" state */}
+          <div className="text-gray-500" title={originalExpireDate ? format(originalExpireDate, 'PPpp') : 'No expiration set'}>
+            {originalExpireDate && new Date() < originalExpireDate 
+              ? `${formatDistanceToNow(originalExpireDate, { addSuffix: false })} remaining`
+              : 'Expired'}
+          </div>
+
+          <ArrowRight className="w-4 h-4 text-gray-400" />
+
+          {/* "After" state */}
+          <div className="font-medium text-gray-800 dark:text-gray-200" title={newExpireDate ? format(newExpireDate, 'PPpp') : 'Will never expire'}>
+            {newExpireDate 
+              ? `Expires ${formatDistanceToNow(newExpireDate, { addSuffix: true })}`
+              : 'Never expires'}
+          </div>
+        </div>
+      );
     }
+
+    // --- CREATE MODE ---
+    if (!expiresAt || expirationPreset.toLowerCase() === 'none') return null;
     
     const expireDate = parseISO(expiresAt + 'Z');
-    const hasExpired = expireDate < new Date();
-
     return (
-      <div className="mt-2 flex flex-col min-h-[2.5rem]">
-        <span className={`text-sm font-medium ${hasExpired ? 'text-red-500' : 'text-gray-800 dark:text-gray-200'}`}>
-          {hasExpired ? 'This link has expired' : `Expires ${formatDistanceToNow(expireDate, { addSuffix: true })}`}
+      <div className="mt-2 flex flex-col min-h-[2rem]" title={format(expireDate, 'PPpp')}>
+        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+          Expires {formatDistanceToNow(expireDate, { addSuffix: true })}
         </span>
         <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
           {format(expireDate, "PPpp")}
