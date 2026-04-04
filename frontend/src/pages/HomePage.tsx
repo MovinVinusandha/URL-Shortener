@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Link2,
@@ -93,8 +93,9 @@ interface PricingCardProps {
   features: string[];
   cta: string;
   highlighted?: boolean;
+  onCtaClick?: (e: React.MouseEvent) => void;
 }
-const PricingCard: React.FC<PricingCardProps> = ({ tier, price, description, features, cta, highlighted }) => (
+const PricingCard: React.FC<PricingCardProps> = ({ tier, price, description, features, cta, highlighted, onCtaClick }) => (
   <div className={`flex flex-col gap-6 p-8 rounded-2xl border ${highlighted ? 'bg-[#12141D] border-[#12141D] text-white' : 'bg-white border-gray-200 text-[#12141D]'}`}>
     <div>
       <p className={`text-sm font-medium mb-1 ${highlighted ? 'text-gray-400' : 'text-gray-500'}`}>{tier}</p>
@@ -109,12 +110,22 @@ const PricingCard: React.FC<PricingCardProps> = ({ tier, price, description, fea
         </li>
       ))}
     </ul>
-    <Link
-      to="/register"
-      className={`mt-auto text-center px-6 py-3 rounded-xl font-semibold text-sm transition-colors ${highlighted ? 'bg-white text-[#12141D] hover:bg-gray-100' : 'bg-[#12141D] text-white hover:bg-[#201F22]'}`}
-    >
-      {cta}
-    </Link>
+    {onCtaClick ? (
+      <button
+        type="button"
+        onClick={onCtaClick}
+        className={`mt-auto text-center px-6 py-3 rounded-xl font-semibold text-sm transition-colors ${highlighted ? 'bg-white text-[#12141D] hover:bg-gray-100' : 'bg-[#12141D] text-white hover:bg-[#201F22]'}`}
+      >
+        {cta}
+      </button>
+    ) : (
+      <Link
+        to="/register"
+        className={`mt-auto text-center px-6 py-3 rounded-xl font-semibold text-sm transition-colors ${highlighted ? 'bg-white text-[#12141D] hover:bg-gray-100' : 'bg-[#12141D] text-white hover:bg-[#201F22]'}`}
+      >
+        {cta}
+      </Link>
+    )}
   </div>
 );
 
@@ -143,12 +154,21 @@ const TestimonialCard: React.FC<TestimonialProps> = ({ quote, name, role, initia
 // ── Main component ────────────────────────────────────────────────────────────
 const HomePage: React.FC = () => {
   const { token } = useAuth();
+  const urlInputRef = useRef<HTMLInputElement>(null);
 
   const [longUrl, setLongUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ShortenedResult | null>(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+
+  const handleTryItNow = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      urlInputRef.current?.focus();
+    }, 100);
+  };
 
   const handleShorten = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -261,6 +281,7 @@ const HomePage: React.FC = () => {
               <div className="flex-1 relative flex items-center">
                 <Link2 className="absolute left-4 w-5 h-5 text-gray-400 pointer-events-none flex-shrink-0" />
                 <input
+                  ref={urlInputRef}
                   id="home-shorten-input"
                   type="url"
                   required
@@ -302,7 +323,7 @@ const HomePage: React.FC = () => {
             {result && (
               <div className="mt-3 p-4 bg-white border border-gray-200 rounded-xl text-left shadow-sm">
                 <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-2">
-                  Your short link is ready 🎉
+                  Your short link is ready
                 </p>
                 <div className="flex items-center gap-3">
                   <a
@@ -528,25 +549,26 @@ const HomePage: React.FC = () => {
           </p>
           <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
             <PricingCard
-              tier="Hosted"
+              tier="Anonymous User"
+              description=""
               price="Free"
-              description="Everything you need, hosted for you."
-              features={['Unlimited short links', 'Click analytics', 'Folders & Tags', 'Password protection', 'Custom aliases']}
+              features={['Instant short links', '24-hour link expiration', 'Basic QR Code generation']}
               cta="Try it now"
+              onCtaClick={handleTryItNow}
             />
             <PricingCard
-              tier="Self-hosted"
-              price="$0"
-              description="Run it on your own infrastructure."
-              features={['Full source code', 'Docker Compose ready', 'Spring Boot + React', 'Your own domain', 'No vendor lock-in']}
-              cta="View GitHub"
+              tier="Registered User"
+              price="Free"
+              description=""
+              features={['Password protection', 'Folders & Custom Tags', 'Deep Analytics & Tracking', 'Permanent, non-expiring links']}
+              cta="Create free account"
               highlighted
             />
           </div>
           <p className="text-center text-sm text-[#3F3F46] mt-10">
             Want to self-host this application? Check out the{' '}
             <a
-              href="https://github.com"
+              href="https://github.com/MovinVinusandha/URL-Shortener"
               target="_blank"
               rel="noopener noreferrer"
               className="font-bold underline hover:no-underline inline-flex items-center gap-1"
