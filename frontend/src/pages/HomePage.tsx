@@ -184,10 +184,7 @@ const HomePage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-6 lg:px-8 h-14 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <BrandLogo className="w-7 h-7 text-[#12141D]" />
-            <span className="font-bold text-[#12141D] text-lg tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              trim
-            </span>
+            <BrandLogo className="h-9 w-auto text-[#12141D]" />
           </div>
 
           {/* Nav links (desktop) */}
@@ -358,37 +355,50 @@ const HomePage: React.FC = () => {
         <TrimBigText />
       </section>
 
-      {/* ── Trusted by Section ──────────────────────────────────── */}
-      <section className="py-14 border-y border-gray-100 bg-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <p
-            className="text-center font-bold text-gray-900 text-xl mb-10"
+      {/* ── Trusted by Section (Figma Exact Match) ──────────────── */}
+      <section className="w-full max-w-[100vw] bg-black overflow-hidden relative min-h-[431px] flex flex-col justify-center">
+        {/* Background accent */}
+        <div className="absolute inset-0 w-full h-full flex justify-end pointer-events-none">
+          <svg className="h-full w-full object-cover object-right text-white fill-white" viewBox="0 0 1601 431" preserveAspectRatio="xMaxYMid slice" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M1488.81 350C1488.81 325.705 1493.6 301.649 1502.9 279.204C1512.2 256.758 1525.84 236.364 1543.02 219.185C1560.21 202.006 1580.62 188.379 1603.08 179.082C1625.53 169.785 1649.6 165 1673.91 165L1673.91 350H1488.81Z" fill="currentColor"/>
+          </svg>
+        </div>
+        
+        <div className="relative z-10 w-full max-w-[940px] px-6 mx-auto flex flex-col items-center gap-16">
+          <h2
+            className="text-white text-2xl md:text-[34px] font-bold text-center"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             Trusted by modern teams and developers
-          </p>
-          {/* Placeholder logo strip */}
-          <div className="flex flex-wrap items-center justify-center gap-x-16 gap-y-6 opacity-40">
-            {['Vercel', 'Supabase', 'PlanetScale', 'Railway', 'Netlify', 'Linear', 'Loom', 'Raycast'].map((name) => (
-              <span key={name} className="font-bold text-lg text-gray-700 tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{name}</span>
-            ))}
+          </h2>
+          
+          <div className="w-full flex flex-col gap-10">
+            <div className="w-full flex justify-center">
+              <img src="/figma/row1.svg" alt="Trusted brand logos" className="w-full max-w-[933px] h-[39px]" />
+            </div>
+            <div className="w-full flex justify-between items-center px-4 md:px-10">
+              <img src="/figma/logo2.svg" alt="Logo 2" className="h-[35px] w-auto" />
+              <img src="/figma/logo3.svg" alt="Logo 3" className="h-[31px] w-auto" />
+              <img src="/figma/logo4.svg" alt="Logo 4" className="h-[31px] w-auto" />
+              <img src="/figma/natroma.svg" alt="Natroma" className="h-[34px] w-auto" />
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── Feature Showcase 1 — Dashboard ──────────────────────── */}
       <section className="py-20 bg-white" id="features">
-        <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-12 lg:gap-8 px-4 sm:px-6 lg:px-8 py-24">
           {/* Screenshot */}
-          <div className="rounded-2xl overflow-hidden shadow-[1px_1px_27px_0px_rgba(0,0,0,0.12)] border border-gray-100">
+          <div className="relative w-full">
             <img
               src="/figma/dashboard_screenshot.png"
               alt="Trim dashboard showing link management"
-              className="w-full h-auto object-cover"
+              className="w-full h-auto drop-shadow-2xl rounded-xl"
             />
           </div>
           {/* Text */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 items-start text-left w-full max-w-lg lg:ml-auto">
             <h2
               className="text-4xl font-bold text-[#12141D] leading-tight"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
@@ -400,7 +410,7 @@ const HomePage: React.FC = () => {
               tag labeling. Filter your entire link library by folder or
               tag in seconds — no more digging through a messy list.
             </p>
-            <ul className="flex flex-col gap-3 text-sm text-gray-600">
+            <ul className="flex flex-col gap-3 text-sm text-gray-600 items-start text-left">
               {['Nested folders for every project', 'Color-coded tags for quick filtering', 'Bulk actions on selected links'].map((f) => (
                 <li key={f} className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-[#12141D] flex-shrink-0" />
@@ -410,7 +420,7 @@ const HomePage: React.FC = () => {
             </ul>
             <Link
               to="/register"
-              className="self-start inline-flex items-center gap-2 px-5 py-3 bg-[#12141D] text-white text-sm font-semibold rounded-xl hover:bg-[#201F22] transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-[#12141D] text-white text-sm font-semibold rounded-xl hover:bg-[#201F22] transition-colors"
             >
               Sign up for free <ArrowRight className="w-4 h-4" />
             </Link>
@@ -420,9 +430,9 @@ const HomePage: React.FC = () => {
 
       {/* ── Feature Showcase 2 — Analytics ──────────────────────── */}
       <section className="py-20 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-12 lg:gap-8 px-4 sm:px-6 lg:px-8 py-24">
           {/* Text */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 items-start text-left w-full max-w-lg lg:mr-auto order-last lg:order-first">
             <h2
               className="text-4xl font-bold text-[#12141D] leading-tight"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
@@ -434,7 +444,7 @@ const HomePage: React.FC = () => {
               device, browser, country, and city. Spot trends at a glance
               with clean, interactive charts.
             </p>
-            <ul className="flex flex-col gap-3 text-sm text-gray-600">
+            <ul className="flex flex-col gap-3 text-sm text-gray-600 items-start text-left">
               {['Real-time click tracking', 'Device & browser breakdown', 'Geographic heatmap by country', 'Time-series click chart with period filters'].map((f) => (
                 <li key={f} className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-[#12141D] flex-shrink-0" />
@@ -444,17 +454,17 @@ const HomePage: React.FC = () => {
             </ul>
             <Link
               to="/register"
-              className="self-start inline-flex items-center gap-2 px-5 py-3 bg-[#12141D] text-white text-sm font-semibold rounded-xl hover:bg-[#201F22] transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-[#12141D] text-white text-sm font-semibold rounded-xl hover:bg-[#201F22] transition-colors"
             >
               Create your first link <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
           {/* Screenshot */}
-          <div className="rounded-2xl overflow-hidden shadow-[1px_1px_27px_0px_rgba(0,0,0,0.12)] border border-gray-100">
+          <div className="relative w-full">
             <img
               src="/figma/analytics_screenshot.png"
               alt="Trim analytics showing click charts"
-              className="w-full h-auto object-cover"
+              className="w-full h-auto drop-shadow-2xl rounded-xl"
             />
           </div>
         </div>
@@ -583,62 +593,47 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* ── Final CTA Banner ─────────────────────────────────────── */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="relative rounded-3xl bg-[#12141D] p-14 text-center overflow-hidden">
-            {/* Decorative circles */}
-            <QuarterCircle className="absolute bottom-0 left-0 w-40 h-40 text-white/5" />
-            <QuarterCircle className="absolute top-0 right-0 w-32 h-32 text-white/5" flip />
+      {/* ── Final CTA Banner & Footer (Figma Exact Match) ─────────── */}
+      <footer 
+        className="relative w-full flex flex-col items-center pt-24 overflow-hidden border-t border-gray-100 mt-20"
+        style={{
+          backgroundImage: `radial-gradient(#e5e7eb 1px, transparent 1px)`,
+          backgroundSize: '24px 24px',
+          backgroundColor: '#ffffff'
+        }}
+      >
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/50 to-white z-0 pointer-events-none"></div>
 
-            <div className="relative z-10 flex flex-col items-center gap-6">
-              <h2
-                className="text-4xl sm:text-5xl font-bold text-white"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                Ready to manage your links?
-              </h2>
-              <p className="text-gray-400 max-w-lg">
-                Join thousands of developers and marketers who trust Trim to shorten, track, and organize their links.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center gap-3">
-                <Link
-                  to="/register"
-                  className="px-6 py-3.5 bg-white text-[#12141D] font-semibold rounded-xl hover:bg-gray-100 transition-colors text-sm"
-                >
-                  Create free account
-                </Link>
-                <button
-                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                  className="px-6 py-3.5 border border-white/20 text-white/80 hover:text-white hover:border-white/40 font-semibold rounded-xl transition-colors text-sm"
-                >
-                  Try it now
-                </button>
-                <a
-                  href="https://github.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-6 py-3.5 border border-white/20 text-white/80 hover:text-white hover:border-white/40 font-semibold rounded-xl transition-colors text-sm inline-flex items-center gap-2"
-                >
-                  <GithubIcon className="w-4 h-4" /> GitHub repository
-                </a>
-              </div>
-            </div>
-          </div>
+        {/* The CTA Block */}
+        <div className="flex flex-col items-center gap-6 z-10 mb-16 relative">
+          <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-[#12141D] text-center" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            Ready to manage your links?
+          </h2>
+          <Link to="/register" className="bg-[#12141D] text-white px-8 py-4 rounded-xl font-medium hover:bg-[#201F22] transition-colors mt-2 shadow-lg">
+            Get Started
+          </Link>
         </div>
-      </section>
+        
+        {/* The Massive Logo */}
+        <div className="w-full max-w-[1600px] mx-auto flex justify-center items-end mt-auto px-4 translate-y-12 relative z-0">
+          <svg className="w-full h-auto text-gray-900" viewBox="0 0 401 163" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M328.345 111.11C328.345 127.896 328.345 144.683 328.345 162.147C318.908 162.147 310.274 162.297 301.663 161.924C300.762 161.885 299.291 158.753 299.275 157.045C299.104 138.88 299.176 120.713 299.174 102.547C299.174 99.5468 299.218 96.5441 299.104 93.5479C298.615 80.7008 289.696 71.9234 277.122 71.8509C263.981 71.7751 254.853 80.1826 254.664 93.4346C254.364 114.43 254.433 135.434 254.688 156.431C254.745 161.11 253.423 162.519 248.812 162.24C242.503 161.859 236.151 162.123 229.819 162.202C227.318 162.233 225.696 161.759 225.704 158.683C225.796 122.023 225.814 85.3621 225.859 48.7017C225.859 48.547 225.975 48.3923 226.228 47.7606C235.072 47.7606 244.113 47.7606 253.905 47.7606C253.905 51.4324 253.905 54.9489 253.905 59.9863C263.847 49.5939 274.55 44.8348 287.55 46.0026C300.452 47.1616 310.357 53.6038 319.005 64.3878C320.5 62.4327 321.535 60.6903 322.932 59.3142C336.447 45.9941 352.562 42.0535 370.273 48.2864C387.948 54.5067 398.633 67.4285 400.104 86.4668C401 98.0677 400.504 109.778 400.585 121.439C400.668 133.272 400.519 145.11 400.833 156.936C400.947 161.222 399.51 162.424 395.388 162.207C389.238 161.882 383.052 161.939 376.896 162.195C372.968 162.358 371.695 160.995 371.719 157.04C371.845 136.041 371.882 115.039 371.641 94.0418C371.457 78.0197 358.407 68.4815 343.456 73.0716C334.17 75.9224 328.616 84.5644 328.114 97.7326C328.187 100.398 328.252 102.286 328.318 104.173C328.244 104.543 328.171 104.912 328.116 105.981C328.205 108.157 328.275 109.633 328.345 111.11Z" fill="currentColor"/>
+          <path d="M48.879 74.9511C48.8902 89.7421 48.3855 104.558 49.1055 119.315C49.5385 128.187 57.7459 134.886 67.1143 135.94C68.9297 136.144 70.7721 136.166 72.6024 136.172C80.6426 136.2 80.632 136.187 80.5528 144.496C80.51 148.993 80.458 153.491 80.5128 157.987C80.5438 160.534 79.8336 162.299 76.899 162.114C69.2777 161.633 61.4474 162.061 54.0807 160.42C35.183 156.209 22.1952 141.002 20.9314 121.455C20.0195 107.351 20.2809 93.1568 20.4313 79.0073C20.4793 74.4932 18.9645 73.0611 14.7137 73.4061C11.2347 73.6883 7.72155 73.5216 4.22646 73.6403C1.41329 73.7358 -0.0941571 72.8692 0.00533092 69.6519C0.190511 63.6618 0.148855 57.6591 0.0033778 51.6664C-0.0750532 48.4356 1.20687 47.107 4.42412 47.2904C8.0801 47.4988 11.7656 47.3071 15.4058 47.6421C19.2781 47.9985 20.777 46.7687 20.619 42.6633C20.3118 34.6796 20.6207 26.674 20.4258 18.6835C20.3441 15.3328 21.2371 13.8883 24.8815 14.0287C31.3673 14.2785 37.8735 14.1901 44.365 14.0151C47.4273 13.9325 48.471 15.0883 48.4139 18.0875C48.2556 26.413 48.4409 34.7462 48.2045 43.0682C48.1043 46.5994 49.3247 47.6773 52.8042 47.5989C61.9216 47.3934 71.0468 47.5296 80.7088 47.5296C80.7088 55.6997 80.8661 63.3126 80.5101 70.9014C80.4655 71.8508 77.7342 73.383 76.2057 73.4363C67.7216 73.7327 59.2244 73.6555 50.0073 73.8554C49.1483 74.3202 49.0136 74.6356 48.879 74.9511Z" fill="currentColor"/>
+          <path d="M137.689 79.6021C128.916 84.8812 124.94 92.4276 124.94 102.216C124.94 120.202 124.901 138.188 124.88 156.173C124.877 157.965 124.879 159.757 124.879 162.097C115.727 162.097 107.106 162.216 98.4998 161.92C97.6051 161.889 96.1065 159.418 96.0611 158.041C95.8201 150.721 95.951 143.389 95.9578 136.062C95.983 108.584 96.0102 81.106 96.0363 53.6281C96.038 51.8191 96.0364 50.0102 96.0364 47.8176C105.683 47.8176 114.92 47.8176 124.639 47.8176C124.639 52.7687 124.639 57.6507 124.639 62.4684C130.878 58.2289 136.381 53.2137 142.846 50.4592C149.184 47.7587 156.503 47.3586 164.287 45.7655C164.287 55.5351 164.291 63.6672 164.286 71.7992C164.283 75.0721 161.924 74.8698 159.72 74.8554C152.152 74.8058 144.748 75.5287 137.689 79.6021Z" fill="currentColor"/>
+          <path d="M179.437 143.971C179.508 139.596 179.579 135.221 179.633 130.028C179.55 128.463 179.483 127.717 179.417 126.971C179.495 123.261 179.573 119.551 179.642 114.932C179.562 106.596 179.492 99.168 179.422 91.7404C179.501 78.7772 179.771 65.8108 179.555 52.8525C179.481 48.4051 180.826 47.0583 185.21 47.254C192.645 47.5861 200.106 47.3453 208.293 47.3453C208.293 50.046 208.292 52.1473 208.293 54.2487C208.311 88.3429 208.257 122.438 208.437 156.531C208.459 160.811 207.459 162.516 202.915 162.248C196.616 161.877 190.278 162.028 183.962 162.183C180.71 162.262 179.443 161.011 179.609 157.792C179.779 154.474 179.653 151.141 179.642 147.012C179.565 145.463 179.501 144.717 179.437 143.971Z" fill="currentColor"/>
+          <path d="M177.056 14.3804C179.822 4.32414 186.227 -0.636336 195.06 0.0653536C203.38 0.726334 210.029 6.9702 210.829 14.8745C211.812 24.5753 204.476 32.9143 194.687 33.2246C184.215 33.5564 176.876 25.9083 177.056 14.3804Z" fill="currentColor"/>
+          </svg>
+        </div>
 
-      {/* ── Footer ───────────────────────────────────────────────── */}
-      <footer className="border-t border-gray-100 py-8 bg-white">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <BrandLogo className="w-6 h-6 text-[#12141D]" />
-            <span className="font-bold text-[#12141D] text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>trim</span>
-          </div>
-          <p className="text-gray-400 text-xs">© Copyright 2026, All Rights Reserved</p>
-          <div className="flex items-center gap-6 text-xs text-gray-500">
-            <a href="#" className="hover:text-[#12141D] transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-[#12141D] transition-colors">Terms &amp; Conditions</a>
+        {/* Bottom Links */}
+        <div className="w-full relative z-10 border-t border-gray-100 bg-white pt-6 pb-6 mt-[-100px] flex flex-col items-center">
+          <div className="w-full max-w-7xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center text-sm text-gray-500 font-normal font-sans">
+            <p>© Copyright 2026, All Rights Reserved</p>
+            <div className="flex gap-8 mt-4 sm:mt-0">
+              <Link to="/privacy-policy" className="hover:text-gray-900 transition-colors">Privacy Policy</Link>
+              <Link to="/terms-and-conditions" className="hover:text-gray-900 transition-colors">Terms & Conditions</Link>
+            </div>
           </div>
         </div>
       </footer>
