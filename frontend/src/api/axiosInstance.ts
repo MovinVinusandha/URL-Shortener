@@ -25,17 +25,43 @@ axiosInstance.interceptors.request.use(
 // ── Response interceptor: handle token expiry ────────────────────────────────
 axiosInstance.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401 && !error.config?.url?.includes('/unlock')) {
-      const currentPath = window.location.pathname;
-      // Don't redirect if already on auth pages (prevents redirect loops)
-      const isAuthPage = currentPath === '/login' || currentPath === '/register';
-      if (!isAuthPage) {
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If the error is 401, we haven't retried yet, and it's not a login/refresh endpoint
+    if (
+      error.response?.status === 401 && 
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/auth/login') &&
+      !originalRequest.url?.includes('/auth/refresh')
+    ) {
+      originalRequest._retry = true; // Mark as retrying to prevent infinite loops
+
+      try {
+        // Call the refresh endpoint. withCredentials ensures the HttpOnly cookie is sent!
+        const refreshResponse = await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
+
+        const newToken = refreshResponse.data.token;
+        
+        // Save the new token
+        localStorage.setItem('token', newToken);
+
+        // Update the failed request's header and retry it
+        originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+        return axiosInstance(originalRequest);
+        
+      } catch (refreshError) {
+        // If the refresh token is expired or invalid, log the user out
         localStorage.removeItem('token');
-        // Hard redirect clears React state entirely and forces re-auth
         window.location.href = '/login';
+        return Promise.reject(refreshError);
       }
     }
+
     return Promise.reject(error);
   }
 );
