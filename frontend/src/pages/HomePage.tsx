@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { motion, type Variants } from 'framer-motion';
 import {
   Link2,
   Copy,
@@ -18,6 +19,19 @@ import axiosInstance, { extractBackendError } from '../api/axiosInstance';
 import BrandLogo from '../components/BrandLogo';
 import { useAuth } from '../context/AuthContext';
 import type { UrlSend } from '../types';
+
+const fadeUpVariant: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
+};
+
+const staggerContainer: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.2 }
+  }
+};
 
 interface ShortenedResult {
   shortUrl: string;
@@ -76,13 +90,13 @@ interface FeatureCardProps {
   desc: string;
 }
 const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, desc }) => (
-  <div className="flex flex-col gap-3 p-6 bg-white border border-gray-100 rounded-2xl hover:-translate-y-1 transition-transform duration-200 shadow-sm">
+  <motion.div variants={fadeUpVariant} className="flex flex-col gap-3 p-6 bg-white border border-gray-100 rounded-2xl hover:-translate-y-1 transition-transform duration-200 shadow-sm">
     <div className="w-11 h-11 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center">
       {icon}
     </div>
     <h3 className="font-semibold text-[#12141D] text-base" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{title}</h3>
     <p className="text-[#52525B] text-sm leading-relaxed">{desc}</p>
-  </div>
+  </motion.div>
 );
 
 // ── Pricing card ──────────────────────────────────────────────────────────────
@@ -164,10 +178,10 @@ const HomePage: React.FC = () => {
 
   const handleTryItNow = (e: React.MouseEvent) => {
     e.preventDefault();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
     setTimeout(() => {
       urlInputRef.current?.focus();
-    }, 100);
+    }, 400);
   };
 
   const handleShorten = async (e: React.FormEvent) => {
@@ -247,15 +261,20 @@ const HomePage: React.FC = () => {
       <section id="hero" className="relative overflow-hidden min-h-[90vh] flex flex-col items-center justify-center" style={{ background: 'linear-gradient(180deg, rgba(250,250,250,0) 0%, rgba(196,196,196,0.21) 100%)' }}>
         <GridBg />
 
-        <div className="relative z-10 w-full max-w-3xl mx-auto px-6 text-center py-20 flex flex-col items-center gap-8">
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={staggerContainer}
+          className="relative z-10 w-full max-w-3xl mx-auto px-6 text-center py-20 flex flex-col items-center gap-8"
+        >
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gray-200 bg-[#EDEDED] text-xs font-medium text-[#444748]">
+          <motion.div variants={fadeUpVariant} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gray-200 bg-[#EDEDED] text-xs font-medium text-[#444748]">
             <span className="w-2 h-2 rounded-full bg-[#12141D] inline-block" />
             Fast · Free · No signup needed →
-          </div>
+          </motion.div>
 
           {/* Headline */}
-          <div className="flex flex-col items-center gap-4">
+          <motion.div variants={fadeUpVariant} className="flex flex-col items-center gap-4">
             <h1
               className="text-5xl sm:text-6xl lg:text-7xl font-bold text-[#12141D] leading-[1.05] tracking-tight"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
@@ -270,10 +289,10 @@ const HomePage: React.FC = () => {
               Paste your long URL below and get a short, shareable link instantly.
               No account required to try it out.
             </p>
-          </div>
+          </motion.div>
 
           {/* ── Shorten Form ──────────────────────────────────────── */}
-          <div className="w-full max-w-2xl">
+          <motion.div variants={fadeUpVariant} className="w-full max-w-2xl">
             <form
               onSubmit={handleShorten}
               className="flex flex-col sm:flex-row gap-2 p-2 bg-white border border-gray-200 rounded-2xl shadow-[1px_1px_27px_0px_rgba(0,0,0,0.12)]"
@@ -369,15 +388,21 @@ const HomePage: React.FC = () => {
                 </>
               )}
             </p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* Big "trim" bg text */}
         <TrimBigText />
       </section>
 
       {/* ── Trusted by Section (Figma Exact Match) ──────────────── */}
-      <section className="w-full max-w-[100vw] bg-black overflow-hidden relative min-h-[431px] flex flex-col justify-center">
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={fadeUpVariant}
+        className="w-full max-w-[100vw] bg-black overflow-hidden relative min-h-[431px] flex flex-col justify-center"
+      >
         {/* Background accent */}
         <div className="absolute inset-0 w-full h-full flex justify-end pointer-events-none">
           <svg className="h-full w-full object-cover object-right text-white fill-white" viewBox="0 0 1601 431" preserveAspectRatio="xMaxYMid slice" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -405,10 +430,17 @@ const HomePage: React.FC = () => {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* ── Feature Showcase 1 — Dashboard ──────────────────────── */}
-      <section className="py-20 bg-white" id="features">
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={fadeUpVariant}
+        className="py-20 bg-white"
+        id="features"
+      >
         <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-12 lg:gap-8 px-4 sm:px-6 lg:px-8 py-24">
           {/* Screenshot */}
           <div className="relative w-full">
@@ -447,10 +479,16 @@ const HomePage: React.FC = () => {
             </Link>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* ── Feature Showcase 2 — Analytics ──────────────────────── */}
-      <section className="py-20 bg-gray-50">
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={fadeUpVariant}
+        className="py-20 bg-gray-50"
+      >
         <div className="w-full max-w-screen-xl mx-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-12 lg:gap-8 px-4 sm:px-6 lg:px-8 py-24">
           {/* Text */}
           <div className="flex flex-col gap-6 items-start text-left w-full max-w-lg lg:mr-auto order-last lg:order-first">
@@ -489,10 +527,16 @@ const HomePage: React.FC = () => {
             />
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* ── Check all features grid ──────────────────────────────── */}
-      <section className="py-20 bg-white border-b border-gray-100">
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={fadeUpVariant}
+        className="py-20 bg-white border-b border-gray-100"
+      >
         <div className="max-w-6xl mx-auto px-6">
           <h2
             className="text-4xl font-bold text-[#12141D] text-center mb-12"
@@ -500,7 +544,7 @@ const HomePage: React.FC = () => {
           >
             Check all features
           </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <motion.div variants={staggerContainer} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             <FeatureCard
               icon={<Zap className="w-5 h-5 text-[#12141D]" />}
               title="Instant shortening"
@@ -531,12 +575,19 @@ const HomePage: React.FC = () => {
               title="Custom aliases"
               desc="Create branded short links with your own memorable custom slug."
             />
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* ── Pricing / Free & Open ────────────────────────────────── */}
-      <section id="pricing" className="py-20 bg-gray-50 relative overflow-hidden">
+      <motion.section
+        id="pricing"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={fadeUpVariant}
+        className="py-20 bg-gray-50 relative overflow-hidden"
+      >
         <div className="max-w-6xl mx-auto px-6 relative z-10">
           <h2
             className="text-4xl font-bold text-[#12141D] text-center mb-4"
@@ -581,10 +632,17 @@ const HomePage: React.FC = () => {
         {/* Decorative quarter circles */}
         <QuarterCircle className="absolute bottom-0 left-0 w-32 h-32 text-gray-100 opacity-60" />
         <QuarterCircle className="absolute top-0 right-0 w-24 h-24 text-gray-100 opacity-60" flip />
-      </section>
+      </motion.section>
 
       {/* ── Testimonials ─────────────────────────────────────────── */}
-      <section id="testimonials" className="py-20 bg-white">
+      <motion.section
+        id="testimonials"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={fadeUpVariant}
+        className="py-20 bg-white"
+      >
         <div className="max-w-6xl mx-auto px-6">
           <h2
             className="text-4xl font-bold text-right text-[#12141D] mb-12"
@@ -613,7 +671,7 @@ const HomePage: React.FC = () => {
             />
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* ── Final CTA Banner & Footer (Figma Exact Match) ─────────── */}
       <footer 
