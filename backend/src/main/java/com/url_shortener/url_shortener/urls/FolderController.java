@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/folders")
+@RequestMapping("/api/folders")
 @RequiredArgsConstructor
 @PreAuthorize("isAuthenticated() and hasAnyRole('USER', 'ADMIN', 'ROOT')")
 public class FolderController {
