@@ -79,10 +79,10 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
 
     /** Count clicks grouped by date for a URL over a time range. */
     @Query("""
-            SELECT DATE(c.timestamp) as date, COUNT(c) as cnt
+            SELECT CAST(c.timestamp AS date) as date, COUNT(c) as cnt
             FROM ClickEvent c
             WHERE c.url.id = :urlId AND c.timestamp >= :startDate
-            GROUP BY DATE(c.timestamp)
+            GROUP BY CAST(c.timestamp AS date)
             ORDER BY date ASC
             """)
     List<Object[]> countByDateForUrl(@Param("urlId") Long urlId, @Param("startDate") LocalDateTime startDate);
@@ -94,11 +94,11 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
     // ── OVERALL ANALYTICS QUERIES (User specific) ───────────────────────────
 
     @Query("""
-            SELECT DATE(c.timestamp) as date, COUNT(c) as cnt
+            SELECT CAST(c.timestamp AS date) as date, COUNT(c) as cnt
             FROM ClickEvent c
             WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.user.id = :userId)
               AND c.timestamp >= :startDate
-            GROUP BY DATE(c.timestamp)
+            GROUP BY CAST(c.timestamp AS date)
             ORDER BY date ASC
             """)
     List<Object[]> countOverallClicksByDate(@Param("userId") Long userId, @Param("startDate") LocalDateTime startDate);
@@ -139,11 +139,11 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
     // ── FOLDER ANALYTICS QUERIES (User specific) ───────────────────────────
 
     @Query("""
-            SELECT DATE(c.timestamp) as date, COUNT(c) as cnt
+            SELECT CAST(c.timestamp AS date) as date, COUNT(c) as cnt
             FROM ClickEvent c
             WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.folder.id = :folderId AND u.user.id = :userId)
               AND c.timestamp >= :startDate
-            GROUP BY DATE(c.timestamp)
+            GROUP BY CAST(c.timestamp AS date)
             ORDER BY date ASC
             """)
     List<Object[]> countFolderClicksByDate(@Param("folderId") Long folderId, @Param("userId") Long userId, @Param("startDate") LocalDateTime startDate);
