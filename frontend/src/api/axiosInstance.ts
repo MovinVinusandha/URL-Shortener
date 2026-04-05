@@ -55,9 +55,15 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
         
       } catch (refreshError) {
-        // If the refresh token is expired or invalid, log the user out
+        // If the refresh token is expired or invalid, clear token
         localStorage.removeItem('token');
-        window.location.href = '/login';
+        
+        // Prevent redirect loop if anonymous user is on landing page or public routes
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/' && currentPath !== '/register' && currentPath !== '/login') {
+          window.location.href = '/login';
+        }
+        
         return Promise.reject(refreshError);
       }
     }

@@ -195,8 +195,8 @@ const HomePage: React.FC = () => {
         longUrl: longUrl.trim(),
       });
       setResult({ shortUrl: data.shortUrl, longUrl: data.longUrl });
-    } catch (err: unknown) {
-      const backendMessage = extractBackendError(err, 'Failed to shorten URL. Please try again.');
+    } catch (err: any) {
+      const backendMessage = String(err?.response?.data?.message || err?.message || 'Failed to shorten URL. Please try again.');
       setError(backendMessage);
     } finally {
       setLoading(false);

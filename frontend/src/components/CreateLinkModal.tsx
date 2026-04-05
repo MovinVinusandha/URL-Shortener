@@ -21,6 +21,17 @@ interface CreateLinkModalProps {
 
 const generateRandomHash = () => Math.random().toString(36).substring(2, 8);
 
+const safeParseISO = (dateStr: string | null | undefined) => {
+  if (!dateStr) return null;
+  try {
+    const d = parseISO(dateStr);
+    if (isNaN(d.getTime())) return null;
+    return d;
+  } catch {
+    return null;
+  }
+};
+
 const TAG_COLORS = [
   { name: 'red', classes: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800/50' },
   { name: 'blue', classes: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800/50' },
@@ -261,14 +272,14 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
 
 
 
-  const filteredTags = localTags.filter(t => t.name.toLowerCase().includes(tagSearchQuery.toLowerCase()));
-  const filteredFolders = localFolders.filter(f => f.name.toLowerCase().includes(folderSearchQuery.toLowerCase()));
+  const filteredTags = (localTags || []).filter(t => t?.name?.toLowerCase().includes((tagSearchQuery || '').toLowerCase()));
+  const filteredFolders = (localFolders || []).filter(f => f?.name?.toLowerCase().includes((folderSearchQuery || '').toLowerCase()));
 
   const renderExpirationStatus = () => {
     // --- EDIT MODE ---
     if (urlToEdit) {
-      const originalExpireDate = urlToEdit.expiresAt ? parseISO(urlToEdit.expiresAt + 'Z') : null;
-      const newExpireDate = expiresAt ? parseISO(expiresAt + 'Z') : null;
+      const originalExpireDate = safeParseISO(urlToEdit.expiresAt ? urlToEdit.expiresAt + 'Z' : null);
+      const newExpireDate = safeParseISO(expiresAt ? expiresAt + 'Z' : null);
 
       return (
         <div className="mt-2 flex items-center gap-3 text-sm min-h-[2rem]">
@@ -294,7 +305,9 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
     // --- CREATE MODE ---
     if (!expiresAt || expirationPreset.toLowerCase() === 'none') return null;
     
-    const expireDate = parseISO(expiresAt + 'Z');
+    const expireDate = safeParseISO(expiresAt + 'Z');
+    if (!expireDate) return null;
+
     return (
       <div className="mt-2 flex flex-col min-h-[2rem]" title={format(expireDate, 'PPpp')}>
         <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
@@ -409,7 +422,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                     ) : (
                       <div className="flex flex-wrap gap-1">
                         {selectedTagIds.map(id => {
-                          const t = localTags.find(tag => tag.id === id) || urlToEdit?.tags?.find((tag: { id: number; name: string }) => tag.id === id);
+                          const t = (localTags || []).find(tag => tag.id === id) || (urlToEdit?.tags || []).find((tag: { id: number; name: string }) => tag.id === id);
                           if (!t) return null;
                           return (
                             <span 
@@ -554,7 +567,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                     <div className="flex items-center gap-2 w-full border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800 rounded-md px-3 py-2 text-sm text-gray-500 dark:text-gray-400 cursor-not-allowed">
                       <Folder className="w-4 h-4 text-emerald-500" />
                       <span className="truncate">
-                        {urlToEdit?.folderName || folders?.find(f => f.id === urlToEdit?.folderId)?.name || 'Uncategorized'}
+                        {urlToEdit?.folderName || (folders || []).find(f => f.id === urlToEdit?.folderId)?.name || 'Uncategorized'}
                       </span>
                     </div>
                   ) : (
@@ -572,7 +585,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                               <FolderArchive className="w-3.5 h-3.5" />
                             </div>
                             <span className="block truncate text-gray-900">
-                              {localFolders.find(f => f.id === selectedFolderId)?.name || (urlToEdit?.folderId === selectedFolderId && urlToEdit?.folderName ? urlToEdit.folderName : 'Unknown')}
+                              {(localFolders || []).find(f => f.id === selectedFolderId)?.name || (urlToEdit?.folderId === selectedFolderId && urlToEdit?.folderName ? urlToEdit.folderName : 'Unknown')}
                             </span>
                           </>
                         )}
