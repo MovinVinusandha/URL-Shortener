@@ -21,6 +21,7 @@ analytics:
     queue-capacity: 500
 
 app:
+  domain: ${APP_DOMAIN:http://localhost:8080}
   frontend:
     url: ${FRONTEND_URL:http://localhost}
   cors:

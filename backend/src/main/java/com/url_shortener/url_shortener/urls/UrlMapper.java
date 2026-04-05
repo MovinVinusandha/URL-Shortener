@@ -3,20 +3,29 @@ package com.url_shortener.url_shortener.urls;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.springframework.beans.factory.annotation.Value;
 
 @Mapper(componentModel = "spring")
-public interface UrlMapper {
+public abstract class UrlMapper {
+
+    @Value("${app.domain:http://localhost:8080}")
+    protected String appDomain;
+
+    protected String buildShortUrl(String hash) {
+        return appDomain.endsWith("/") ? appDomain + hash : appDomain + "/" + hash;
+    }
+
     @Mapping(target = "accessed_times", source = "statistic.accessedTimes")
-    @Mapping(target = "shortUrl", expression = "java(\"http://localhost:8080/\" + url.getShortUrl())")
-    UrlDto toDto(Url url);
+    @Mapping(target = "shortUrl", expression = "java(buildShortUrl(url.getShortUrl()))")
+    public abstract UrlDto toDto(Url url);
 
-    @Mapping(target = "shortUrl", expression = "java(\"http://localhost:8080/\" + url.getShortUrl())")
-    UrlSend toSendDto(Url url);
+    @Mapping(target = "shortUrl", expression = "java(buildShortUrl(url.getShortUrl()))")
+    public abstract UrlSend toSendDto(Url url);
 
-    @Mapping(target = "shortUrl", expression = "java(\"http://localhost:8080/\" + url.getShortUrl())")
-    UrlUpdateDto toUpdateDto(Url url);
+    @Mapping(target = "shortUrl", expression = "java(buildShortUrl(url.getShortUrl()))")
+    public abstract UrlUpdateDto toUpdateDto(Url url);
 
-    Url toEntity(UrlRequest urlRequest);
+    public abstract Url toEntity(UrlRequest urlRequest);
 
-    void updateUrl(UrlRequest urlRequest, @MappingTarget Url url);
+    public abstract void updateUrl(UrlRequest urlRequest, @MappingTarget Url url);
 }
