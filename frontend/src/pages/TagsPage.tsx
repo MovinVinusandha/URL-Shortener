@@ -25,7 +25,7 @@ const TagsPage: React.FC = () => {
 
   const handleDeleteTag = async (id: number) => {
     try {
-      await axiosInstance.delete(`/tags/${id}`);
+      await axiosInstance.delete(`/api/tags/${id}`);
       setTags(tags.filter(t => t.id !== id));
       setTagToDelete(null);
     } catch (err) {

@@ -75,14 +75,14 @@ const DashboardLayout: React.FC = () => {
     let isMounted = true;
     const loadTags = async () => {
       try {
-        const { data } = await axiosInstance.get<Tag[]>('/tags');
+        const { data } = await axiosInstance.get<Tag[]>('/api/tags');
         if (isMounted) setTags(data);
       } catch (err) {}
     };
 
     const loadFolders = async () => {
       try {
-        const { data } = await axiosInstance.get<Folder[]>('/folders');
+        const { data } = await axiosInstance.get<Folder[]>('/api/folders');
         if (isMounted) setFolders(data);
       } catch (err) {}
     };

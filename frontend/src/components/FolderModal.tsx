@@ -33,9 +33,9 @@ const FolderModal: React.FC<FolderModalProps> = ({ isOpen, onClose, onSuccess, f
     try {
       let response;
       if (folderToEdit) {
-        response = await axiosInstance.put(`/folders/${folderToEdit.id}`, { name: name.trim() });
+        response = await axiosInstance.put(`/api/folders/${folderToEdit.id}`, { name: name.trim() });
       } else {
-        response = await axiosInstance.post('/folders', { name: name.trim() });
+        response = await axiosInstance.post('/api/folders', { name: name.trim() });
       }
       onSuccess(response.data);
       onClose();

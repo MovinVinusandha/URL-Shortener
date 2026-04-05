@@ -25,7 +25,7 @@ const FoldersPage: React.FC = () => {
 
   const handleDeleteFolder = async (id: number) => {
     try {
-      await axiosInstance.delete(`/folders/${id}`);
+      await axiosInstance.delete(`/api/folders/${id}`);
       setFolders(folders.filter(f => f.id !== id));
       setFolderToDelete(null);
     } catch (err) {

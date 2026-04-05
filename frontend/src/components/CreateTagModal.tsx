@@ -45,9 +45,9 @@ const CreateTagModal: React.FC<CreateTagModalProps> = ({ isOpen, onClose, onSucc
     try {
       let response;
       if (tagToEdit) {
-        response = await axiosInstance.put('/tags/' + tagToEdit.id, { name: name.trim(), color });
+        response = await axiosInstance.put('/api/tags/' + tagToEdit.id, { name: name.trim(), color });
       } else {
-        response = await axiosInstance.post('/tags', { name: name.trim(), color });
+        response = await axiosInstance.post('/api/tags', { name: name.trim(), color });
       }
       onSuccess(response.data);
       onClose();

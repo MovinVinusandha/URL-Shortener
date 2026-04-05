@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import axiosInstance, { extractBackendError } from '../api/axiosInstance';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +8,7 @@ import { toast } from 'react-hot-toast';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -15,6 +16,8 @@ const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const from = location.state?.from?.pathname || '/dashboard';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +29,7 @@ const LoginPage: React.FC = () => {
         password,
       });
       await login(data.token);
-      navigate('/dashboard', { replace: true });
+      navigate(from, { replace: true });
     } catch (err: unknown) {
       const backendMessage = extractBackendError(err, 'Invalid email or password. Please try again.');
       setError(backendMessage);

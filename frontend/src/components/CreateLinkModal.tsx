@@ -262,7 +262,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
     if (!tagSearchQuery.trim()) return;
     try {
       const randomColor = TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)].name;
-      const { data } = await axiosInstance.post('/tags', { name: tagSearchQuery.trim(), color: randomColor });
+      const { data } = await axiosInstance.post('/api/tags', { name: tagSearchQuery.trim(), color: randomColor });
       setLocalTags([...localTags, data]);
       setSelectedTagIds([...selectedTagIds, data.id]);
       setTagSearchQuery('');
