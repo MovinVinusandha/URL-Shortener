@@ -58,4 +58,6 @@ build/
 hs_err_pid*
 replay_pid*
 
+# Local env files
 .env
+*.env
