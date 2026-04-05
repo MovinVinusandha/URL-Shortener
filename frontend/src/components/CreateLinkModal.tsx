@@ -59,6 +59,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
   urlToEdit,
   onOpenFolderModal
 }) => {
+  const domainPrefix = import.meta.env.VITE_APP_DOMAIN || 'http://localhost:8080';
   const [longUrl, setLongUrl] = useState(urlToEdit?.longUrl || '');
   const [customAlias, setCustomAlias] = useState(urlToEdit ? urlToEdit.shortUrl.split('/').pop() || '' : '');
   const [selectedFolderId, setSelectedFolderId] = useState(urlToEdit?.folderId || '');
@@ -136,7 +137,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
     const fetchQrCode = async () => {
       if (!customAlias) return;
       setIsQrLoading(true);
-      const fullShortUrl = `http://localhost:8080/${customAlias}`;
+      const fullShortUrl = `${domainPrefix}/${customAlias}`;
       const previewUrl = `http://localhost:8080/api/public/qr/preview?text=${encodeURIComponent(fullShortUrl)}`;
       setQrCodeUrl(previewUrl);
       setIsQrLoading(false);
@@ -376,8 +377,8 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                     </div>
                   </div>
                   <div className="flex rounded-md shadow-sm">
-                    <div className="relative flex-grow focus-within:z-10 w-1/3 border border-gray-300 border-r-0 bg-gray-50 flex items-center justify-center rounded-l-md px-3 text-sm text-gray-500">
-                      trim.sh
+                    <div className="relative flex-grow focus-within:z-10 w-1/3 border border-gray-300 border-r-0 bg-gray-50 flex items-center justify-center rounded-l-md px-3 text-sm text-gray-500 overflow-hidden text-ellipsis whitespace-nowrap">
+                      {domainPrefix.replace(/^https?:\/\//, '')}/
                     </div>
                     <input 
                       type="text" 
