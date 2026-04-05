@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Lock, ArrowRight, AlertCircle, ShieldAlert, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
 
 const SecurePage: React.FC = () => {
@@ -10,7 +10,7 @@ const SecurePage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) return;
 
@@ -36,72 +36,67 @@ const SecurePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center p-4">
-      {/* Subtle background glow */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-violet-500/10 dark:bg-violet-500/5 rounded-full blur-3xl" />
-      </div>
-
-      <div className="card w-full max-w-md p-8 relative z-10 animate-fade-in shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
-        <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-14 h-14 bg-violet-100 dark:bg-violet-500/10 rounded-2xl flex items-center justify-center mb-5 border border-violet-200 dark:border-violet-500/20 shadow-sm">
-            <Lock className="w-7 h-7 text-violet-600 dark:text-violet-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Password Protected</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">
-            This link requires a password to access.
-          </p>
+    <div 
+      className="font-sans antialiased bg-white dark:bg-black text-gray-900 dark:text-white min-h-screen w-full flex items-center justify-center relative bg-[length:40px_40px] bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#2a2a2a_1px,transparent_1px),linear-gradient(to_bottom,#2a2a2a_1px,transparent_1px)]"
+    >
+      <div 
+        className="w-full max-w-sm relative z-10 bg-white dark:bg-black rounded-xl border border-gray-200 dark:border-gray-800 p-8 space-y-8" 
+        style={{ boxShadow: "rgba(0, 0, 0, 0.02) 0px 1px 2px, rgba(0, 0, 0, 0.02) 0px 2px 4px, rgba(0, 0, 0, 0.02) 0px 4px 8px, rgba(0, 0, 0, 0.02) 0px 8px 16px, rgba(0, 0, 0, 0.02) 0px 16px 32px, rgba(0, 0, 0, 0.02) 0px 32px 64px" }}
+      >
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <img 
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUAklCfWlFP_lC7C5MiKEbMf6DXDMrH6xTFnjLpDt2iO7Xt1lTJ6ub55qVAKIZRtGzGEiaj01zBHRoyv3hVCik3zr-G6CxFqHUf_w3O9MWPwwcDCZ4J4KfxMZ7nDcbSO4EyvJsMlaVDdQerQC_tw5R3MyX_XPlqp0YTG3SlpnNvi3An3N72hH7Td1U6VW4X6bBPVx6z8sDqiT7zdFOSBSlEevfPk98IV2vUsa-uBCbNdyBw8skAdAXjYUJMKPcAjidBMU" 
+            alt="Logo" 
+            className="h-8 w-auto object-contain mx-auto"
+          />
         </div>
 
-        {error && (
-          <div className="mb-6 flex items-start gap-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl p-3 animate-slide-up">
-            <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
-            <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
-          </div>
-        )}
+        <div className="text-center">
+          <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">Password Required</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">This link is protected. Enter the password to continue.</p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              required
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setError('');
-              }}
-              className="input-field py-3 text-center tracking-widest text-lg pr-12"
-              placeholder="Enter password"
-              autoFocus
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-            >
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
-          </div>
+        <div className="mt-8 space-y-6">
+          <form onSubmit={handleUnlock} className="space-y-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-900 dark:text-white text-left">Password</label>
+              <div className="relative">
+                <input 
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError('');
+                  }}
+                  placeholder="••••••••" 
+                  className="w-full px-4 py-2.5 border-2 rounded-lg focus:outline-none focus:ring-0 text-gray-900 dark:text-white bg-white dark:bg-black border-gray-200 dark:border-gray-800"
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading || !password.trim()}
-            className="btn-primary w-full py-3 flex items-center justify-center gap-2 group"
-          >
-            {loading ? (
-              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>
-                Unlock Link
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </>
+            {error && (
+              <div className="text-red-500 text-sm text-center font-medium pt-1">
+                {error}
+              </div>
             )}
-          </button>
-        </form>
 
-        <div className="mt-8 text-center flex items-center justify-center gap-1.5 text-slate-400 dark:text-slate-500 text-xs">
-          <ShieldAlert className="w-3.5 h-3.5" />
-          <span>Secured by URL Shortener</span>
+            <button 
+              type="submit"
+              disabled={loading || !password.trim()}
+              className="w-full flex items-center justify-center px-4 py-2.5 rounded-lg bg-black dark:bg-white text-sm font-medium text-white dark:text-black hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 mt-4"
+            >
+              {loading ? 'Unlocking...' : 'Unlock Link'}
+            </button>
+          </form>
+
         </div>
       </div>
     </div>

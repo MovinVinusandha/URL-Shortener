@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link2, Sparkles, AlertCircle, AlertTriangle, Clock, Lock, Eye, EyeOff, X, Tag as TagIcon, Trash2, ChevronDown, Check, Folder as FolderIcon, Plus, Layers } from 'lucide-react';
-import Navbar from '../components/Navbar';
-import UrlTable from '../components/UrlTable';
-import EditModal from '../components/EditModal';
+import { useOutletContext, Link, useSearchParams } from 'react-router-dom';
+import { X, BarChart2, Search, Copy, QrCode, Edit2, Trash2, CornerDownRight, MoreVertical, Filter, SlidersHorizontal, ChevronDown, ArrowUpDown, Check, ArrowDownWideNarrow, Tag, ChevronLeft } from 'lucide-react';
+
+import CreateLinkModal from '../components/CreateLinkModal';
+import ClickArrowIcon from '../components/icons/ClickArrowIcon';
+import type { DashboardLayoutContext } from '../layouts/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
-import type { UrlEntry, UrlDto, UrlSend, Tag, Folder } from '../types';
-import { TAG_COLORS, getTagColorClasses } from '../utils/tagColors';
+import type { UrlEntry, UrlDto } from '../types';
 
 /** Helper to extract hash from short URL */
 const extractHash = (shortUrl: string): string =>
   shortUrl.split('/').pop() ?? shortUrl;
-
-const generateRandomHash = () => Math.random().toString(36).substring(2, 8);
 
 const mapDtoToEntry = (d: UrlDto): UrlEntry => ({
   longUrl: d.longUrl,
@@ -44,58 +43,65 @@ const DashboardPage: React.FC = () => {
   const { user } = useAuth();
 
   const [urls, setUrls] = useState<UrlEntry[]>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [loadingAll, setLoadingAll] = useState(true);
   
-  const [editIndex, setEditIndex] = useState<number | null>(null);
-
-  // Inline Shorten Form states
-  const [longUrl, setLongUrl] = useState('');
-  const [customAlias, setCustomAlias] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [expiresAt, setExpiresAt] = useState<string>('');
-  const [expirationPreset, setExpirationPreset] = useState<string>('none');
-  const [shortenLoading, setShortenLoading] = useState(false);
-  const [shortenError, setShortenError] = useState('');
+  const [editingUrl, setEditingUrl] = useState<UrlEntry | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
   const [isQrLoading, setIsQrLoading] = useState(false);
   const [activeQrHash, setActiveQrHash] = useState<string | null>(null);
 
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
-  const [activeFilterTagId, setActiveFilterTagId] = useState<number | null>(null);
+  const { triggerRefresh, tags, folders, activeFolderId } = useOutletContext<DashboardLayoutContext>();
+
+  const [activeFilterTagId] = useState<number | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   
-  const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
-  const [tagSearchQuery, setTagSearchQuery] = useState('');
-  const [isCreatingTag, setIsCreatingTag] = useState(false);
+  const [sortBy, setSortBy] = useState('dateCreated');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [displayProps, setDisplayProps] = useState({ destinationUrl: true, tags: true, clicks: true, createdAt: true });
+  const [isDisplayOpen, setIsDisplayOpen] = useState(false);
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('none');
+  const [selectedFilterTags, setSelectedFilterTags] = useState<number[]>([]);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [tagSearch, setTagSearch] = useState('');
+  
+  const displayRef = useRef<HTMLDivElement>(null);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
 
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [activeFolderId, setActiveFolderId] = useState<number | null>(null);
-  const [selectedFolderId, setSelectedFolderId] = useState<number | ''>('');
-  const [newFolderName, setNewFolderName] = useState('');
-  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
-  const [isFolderDropdownOpen, setIsFolderDropdownOpen] = useState(false);
+  const [searchParams] = useSearchParams();
 
-  const [isShortenFolderDropdownOpen, setIsShortenFolderDropdownOpen] = useState(false);
-  const [folderSearchQuery, setFolderSearchQuery] = useState('');
-  const [isCreatingShortenFolder, setIsCreatingShortenFolder] = useState(false);
-  const [folderToDelete, setFolderToDelete] = useState<{id: number, name: string} | null>(null);
-
-  const confirmDeleteFolder = async () => {
-    if (!folderToDelete) return;
-    try {
-      await axiosInstance.delete(`/folders/${folderToDelete.id}`);
-      setFolders(folders.filter(f => f.id !== folderToDelete.id));
-      if (activeFolderId === folderToDelete.id) setActiveFolderId(null);
-      if (selectedFolderId === folderToDelete.id) setSelectedFolderId('');
-      setFolderToDelete(null);
-    } catch(err) {
-      console.error("Failed to delete folder", err);
+  useEffect(() => {
+    const tagFromUrl = searchParams.get('tag');
+    if (tagFromUrl && tags.length > 0) {
+      const tagToFilter = tags.find(t => t.name.toLowerCase() === tagFromUrl.toLowerCase());
+      if (tagToFilter) {
+        setSelectedFilterTags([tagToFilter.id]);
+      }
     }
-  };
+  }, [searchParams, tags]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (displayRef.current && !displayRef.current.contains(event.target as Node)) {
+        setIsDisplayOpen(false);
+        setIsSortMenuOpen(false);
+      } else if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
+        setIsSortMenuOpen(false);
+      }
+      
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+        setIsFilterOpen(false);
+        setActiveFilter('none');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const urlsRef = useRef(urls);
 
@@ -107,7 +113,7 @@ const DashboardPage: React.FC = () => {
   /** Save URLs to localStorage for regular users */
   const saveToStorage = useCallback(
     (newUrls: UrlEntry[]) => {
-      if (storageKey && !isAdmin) {
+      if (storageKey) {
         try {
           localStorage.setItem(storageKey, JSON.stringify(newUrls));
         } catch {
@@ -115,7 +121,7 @@ const DashboardPage: React.FC = () => {
         }
       }
     },
-    [storageKey, isAdmin]
+    [storageKey]
   );
 
   /** Refresh live click counts via GET /url/{hash} for each entry */
@@ -154,9 +160,6 @@ const DashboardPage: React.FC = () => {
     return updatedUrls.filter((u): u is UrlEntry => u !== null);
   }, []);
 
-  useEffect(() => {
-    setCustomAlias(generateRandomHash());
-  }, []);
 
   // Initial load logic on mount / user change
   useEffect(() => {
@@ -165,89 +168,45 @@ const DashboardPage: React.FC = () => {
     const loadDashboardData = async () => {
       setLoadingAll(true);
 
-      // STEP 1: Try Admin endpoint GET /url/all
       try {
         const { data } = await axiosInstance.get<UrlDto[]>('/url/all');
         if (isMounted) {
-          setIsAdmin(true);
           const serverUrls = data.map(mapDtoToEntry);
           setUrls(serverUrls);
-          setLoadingAll(false);
-
-          // Background refresh so click counts stay live while the dashboard is open
-          syncClickCounts(serverUrls).then((freshUrls) => {
-            if (isMounted) {
-              setUrls(freshUrls);
-            }
-          });
-          return;
-        }
-      } catch {
-        // 403 Forbidden = Regular User (NO server-side list endpoint)
-        if (isMounted) {
-          setIsAdmin(false);
-        }
-      }
-
-      // STEP 2: Regular User — Load from user-scoped localStorage
-      if (storageKey) {
-        try {
-          const raw = localStorage.getItem(storageKey);
-          if (raw) {
-            const cached: UrlEntry[] = JSON.parse(raw);
-            if (isMounted && Array.isArray(cached)) {
-              setUrls(cached);
-            }
-
-            // Background sync: Fetch latest click counts via GET /url/{hash}
-            const freshUrls = await syncClickCounts(cached);
-            if (isMounted) {
-              setUrls(freshUrls);
-              localStorage.setItem(storageKey, JSON.stringify(freshUrls));
-            }
+          if (storageKey) {
+            localStorage.setItem(storageKey, JSON.stringify(serverUrls));
           }
-        } catch {
-          // If storage parsing fails, start empty
         }
-      }
-
-      if (isMounted) {
-        setLoadingAll(false);
-      }
-    };
-
-    const loadTags = async () => {
-      try {
-        const { data } = await axiosInstance.get<Tag[]>('/tags');
+      } catch (error) {
+        console.error('Failed to fetch URLs from server:', error);
+        // Fallback to localStorage if server fetch fails
+        if (storageKey && isMounted) {
+          try {
+            const raw = localStorage.getItem(storageKey);
+            if (raw) {
+              const cached = JSON.parse(raw);
+              if (Array.isArray(cached)) {
+                setUrls(cached);
+              }
+            }
+          } catch (e) {
+            // If storage parsing fails, start empty
+          }
+        }
+      } finally {
         if (isMounted) {
-          setTags(data);
+          setLoadingAll(false);
         }
-      } catch (err) {
-        // Tags might fail if anonymous or not supported yet, ignore gracefully
       }
     };
 
-    const loadFolders = async () => {
-      try {
-        const { data } = await axiosInstance.get<Folder[]>('/folders');
-        if (isMounted) {
-          setFolders(data);
-        }
-      } catch (err) {
-        // Ignore gracefully
-      }
-    };
-
-    if (user && user.role !== 'ROOT' && user.role !== 'ROLE_ROOT') {
-      loadTags();
-      loadFolders();
-    }
+    // Tags and Folders are now loaded by DashboardLayout
     loadDashboardData();
 
     return () => {
       isMounted = false;
     };
-  }, [storageKey, syncClickCounts]);
+  }, [storageKey]);
 
   // Periodically refresh click counts while the dashboard is visible
   useEffect(() => {
@@ -280,115 +239,19 @@ const DashboardPage: React.FC = () => {
   }, [urls.length, syncClickCounts, saveToStorage]);
 
   /** Called when ShortenForm successfully shortens a URL */
-  const handleShortened = (newEntry: UrlSend) => {
-    const created: UrlEntry = {
-      longUrl: newEntry.longUrl,
-      shortUrl: newEntry.shortUrl,
-      accessed_times: 0,
-      createdAt: newEntry.createdAt,
-      expiresAt: newEntry.expiresAt,
-      isActive: newEntry.isActive ?? true,
-      hasPassword: newEntry.hasPassword,
-      tags: newEntry.tags,
-      folderId: newEntry.folderId,
-      folderName: newEntry.folderName,
-    };
+  const handleShortened = useCallback((newEntry: UrlEntry) => {
     setUrls((prev) => {
-      const updatedList = [created, ...prev];
+      const updatedList = [newEntry, ...prev];
       saveToStorage(updatedList);
       return updatedList;
     });
-    setCustomAlias(generateRandomHash());
-    setPassword('');
-    setExpiresAt('');
-    setExpirationPreset('none');
-    setSelectedTagIds([]);
-    setSelectedFolderId('');
-    setLongUrl('');
-  };
+  }, [saveToStorage]);
 
-  const handleExpirationPresetChange = (preset: string) => {
-    setExpirationPreset(preset);
-    const tzOffset = new Date().getTimezoneOffset() * 60000;
-    const localNow = Date.now() - tzOffset;
-    if (preset === 'none') {
-      setExpiresAt('');
-    } else if (preset === '1hour') {
-      setExpiresAt(new Date(localNow + 60 * 60 * 1000).toISOString().substring(0, 16));
-    } else if (preset === '24hours') {
-      setExpiresAt(new Date(localNow + 24 * 60 * 60 * 1000).toISOString().substring(0, 16));
-    } else if (preset === '7days') {
-      setExpiresAt(new Date(localNow + 7 * 24 * 60 * 60 * 1000).toISOString().substring(0, 16));
-    } else if (preset === 'custom') {
-      // Initialize to current time + 1 hour if switching to custom
-      setExpiresAt(new Date(localNow + 60 * 60 * 1000).toISOString().substring(0, 16));
+  useEffect(() => {
+    if (triggerRefresh) {
+      handleShortened(triggerRefresh);
     }
-  };
-
-  const handleShortenSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!longUrl.trim()) return;
-    setShortenError('');
-    setShortenLoading(true);
-    try {
-      const payload: any = {
-        longUrl: longUrl.trim(),
-        customAlias: customAlias.trim() || undefined,
-        password: password.trim() || undefined,
-        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
-        folderId: selectedFolderId !== '' ? selectedFolderId : undefined
-      };
-      
-      if (expiresAt) {
-        payload.expiresAt = new Date(expiresAt).toISOString().substring(0, 19);
-      }
-
-      const { data } = await axiosInstance.post<UrlSend>('/shorten', payload);
-      handleShortened(data);
-      setLongUrl('');
-    } catch (err: any) {
-      if (err.response?.status === 409 || err.response?.status === 400) {
-        setShortenError('This custom alias is already taken. Please choose another one.');
-      } else {
-        setShortenError(err.response?.data?.message || 'Failed to shorten URL. Please try again.');
-      }
-    } finally {
-      setShortenLoading(false);
-    }
-  };
-
-  const handleCreateTag = async () => {
-    const name = tagSearchQuery.trim();
-    if (!name) return;
-    setIsCreatingTag(true);
-    try {
-      const randomColor = TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
-      const { data } = await axiosInstance.post<Tag>('/tags', { name, color: randomColor.name });
-      setTags([...tags, data]);
-      setSelectedTagIds([...selectedTagIds, data.id]);
-      setTagSearchQuery('');
-    } catch (err: any) {
-      if (err.response?.status === 409) {
-        setShortenError("A tag with this name already exists.");
-      } else {
-        console.error("Failed to create tag", err);
-      }
-    } finally {
-      setIsCreatingTag(false);
-    }
-  };
-
-  const handleDeleteTag = async (tagId: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await axiosInstance.delete(`/tags/${tagId}`);
-      setTags(tags.filter(t => t.id !== tagId));
-      setSelectedTagIds(selectedTagIds.filter(id => id !== tagId));
-      if (activeFilterTagId === tagId) setActiveFilterTagId(null);
-    } catch (err) {
-      console.error("Failed to delete tag", err);
-    }
-  };
+  }, [triggerRefresh, handleShortened]);
 
   const handleOpenQr = async (hash: string) => {
     setIsQrModalOpen(true);
@@ -432,608 +295,439 @@ const DashboardPage: React.FC = () => {
     });
   };
 
-  const displayedUrls = urls.filter(u => 
+  const sortedUrls = React.useMemo(() => {
+    return [...urls].sort((a, b) => {
+      if (sortBy === 'dateCreated') {
+        return sortOrder === 'asc' 
+          ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() 
+          : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      if (sortBy === 'totalClicks') {
+        return sortOrder === 'asc' 
+          ? (a.accessed_times || 0) - (b.accessed_times || 0) 
+          : (b.accessed_times || 0) - (a.accessed_times || 0);
+      }
+      return 0;
+    });
+  }, [urls, sortBy, sortOrder]);
+
+  const displayedUrls = sortedUrls.filter(u => 
     (activeFolderId === null || u.folderId === activeFolderId) &&
     (activeFilterTagId === null || u.tags?.some(t => t.id === activeFilterTagId))
-  );
+  ).filter(u => {
+    if (searchQuery.trim() === '') return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      u.shortUrl.toLowerCase().includes(query) || 
+      u.longUrl.toLowerCase().includes(query)
+    );
+  }).filter(u => {
+    if (selectedFilterTags.length === 0) return true;
+    return u.tags?.some(tag => selectedFilterTags.includes(tag.id));
+  });
 
-  const totalClicks = displayedUrls.reduce((acc, u) => acc + (u.accessed_times ?? 0), 0);
-  const topClicks = displayedUrls.length ? Math.max(...displayedUrls.map((u) => u.accessed_times ?? 0)) : 0;
+
+
+
 
   return (
-    <div className="page-bg">
-      <Navbar />
+    <>
 
-      {/* Subtle background gradient */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-violet-500/5 dark:bg-violet-900/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-indigo-500/5 dark:bg-indigo-900/10 rounded-full blur-3xl" />
-      </div>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* ── Greeting ─────────────────────────────────────── */}
-        <div className="animate-slide-up">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-            Good to see you,{' '}
-            <span className="bg-gradient-to-r from-violet-500 to-indigo-500 bg-clip-text text-transparent">
-              {user?.name?.split(' ')[0] ?? 'there'}
-            </span>{' '}
-            👋
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1.5 text-sm">
-            {isAdmin
-              ? 'You have admin access — all links are visible below.'
-              : 'Shorten a URL below. Your links are saved automatically to your account dashboard.'}
-          </p>
-        </div>
-
-        {/* ── Stats row ────────────────────────────────────── */}
-        {urls.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-slide-up">
-            <div className="card p-5">
-              <p className="text-slate-400 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                Total Links
-              </p>
-              <p className="text-4xl font-bold text-slate-900 dark:text-white mt-1">{displayedUrls.length}</p>
-            </div>
-            <div className="card p-5">
-              <p className="text-slate-400 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                Total Clicks
-              </p>
-              <p className="text-4xl font-bold text-slate-900 dark:text-white mt-1">{totalClicks}</p>
-            </div>
-            <div className="col-span-2 md:col-span-1 card p-5">
-              <p className="text-slate-400 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                Top Link Clicks
-              </p>
-              <p className="text-4xl font-bold text-slate-900 dark:text-white mt-1">{topClicks}</p>
-            </div>
-          </div>
-        )}
-
-        {/* ── Shorten form ─────────────────────────────────── */}
-        {user?.role !== 'ROOT' && user?.role !== 'ROLE_ROOT' && (
-          <div className="card p-6 animate-slide-up relative z-40 overflow-visible">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-9 h-9 rounded-xl bg-violet-100 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-violet-600 dark:text-violet-400" />
-              </div>
-              <div>
-                <h2 className="text-slate-900 dark:text-white font-semibold">Shorten a URL</h2>
-                <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
-                  Paste a long URL and customize your short link
-                </p>
-              </div>
-            </div>
-
-            {shortenError && (
-              <div className="mb-4 flex items-start gap-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl p-3 animate-fade-in">
-                <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                <p className="text-red-600 dark:text-red-400 text-sm">{shortenError}</p>
-              </div>
-            )}
-
-            <form onSubmit={handleShortenSubmit} className="flex flex-col gap-4">
-              <div className="flex gap-3">
-                <div className="flex-1 relative">
-                  <Link2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
-                  <input
-                    id="shorten-input"
-                    type="url"
-                    required
-                    value={longUrl}
-                    onChange={(e) => { setLongUrl(e.target.value); setShortenError(''); }}
-                    className="input-field pl-10"
-                    placeholder="https://your-very-long-url.com/with/many/path/segments"
-                  />
-                </div>
-                <button
-                  id="shorten-submit"
-                  type="submit"
-                  disabled={shortenLoading}
-                  className="btn-primary flex items-center gap-2 whitespace-nowrap"
+        <div className="flex-1 py-6 w-full">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 mt-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative" ref={filterRef}>
+                <button 
+                  onClick={() => setIsFilterOpen(!isFilterOpen)}
+                  className={`flex items-center gap-2 px-3 py-1.5 border rounded-md text-sm font-medium shadow-sm transition-colors ${selectedFilterTags.length > 0 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}
                 >
-                  {shortenLoading ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Shortening…
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Shorten
-                    </>
-                  )}
+                  <Filter className="w-4 h-4" />
+                  Filter
+                  {selectedFilterTags.length > 0 && <span className="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs px-1.5 py-0.5 rounded-full leading-none">{selectedFilterTags.length}</span>}
+                  <ChevronDown className="w-3 h-3 opacity-70" />
                 </button>
+
+                {isFilterOpen && (
+                  <div className="absolute left-0 top-full mt-2 w-64 rounded-lg shadow-xl bg-white dark:bg-slate-900 ring-1 ring-black/5 dark:ring-white/10 border border-gray-200 dark:border-slate-800 divide-y divide-gray-100 dark:divide-slate-800 focus:outline-none z-[60] overflow-hidden">
+                    {activeFilter === 'none' ? (
+                      <>
+                        <div className="p-2">
+                          <div className="relative">
+                            <input 
+                              type="text"
+                              placeholder="Filter..." 
+                              className="block w-full pl-3 pr-8 py-2 border-none bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-0"
+                            />
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                              <kbd className="inline-flex items-center border border-gray-200 dark:border-slate-700 rounded px-1.5 text-xs font-medium text-gray-400 bg-gray-50 dark:bg-slate-800">F</kbd>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="py-1 p-1">
+                          <button 
+                            onClick={() => setActiveFilter('tag')}
+                            className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-md transition-colors group"
+                          >
+                            <div className="flex items-center">
+                              <Tag className="mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+                              Tag
+                            </div>
+                            <span className="text-xs text-gray-400 group-hover:text-gray-500">T</span>
+                          </button>
+                        </div>
+                      </>
+                    ) : activeFilter === 'tag' ? (
+                      <>
+                        <div className="p-2 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2">
+                          <button 
+                            onClick={() => { setActiveFilter('none'); setTagSearch(''); }} 
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded text-gray-500"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <div className="relative flex-1">
+                            <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input 
+                              type="text"
+                              value={tagSearch}
+                              onChange={e => setTagSearch(e.target.value)}
+                              placeholder="Search tags..." 
+                              className="block w-full pl-9 pr-3 py-1.5 border border-gray-200 dark:border-slate-700 rounded-md text-sm bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                        </div>
+                        <div className="py-1 p-1 max-h-48 overflow-y-auto">
+                          {tags.filter(t => t.name.toLowerCase().includes(tagSearch.toLowerCase())).map(t => (
+                            <label key={t.id} className="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-md cursor-pointer group">
+                              <input 
+                                type="checkbox" 
+                                checked={selectedFilterTags.includes(t.id)}
+                                onChange={() => {
+                                  setSelectedFilterTags(prev => 
+                                    prev.includes(t.id) ? prev.filter(id => id !== t.id) : [...prev, t.id]
+                                  )
+                                }}
+                                className="rounded border-gray-300 dark:border-slate-600 text-black dark:text-white focus:ring-black dark:focus:ring-white mr-3 bg-white dark:bg-slate-900"
+                              />
+                              <span className="flex-1 flex items-center gap-2">
+                                <span 
+                                  className="w-2.5 h-2.5 rounded-full" 
+                                  style={{ backgroundColor: t.color || '#374151' }}
+                                />
+                                {t.name}
+                              </span>
+                            </label>
+                          ))}
+                          {tags.length === 0 && <div className="px-3 py-2 text-sm text-gray-500">No tags found</div>}
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                )}
               </div>
               
-              {/* Custom Alias Input */}
-              <div className="flex flex-col sm:flex-row items-center gap-3 animate-fade-in">
-                <div className="flex items-center w-full max-w-sm overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 focus-within:border-violet-500 dark:focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500 transition-all shadow-sm">
-                  <div className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 px-3 py-2.5 text-sm font-medium border-r border-slate-200 dark:border-slate-700 whitespace-nowrap select-none">
-                    {window.location.host}/
+              {/* Active Filters Pills */}
+              {selectedFilterTags.map(tagId => {
+                const tag = tags.find(t => t.id === tagId);
+                if (!tag) return null;
+                return (
+                  <div key={tag.id} className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color || '#374151' }} />
+                    {tag.name}
+                    <button 
+                      onClick={() => setSelectedFilterTags(prev => prev.filter(id => id !== tag.id))}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
-                  <input
-                    type="text"
-                    value={customAlias}
-                    onChange={(e) => { setCustomAlias(e.target.value); setShortenError(''); }}
-                    className="flex-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-white px-3 py-2.5 text-sm outline-none w-full"
-                    placeholder="custom-alias"
-                    pattern="[a-zA-Z0-9-_]+"
-                    title="Only alphanumeric characters, hyphens, and underscores are allowed."
-                  />
-                </div>
-                <p className="text-xs text-slate-400 dark:text-slate-500 self-start sm:self-center">
-                  Leave the generated hash or enter a custom alias.
-                </p>
-              </div>
-
-              {/* Expiration UI */}
-              <div className="flex flex-col gap-2 mt-2 animate-fade-in">
-                <div className="flex items-center gap-2 text-sm text-slate-900 dark:text-white font-medium">
-                  <Clock className="w-4 h-4 text-violet-500" />
-                  Expiration (Optional)
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {[
-                    { id: 'none', label: 'None' },
-                    { id: '1hour', label: '1 Hour' },
-                    { id: '24hours', label: '24 Hours' },
-                    { id: '7days', label: '7 Days' },
-                    { id: 'custom', label: 'Custom' },
-                  ].map((preset) => {
-                    const isActive = expirationPreset === preset.id;
-                    return (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => handleExpirationPresetChange(preset.id)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
-                          isActive
-                            ? 'bg-slate-900 text-white border-transparent dark:bg-white dark:text-slate-900'
-                            : 'bg-transparent text-slate-600 border border-slate-200 hover:border-slate-300 dark:text-slate-300 dark:border-slate-700 dark:hover:border-slate-600'
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                );
+              })}
+              <div className="relative" ref={displayRef}>
+                <button 
+                  onClick={() => setIsDisplayOpen(!isDisplayOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 shadow-sm transition-colors"
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  Display
+                  <ChevronDown className="w-3 h-3 text-gray-400" />
+                </button>
                 
-                {expirationPreset === 'custom' && (
-                  <div className="mt-2 animate-fade-in">
-                    <input
-                      type="datetime-local"
-                      value={expiresAt}
-                      onChange={(e) => setExpiresAt(e.target.value)}
-                      className="input-field text-sm max-w-sm"
-                      min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 16)}
-                      required
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Password Protection UI */}
-              <div className="flex flex-col gap-2 mt-2 animate-fade-in">
-                <div className="flex items-center gap-2 text-sm text-slate-900 dark:text-white font-medium">
-                  <Lock className="w-4 h-4 text-violet-500" />
-                  Password Protection (Optional)
-                </div>
-                <div className="flex items-center max-w-sm relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="input-field text-sm pr-10"
-                    placeholder="Enter a secret password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                <p className="text-xs text-slate-400 dark:text-slate-500">
-                  Users will need to enter this password to access the link.
-                </p>
-              </div>
-
-              {/* Folder UI */}
-              <div className="flex flex-col gap-2 mt-2 animate-fade-in relative z-[60]">
-                <div className="flex items-center gap-2 text-sm text-slate-900 dark:text-white font-medium">
-                  <FolderIcon className="w-4 h-4 text-violet-500" />
-                  Folder (Optional)
-                </div>
-                <div className="relative w-full max-w-sm">
-                  <div 
-                    onClick={() => setIsShortenFolderDropdownOpen(!isShortenFolderDropdownOpen)}
-                    className="input-field min-h-[42px] py-1.5 flex flex-wrap items-center gap-1.5 cursor-pointer pr-8"
-                  >
-                    <span className="text-slate-700 dark:text-slate-300 text-sm ml-1 py-1">
-                      {selectedFolderId === '' ? '📁 No Folder' : `📁 ${folders.find(f => f.id === selectedFolderId)?.name}`}
-                    </span>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  </div>
-
-                  {isShortenFolderDropdownOpen && (
-                    <div className="absolute top-full mt-1 left-0 w-full z-[70] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 shadow-xl rounded-md max-h-60 flex flex-col">
-                      <div className="p-2 border-b border-gray-200 dark:border-slate-700">
-                        <input
-                          type="text"
-                          value={folderSearchQuery}
-                          onChange={(e) => setFolderSearchQuery(e.target.value)}
-                          placeholder="Search or create folder..."
-                          className="w-full bg-slate-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded text-sm px-3 py-1.5 outline-none focus:border-violet-500"
-                          onClick={(e) => e.stopPropagation()}
-                        />
+                {isDisplayOpen && (
+                  <div className="absolute top-full left-0 mt-2 bg-white dark:bg-slate-900 rounded-lg shadow-xl ring-1 ring-gray-100 dark:ring-slate-800 border border-gray-200 dark:border-slate-800 w-[320px] z-50 flex flex-col">
+                    {/* Ordering Section */}
+                    <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 text-sm font-medium">
+                        <ArrowUpDown className="h-4 w-4 text-gray-500" />
+                        Ordering
                       </div>
-                      <div className="overflow-y-auto">
-                        <div
-                          className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-                          onClick={() => {
-                            setSelectedFolderId('');
-                            setIsShortenFolderDropdownOpen(false);
-                          }}
+                      <div className="relative flex items-center gap-2">
+                        <button 
+                          onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                          className="p-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
+                          title={sortOrder === 'asc' ? 'Sort Ascending' : 'Sort Descending'}
                         >
-                          📁 No Folder
-                        </div>
-                        {folders.filter(f => f.name.toLowerCase().includes(folderSearchQuery.toLowerCase())).map(folder => (
-                          <div
-                            key={folder.id}
-                            className="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer group"
-                            onClick={() => {
-                              setSelectedFolderId(folder.id);
-                              setIsShortenFolderDropdownOpen(false);
-                            }}
+                          <ArrowUpDown className={`h-4 w-4 transform transition-transform ${sortOrder === 'asc' ? 'rotate-180' : ''}`} />
+                        </button>
+                        
+                        <div className="relative" ref={sortMenuRef}>
+                          <button 
+                            onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
+                            className="flex items-center justify-between w-36 px-3 py-1.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
                           >
-                            <span className="text-sm text-slate-700 dark:text-slate-300">📁 {folder.name}</span>
-                            <div className="flex items-center gap-2">
-                              {selectedFolderId === folder.id && <Check className="w-4 h-4 text-violet-500" />}
+                            <span className="flex items-center gap-2">
+                              {sortBy === 'dateCreated' ? 'Date created' : 'Total clicks'}
+                            </span>
+                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                          </button>
+                          
+                          {isSortMenuOpen && (
+                            <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-900 rounded-lg shadow-xl ring-1 ring-gray-100 dark:ring-slate-800 border border-gray-200 dark:border-slate-800 z-[60] overflow-hidden py-1">
                               <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setFolderToDelete(folder);
-                                }}
-                                className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-red-500 transition-all"
-                                title="Delete Folder"
+                                onClick={() => { setSortBy('dateCreated'); setIsSortMenuOpen(false); }}
+                                className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <span className="flex items-center gap-2">
+                                  <ArrowDownWideNarrow className="w-4 h-4 text-gray-500" />
+                                  Date created
+                                </span>
+                                {sortBy === 'dateCreated' && <Check className="w-4 h-4 text-gray-900 dark:text-white" />}
+                              </button>
+                              
+                              <button
+                                onClick={() => { setSortBy('totalClicks'); setIsSortMenuOpen(false); }}
+                                className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                              >
+                                <span className="flex items-center gap-2">
+                                  <ArrowDownWideNarrow className="w-4 h-4 text-gray-500" />
+                                  Total clicks
+                                </span>
+                                {sortBy === 'totalClicks' && <Check className="w-4 h-4 text-gray-900 dark:text-white" />}
                               </button>
                             </div>
-                          </div>
-                        ))}
-                        {folderSearchQuery.trim() && !folders.some(f => f.name.toLowerCase() === folderSearchQuery.trim().toLowerCase()) && (
-                          <button
-                            type="button"
-                            onClick={async (e) => {
-                              e.preventDefault();
-                              setIsCreatingShortenFolder(true);
-                              try {
-                                const { data } = await axiosInstance.post<Folder>('/folders', { name: folderSearchQuery.trim() });
-                                setFolders([...folders, data]);
-                                setSelectedFolderId(data.id);
-                                setFolderSearchQuery('');
-                                setIsShortenFolderDropdownOpen(false);
-                              } catch(err) {
-                                console.error("Failed to create folder", err);
-                              } finally {
-                                setIsCreatingShortenFolder(false);
-                              }
-                            }}
-                            className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
-                          >
-                            {isCreatingShortenFolder ? (
-                              <span className="w-4 h-4 border-2 border-slate-300 border-t-violet-500 rounded-full animate-spin" />
-                            ) : (
-                              <Plus className="w-4 h-4 text-slate-400" />
-                            )}
-                            <span>Create <span className="font-semibold">"{folderSearchQuery}"</span></span>
-                          </button>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Tags UI */}
-              <div className="flex flex-col gap-2 mt-2 animate-fade-in relative z-50">
-                <div className="flex items-center gap-2 text-sm text-slate-900 dark:text-white font-medium">
-                  <TagIcon className="w-4 h-4 text-violet-500" />
-                  Tags (Optional)
-                </div>
-                
-                {/* Combobox Wrapper */}
-                <div className="relative w-full max-w-sm">
-                  {/* Combobox Trigger */}
-                  <div 
-                    onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
-                    className="input-field min-h-[42px] py-1.5 flex flex-wrap items-center gap-1.5 cursor-pointer pr-8"
-                  >
-                    {selectedTagIds.length === 0 ? (
-                      <span className="text-slate-400 dark:text-slate-500 text-sm ml-1 py-1">Select tags...</span>
-                    ) : (
-                      selectedTagIds.map(id => {
-                        const tag = tags.find(t => t.id === id);
-                        if (!tag) return null;
-                        const colors = getTagColorClasses(tag.color);
-                        return (
-                          <span
-                            key={tag.id}
-                            className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${colors.bg} ${colors.text} ${colors.border}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedTagIds(prev => prev.filter(tId => tId !== tag.id));
-                            }}
-                          >
-                            {tag.name}
-                            <X className="w-3 h-3 hover:opacity-70" />
-                          </span>
-                        );
-                      })
-                    )}
-                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
-                  </div>
-
-                  {/* Combobox Dropdown */}
-                  {isTagDropdownOpen && (
-                    <div className="absolute top-full left-0 w-full mt-1 z-[60] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 shadow-2xl rounded-md max-h-60 overflow-y-auto animate-fade-in">
-                      <div className="p-2 border-b border-slate-100 dark:border-slate-800">
-                      <input
-                        type="text"
-                        value={tagSearchQuery}
-                        onChange={(e) => setTagSearchQuery(e.target.value)}
-                        placeholder="Search or create tag..."
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-sm px-3 py-2 rounded-lg outline-none text-slate-900 dark:text-white"
-                        autoFocus
-                      />
-                    </div>
                     
-                    <div className="max-h-60 overflow-y-auto p-1">
-                      {tagSearchQuery.trim() && !tags.some(t => t.name.toLowerCase() === tagSearchQuery.trim().toLowerCase()) && (
-                        <button
-                          type="button"
-                          onClick={handleCreateTag}
-                          disabled={isCreatingTag}
-                          className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg flex items-center gap-2"
-                        >
-                          {isCreatingTag ? (
-                            <span className="w-4 h-4 border-2 border-slate-300 border-t-violet-500 rounded-full animate-spin" />
-                          ) : (
-                            <TagIcon className="w-4 h-4 text-slate-400" />
-                          )}
-                          <span>Create <span className="font-semibold">"{tagSearchQuery}"</span></span>
+                    {/* Display Properties Section */}
+                    <div className="p-4 flex flex-col gap-3">
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Display Properties</h3>
+                      <div className="flex flex-wrap gap-2">
+                        <button className="px-2 py-1 text-xs border border-transparent rounded-md bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 font-medium cursor-not-allowed">
+                          Short link
                         </button>
-                      )}
-
-                      {tags.filter(t => t.name.toLowerCase().includes(tagSearchQuery.toLowerCase())).map(tag => {
-                        const colors = getTagColorClasses(tag.color);
-                        const isSelected = selectedTagIds.includes(tag.id);
-                        return (
-                          <div
-                            key={tag.id}
-                            className="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group cursor-pointer"
-                            onClick={() => {
-                              setSelectedTagIds(prev => 
-                                isSelected ? prev.filter(id => id !== tag.id) : [...prev, tag.id]
-                              );
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-violet-500 border-violet-500' : 'border-slate-300 dark:border-slate-600'}`}>
-                                {isSelected && <Check className="w-3 h-3 text-white" />}
-                              </div>
-                              <span className={`text-[11px] px-2 py-0.5 rounded-full border ${colors.bg} ${colors.text} ${colors.border}`}>
-                                {tag.name}
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={(e) => handleDeleteTag(tag.id, e)}
-                              className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-all"
-                              title="Delete Tag"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                      {tags.length === 0 && !tagSearchQuery.trim() && (
-                        <p className="text-center text-xs text-slate-500 py-3">No tags found. Type to create one.</p>
-                      )}
+                        <button 
+                          onClick={() => setDisplayProps(prev => ({ ...prev, destinationUrl: !prev.destinationUrl }))}
+                          className={`px-2 py-1 text-xs border rounded-md font-medium transition-colors ${displayProps.destinationUrl ? 'border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-gray-200' : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+                        >
+                          Destination URL
+                        </button>
+                        <button 
+                          onClick={() => setDisplayProps(prev => ({ ...prev, clicks: !prev.clicks }))}
+                          className={`px-2 py-1 text-xs border rounded-md font-medium transition-colors ${displayProps.clicks ? 'border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-gray-200' : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+                        >
+                          Analytics
+                        </button>
+                        <button 
+                          onClick={() => setDisplayProps(prev => ({ ...prev, createdAt: !prev.createdAt }))}
+                          className={`px-2 py-1 text-xs border rounded-md font-medium transition-colors ${displayProps.createdAt ? 'border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-gray-200' : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+                        >
+                          Created Date
+                        </button>
+                        <button 
+                          onClick={() => setDisplayProps(prev => ({ ...prev, tags: !prev.tags }))}
+                          className={`px-2 py-1 text-xs border rounded-md font-medium transition-colors ${displayProps.tags ? 'border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-gray-200' : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+                        >
+                          Tags
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
-                </div>
               </div>
-            </form>
+            </div>
+            {/* Search Input */}
+            <div className="relative w-full sm:w-auto">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input 
+                type="text" 
+                placeholder="Search by short link or URL" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full sm:w-auto pl-9 pr-4 py-1.5 border border-gray-200 dark:border-slate-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black dark:bg-slate-900 dark:text-white"
+              />
+            </div>
           </div>
-        )}
 
-        {/* ── Filter Bar ────────────────────────────────────── */}
-        {tags.length > 0 && (
-          <div className="mt-8 mb-4 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide animate-fade-in">
-            <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mr-2 flex-shrink-0">Filter by Tag:</span>
-            <button
-              onClick={() => setActiveFilterTagId(null)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all flex-shrink-0 ${
-                activeFilterTagId === null
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
-              }`}
-            >
-              All
-            </button>
-            {tags.map(tag => (
-              <button
-                key={tag.id}
-                onClick={() => setActiveFilterTagId(tag.id)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all border flex-shrink-0 ${
-                  activeFilterTagId === tag.id
-                    ? 'border-transparent text-white'
-                    : 'border-slate-200 bg-transparent hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600 text-slate-600 dark:text-slate-300'
-                }`}
-                style={activeFilterTagId === tag.id ? { backgroundColor: tag.color || '#6366f1' } : {}}
-              >
-                {tag.name}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* ── URL Table ────────────────────────────────────── */}
-        {loadingAll ? (
-          <div className="card p-12 flex flex-col items-center justify-center animate-slide-up relative z-10">
-            <div className="w-10 h-10 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mb-3" />
-            <p className="text-slate-400 dark:text-slate-400 text-sm">Loading your links…</p>
-          </div>
-        ) : (
-          <div className="relative z-10">
-            <UrlTable
-              urls={displayedUrls}
-              onDeleted={handleDeleted}
-              onOpenQr={handleOpenQr}
-              onEdit={(idx) => {
-                setEditIndex(urls.indexOf(displayedUrls[idx]));
-              }}
-              headerRightNode={
-                <div className="relative z-50 flex items-center">
-                  <button
-                    onClick={() => setIsFolderDropdownOpen(!isFolderDropdownOpen)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 dark:text-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition-colors border border-slate-200 dark:border-slate-700"
-                  >
-                    <FolderIcon className="w-3.5 h-3.5 text-violet-500" />
-                    Folder: {activeFolderId ? folders.find(f => f.id === activeFolderId)?.name || 'Unknown' : 'All Links'}
-                    <ChevronDown className="w-3.5 h-3.5 ml-1 text-slate-400" />
-                  </button>
-
-                  {isFolderDropdownOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden animate-fade-in z-[100]">
-                      <div className="p-1">
-                        <button
-                          onClick={() => { setActiveFolderId(null); setIsFolderDropdownOpen(false); }}
-                          className={`w-full text-left px-3 py-2 text-sm rounded-lg flex items-center gap-2 transition-colors ${
-                            activeFolderId === null ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 font-medium' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                          }`}
-                        >
-                          <Layers className="w-4 h-4 text-slate-400" />
-                          All Links
-                        </button>
+          {loadingAll ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-12 flex flex-col items-center justify-center">
+              <div className="w-8 h-8 border-4 border-black dark:border-white border-t-transparent rounded-full animate-spin mb-3" />
+              <p className="text-slate-400 dark:text-slate-500 text-sm">Loading your links…</p>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl overflow-visible shadow-sm flex flex-col gap-0 divide-y divide-gray-100 dark:divide-slate-800">
+              {displayedUrls.length === 0 ? (
+                <div className="p-12 text-center text-gray-500">No links found.</div>
+              ) : (
+                displayedUrls.map((url) => (
+                  <div key={url.shortUrl} className="group relative flex items-center p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                    {/* Favicon */}
+                    <div className="shrink-0 mr-4">
+                      <div className="w-10 h-10 rounded-full border border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 overflow-hidden flex items-center justify-center p-1">
+                        <img 
+                          src={`https://www.google.com/s2/favicons?domain=${url.longUrl}&sz=64`} 
+                          alt="Favicon" 
+                          className="w-6 h-6 rounded-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%239ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>';
+                          }}
+                        />
                       </div>
-                      <div className="p-1 border-t border-slate-100 dark:border-slate-800 max-h-48 overflow-y-auto scrollbar-hide">
-                        {folders.map(folder => (
-                          <div key={folder.id} className="relative group">
-                            <button
-                              onClick={() => { setActiveFolderId(folder.id); setIsFolderDropdownOpen(false); }}
-                              className={`w-full text-left px-3 py-2 text-sm rounded-lg flex items-center gap-2 transition-colors ${
-                                activeFolderId === folder.id ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 font-medium' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                              }`}
-                            >
-                              <FolderIcon className="w-4 h-4 text-slate-400" />
-                              <span className="truncate pr-6">{folder.name}</span>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setFolderToDelete(folder);
-                              }}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                              title="Delete Folder"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                    </div>
+                    
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <a href={url.shortUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-gray-900 dark:text-white truncate hover:underline">
+                          {url.shortUrl.replace(/^https?:\/\//, '')}
+                        </a>
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText(url.shortUrl);
+                            }}
+                            className="p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                            title="Copy link"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => handleOpenQr(extractHash(url.shortUrl))}
+                            className="p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                            title="QR Code"
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        {displayProps.destinationUrl && (
+                          <div className="flex items-center gap-1.5 text-gray-400 text-xs mt-0.5 ml-1">
+                            <CornerDownRight className="w-3 h-3 shrink-0" />
+                            <span className="truncate max-w-[200px] sm:max-w-[300px] lg:max-w-[400px]">
+                              {url.longUrl}
+                            </span>
                           </div>
-                        ))}
+                        )}
+                        {displayProps.destinationUrl && displayProps.createdAt && <span>•</span>}
+                        {displayProps.createdAt && (
+                          <span>
+                            {new Date(url.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                        )}
                       </div>
-                      <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                        {isCreatingFolder ? (
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="text"
-                              autoFocus
-                              value={newFolderName}
-                              onChange={(e) => setNewFolderName(e.target.value)}
-                              onKeyDown={async (e) => {
-                                if (e.key === 'Enter') {
-                                  if (!newFolderName.trim()) return;
-                                  try {
-                                    const { data } = await axiosInstance.post<Folder>('/folders', { name: newFolderName.trim() });
-                                    setFolders([...folders, data]);
-                                    setNewFolderName('');
-                                    setIsCreatingFolder(false);
-                                  } catch(err) {
-                                    console.error("Failed to create folder", err);
-                                  }
-                                } else if (e.key === 'Escape') {
-                                  setIsCreatingFolder(false);
-                                  setNewFolderName('');
+                      
+                      {displayProps.tags && url.tags && url.tags.length > 0 && (
+                        <div className="relative group inline-flex items-center mt-2">
+                          <span 
+                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border"
+                            style={{ 
+                              borderColor: url.tags[0].color ? `${url.tags[0].color}40` : '#e5e7eb',
+                              color: url.tags[0].color || '#374151',
+                              backgroundColor: url.tags[0].color ? `${url.tags[0].color}10` : '#f9fafb'
+                            }}
+                          >
+                            {url.tags[0].name}
+                            {url.tags.length > 1 && ` | +${url.tags.length - 1}`}
+                          </span>
+                          
+                          {/* Tooltip */}
+                          {url.tags.length > 1 && (
+                            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:flex bg-white dark:bg-slate-900 shadow-xl border border-gray-200 dark:border-slate-700 rounded-lg p-2 gap-2 z-[60] min-w-max">
+                              {url.tags.map(t => (
+                                <span 
+                                  key={t.id} 
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border"
+                                  style={{ 
+                                    borderColor: t.color ? `${t.color}40` : '#e5e7eb',
+                                    color: t.color || '#374151',
+                                    backgroundColor: t.color ? `${t.color}10` : '#f9fafb'
+                                  }}
+                                >
+                                  {t.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Actions */}
+                    <div className="shrink-0 flex items-center gap-3 ml-4">
+                      {displayProps.clicks && (
+                        <Link to={`/analytics/${extractHash(url.shortUrl)}`} className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors px-2 py-1 rounded-md border border-gray-100 dark:border-slate-700">
+                          <ClickArrowIcon className="w-3 h-3 text-blue-500" />
+                          {url.accessed_times}
+                          <span className="hidden sm:inline ml-1 text-gray-400 font-normal">clicks</span>
+                        </Link>
+                      )}
+                      
+                      <div className="relative">
+                        <button 
+                          onClick={() => setOpenMenuId(openMenuId === url.shortUrl ? null : url.shortUrl)}
+                          className="p-1.5 text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                        
+                        {openMenuId === url.shortUrl && (
+                          <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md shadow-lg z-50 overflow-hidden">
+                            <Link
+                              to={`/analytics/${extractHash(url.shortUrl)}`}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                            >
+                              <BarChart2 className="w-4 h-4" />
+                              View Analytics
+                            </Link>
+                            <button
+                              onClick={() => {
+                                setEditingUrl(url);
+                                setIsCreateModalOpen(true);
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                setOpenMenuId(null);
+                                if (window.confirm("Are you sure you want to delete this link?")) {
+                                  const originalIdx = urls.indexOf(url);
+                                  axiosInstance.delete(`/url/${extractHash(url.shortUrl)}`)
+                                    .then(() => handleDeleted(originalIdx))
+                                    .catch(err => console.error("Failed to delete", err));
                                 }
                               }}
-                              className="flex-1 min-w-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md py-1.5 px-2 text-xs focus:outline-none focus:border-violet-500"
-                              placeholder="Folder name..."
-                            />
-                            <button
-                              onClick={() => { setIsCreatingFolder(false); setNewFolderName(''); }}
-                              className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                             >
-                              <X className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" />
+                              Delete
                             </button>
                           </div>
-                        ) : (
-                          <button
-                            onClick={() => setIsCreatingFolder(true)}
-                            className="w-full text-left px-2 py-1.5 text-xs text-slate-500 hover:text-violet-600 dark:text-slate-400 dark:hover:text-violet-400 font-medium flex items-center gap-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                            Create new folder
-                          </button>
                         )}
                       </div>
                     </div>
-                  )}
-                </div>
-              }
-            />
-          </div>
-        )}
-      </main>
-
-      {/* ── Folder Delete Confirmation Modal ──────────────── */}
-      {folderToDelete && (
-        <div className="fixed inset-0 bg-black/50 z-[120] flex items-center justify-center px-4 animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-xl p-6 w-full max-w-sm shadow-2xl relative z-[121] animate-slide-up">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Delete Folder</h3>
+                  </div>
+                ))
+              )}
             </div>
-            
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-              Are you sure you want to delete <span className="font-semibold text-slate-700 dark:text-slate-300">"{folderToDelete.name}"</span>? The links inside this folder will NOT be deleted, but will be moved to your main dashboard.
-            </p>
-            
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setFolderToDelete(null)}
-                className="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-gray-300 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDeleteFolder}
-                className="px-4 py-2 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
+          )}
         </div>
-      )}
 
       {/* ── QR Code Modal ────────────────────────────────── */}
       {isQrModalOpen && (
@@ -1078,17 +772,25 @@ const DashboardPage: React.FC = () => {
       )}
 
       {/* ── Edit Modal ───────────────────────────────────── */}
-      {editIndex !== null && (
-        <EditModal
-          entry={urls[editIndex]}
-          onClose={() => setEditIndex(null)}
-          onUpdated={(updatedEntry) => {
-            handleUpdated(editIndex, updatedEntry);
-            setEditIndex(null);
+      {isCreateModalOpen && editingUrl && (
+        <CreateLinkModal
+          isOpen={isCreateModalOpen}
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            setEditingUrl(null);
+          }}
+          folders={folders}
+          tags={tags}
+          urlToEdit={editingUrl}
+          onSuccess={(updatedEntry) => {
+            const idx = urls.findIndex(u => u.shortUrl === editingUrl.shortUrl);
+            if (idx !== -1) {
+              handleUpdated(idx, updatedEntry);
+            }
           }}
         />
       )}
-    </div>
+    </>
   );
 };
 
