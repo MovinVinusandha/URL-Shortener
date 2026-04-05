@@ -29,8 +29,8 @@ public class AnalyticsController {
     @Operation(summary = "Get detailed analytics for a short URL")
     public ResponseEntity<AnalyticsResponseDto> getAnalytics(
             @PathVariable String hash,
-            @RequestParam(name = "period", defaultValue = "all") String period) {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
+            @RequestParam(name = "period", defaultValue = "all") String period,
+            Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
             throw new UrlNotFoundException();
         }

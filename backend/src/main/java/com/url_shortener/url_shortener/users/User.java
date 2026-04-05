@@ -2,7 +2,10 @@ package com.url_shortener.url_shortener.users;
 
 import com.url_shortener.url_shortener.urls.Url;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
@@ -12,6 +15,9 @@ import java.util.List;
 @Getter
 @Setter
 @Entity
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "users")
 public class User {
     @Id
@@ -44,6 +50,9 @@ public class User {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.role == null) {
+            this.role = Role.USER;
+        }
         if (this.publicId == null) {
             String randomPart = org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric(16);
             this.publicId = this.getRole().name().toLowerCase() + "_" + randomPart;
