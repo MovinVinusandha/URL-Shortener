@@ -172,7 +172,7 @@ const HomePage: React.FC = () => {
 
   const [longUrl, setLongUrl] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<ShortenedResult | null>(null);
+  const [generatedUrl, setGeneratedUrl] = useState<ShortenedResult | null>(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
 
@@ -188,13 +188,14 @@ const HomePage: React.FC = () => {
     e.preventDefault();
     if (!longUrl.trim()) return;
     setError('');
-    setResult(null);
+    setGeneratedUrl(null);
     setLoading(true);
     try {
       const { data } = await axiosInstance.post<UrlSend>('/shorten', {
         longUrl: longUrl.trim(),
       });
-      setResult({ shortUrl: data.shortUrl, longUrl: data.longUrl });
+      const fullShortUrl = `${window.location.origin}/${data.shortUrl}`;
+      setGeneratedUrl({ shortUrl: fullShortUrl, longUrl: data.longUrl });
     } catch (err: any) {
       const backendMessage = String(err?.response?.data?.message || err?.message || 'Failed to shorten URL. Please try again.');
       setError(backendMessage);
@@ -204,8 +205,8 @@ const HomePage: React.FC = () => {
   };
 
   const copyToClipboard = async () => {
-    if (!result) return;
-    await navigator.clipboard.writeText(result.shortUrl);
+    if (!generatedUrl) return;
+    await navigator.clipboard.writeText(generatedUrl.shortUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -305,7 +306,7 @@ const HomePage: React.FC = () => {
                   type="url"
                   required
                   value={longUrl}
-                  onChange={(e) => { setLongUrl(e.target.value); setResult(null); setError(''); }}
+                  onChange={(e) => { setLongUrl(e.target.value); setGeneratedUrl(null); setError(''); }}
                   className="w-full bg-transparent pl-12 pr-4 py-3.5 text-[#12141D] placeholder-gray-400 text-sm focus:outline-none"
                   placeholder="Paste your long URL here…"
                 />
@@ -339,19 +340,19 @@ const HomePage: React.FC = () => {
             )}
 
             {/* Result */}
-            {result && (
+            {generatedUrl && (
               <div className="mt-3 p-4 bg-white border border-gray-200 rounded-xl text-left shadow-sm">
                 <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-2">
                   Your short link is ready
                 </p>
                 <div className="flex items-center gap-3">
                   <a
-                    href={result.shortUrl}
+                    href={generatedUrl.shortUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 text-[#12141D] font-semibold text-base hover:underline flex items-center gap-1.5 min-w-0"
                   >
-                    <span className="truncate">{result.shortUrl}</span>
+                    <span className="truncate">{generatedUrl.shortUrl}</span>
                     <ExternalLink className="w-4 h-4 flex-shrink-0" />
                   </a>
                   <button
@@ -366,7 +367,7 @@ const HomePage: React.FC = () => {
                     )}
                   </button>
                 </div>
-                <p className="text-gray-400 text-xs mt-2 truncate">→ {result.longUrl}</p>
+                <p className="text-gray-400 text-xs mt-2 truncate">→ {generatedUrl.longUrl}</p>
               </div>
             )}
 

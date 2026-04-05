@@ -144,10 +144,10 @@ const UrlTable: React.FC<Props> = ({ urls, onDeleted,  onOpenQr,
               </div>
               <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
                 <div className="flex items-center gap-2">
-                  <a href={entry.shortUrl} target="_blank" rel="noreferrer" className="font-medium text-sm text-gray-900 dark:text-slate-100 hover:underline truncate">
-                    {entry.shortUrl.replace(/^https?:\/\//, '')}
+                  <a href={`${window.location.origin}/${extractHash(entry.shortUrl)}`} target="_blank" rel="noreferrer" className="font-medium text-sm text-gray-900 dark:text-slate-100 hover:underline truncate">
+                    {`${window.location.host}/${extractHash(entry.shortUrl)}`}
                   </a>
-                  <button onClick={() => copyToClipboard(entry.shortUrl, originalIndex)} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy">
+                  <button onClick={() => copyToClipboard(`${window.location.origin}/${extractHash(entry.shortUrl)}`, originalIndex)} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy">
                     {copied === originalIndex ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
                   </button>
                   {entry.hasPassword && <Lock className="w-3 h-3 text-violet-500 shrink-0" title="Password Protected" />}

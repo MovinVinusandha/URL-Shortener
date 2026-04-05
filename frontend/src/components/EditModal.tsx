@@ -82,12 +82,12 @@ const EditModal: React.FC<Props> = ({ entry, onClose, onUpdated }) => {
         <div className="mb-5 p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl">
           <p className="text-slate-400 text-xs mb-1 font-medium">Short URL</p>
           <a
-            href={entry.shortUrl}
+            href={`${window.location.origin}/${extractHash(entry.shortUrl)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 text-sm break-all transition-colors"
           >
-            {entry.shortUrl}
+            {`${window.location.host}/${extractHash(entry.shortUrl)}`}
           </a>
         </div>
 

@@ -589,13 +589,13 @@ const DashboardPage: React.FC = () => {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <a href={url.shortUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-gray-900 dark:text-white truncate hover:underline">
-                          {url.shortUrl.replace(/^https?:\/\//, '')}
+                        <a href={`${window.location.origin}/${extractHash(url.shortUrl)}`} target="_blank" rel="noreferrer" className="text-sm font-semibold text-gray-900 dark:text-white truncate hover:underline">
+                          {`${window.location.host}/${extractHash(url.shortUrl)}`}
                         </a>
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                           <button 
                             onClick={() => {
-                              navigator.clipboard.writeText(url.shortUrl);
+                              navigator.clipboard.writeText(`${window.location.origin}/${extractHash(url.shortUrl)}`);
                             }}
                             className="p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded text-gray-400 hover:text-gray-700 dark:hover:text-white"
                             title="Copy link"

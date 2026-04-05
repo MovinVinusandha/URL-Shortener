@@ -120,7 +120,8 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (urlToEdit) {
-        setCustomAlias(urlToEdit.shortUrl || '');
+        const extractHash = (shortUrl: string): string => shortUrl.split('/').pop() ?? shortUrl;
+        setCustomAlias(urlToEdit.shortUrl ? extractHash(urlToEdit.shortUrl) : '');
         setLongUrl(urlToEdit.longUrl || '');
         setPassword('');
         setExpiresAt(urlToEdit.expiresAt ? urlToEdit.expiresAt.substring(0, 16) : '');
@@ -396,7 +397,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                     <input 
                       type="text" 
                       value={customAlias}
-                      onChange={(e) => setCustomAlias(e.target.value)}
+                      onChange={(e) => setCustomAlias(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ''))}
                       disabled={!!urlToEdit}
                       className="block w-full rounded-none rounded-r-md border border-gray-300 focus:border-black focus:ring-1 focus:ring-black px-3 py-2 sm:text-sm w-2/3 disabled:bg-gray-100 disabled:text-gray-500 dark:disabled:bg-slate-800" 
                     />
