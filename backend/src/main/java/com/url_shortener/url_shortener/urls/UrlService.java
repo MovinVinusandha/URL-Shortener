@@ -42,13 +42,14 @@ public class UrlService {
         }
         String shortUrl;
         if (urlRequest.getCustomAlias() != null && !urlRequest.getCustomAlias().trim().isEmpty()) {
-            shortUrl = urlRequest.getCustomAlias().trim();
-            if (!shortUrl.matches("^[a-zA-Z0-9-_]+$")) {
-                throw new IllegalArgumentException("Invalid custom alias format. Only alphanumeric characters, hyphens, and underscores are allowed.");
+            String alias = urlRequest.getCustomAlias().trim();
+            if (!alias.matches("^[a-zA-Z0-9-_]+$")) {
+                throw new IllegalArgumentException("Custom alias can only contain letters, numbers, hyphens, and underscores.");
             }
-            if (urlRepository.existsUrlByShortUrl(shortUrl)) {
+            if (urlRepository.existsUrlByShortUrl(alias)) {
                 throw new AliasAlreadyExistsException();
             }
+            shortUrl = alias;
         } else {
             shortUrl = generateUrlHash(urlRequest.getLongUrl());
             if (urlRepository.existsUrlByShortUrl(shortUrl)) {
@@ -275,6 +276,16 @@ public class UrlService {
         var url = isExistsShortUrl(shortUrl);
 
         isUserCorrect(url);
+
+        if (urlRequest.getCustomAlias() != null && !urlRequest.getCustomAlias().trim().isEmpty()) {
+            String alias = urlRequest.getCustomAlias().trim();
+            if (!alias.matches("^[a-zA-Z0-9-_]+$")) {
+                throw new IllegalArgumentException("Custom alias can only contain letters, numbers, hyphens, and underscores.");
+            }
+            if (!alias.equals(shortUrl) && urlRepository.existsUrlByShortUrl(alias)) {
+                throw new AliasAlreadyExistsException();
+            }
+        }
 
         urlMapper.updateUrl(urlRequest, url);
         urlRepository.save(url);
