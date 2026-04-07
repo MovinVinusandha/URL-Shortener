@@ -1,35 +1,63 @@
-# 1. THE API PILLAR (api.domain.com)
+# 1. THE API PILLAR (api.domain.com) - Direct to Spring Boot
 server {
     listen 8080;
     server_name ${API_DOMAIN_NAME};
 
     location / {
-        proxy_pass http://backend:8080;
+        # Use 127.0.0.11 (Docker internal DNS) to resolve the backend dynamically
+        resolver 127.0.0.11 valid=10s;
+        set $upstream http://backend:8080;
+        
+        # Handle CORS Preflight directly in Nginx to prevent 502s
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' '$http_origin' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE' always;
+            add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, Accept' always;
+            add_header 'Access-Control-Allow-Credentials' 'true' always;
+            add_header 'Content-Type' 'text/plain charset=UTF-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+
+        proxy_pass $upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
 }
 
-# 2. THE APP PILLAR (app.domain.com)
+# 2. THE APP PILLAR (app.domain.com) - React Dashboard
 server {
     listen 8080;
     server_name ${APP_DOMAIN_NAME};
     root /usr/share/nginx/html;
+    index index.html;
 
+    # Static assets
+    location ~ ^/(assets|images|.*\.(svg|png|jpg|jpeg|ico|css|js))$ {
+        try_files $uri =404;
+    }
+
+    # SPA Fallback: Never send React routes to backend
     location / {
         try_files $uri $uri/ /index.html;
     }
 }
 
-# 3. THE ROOT & REDIRECT PILLAR (domain.com)
+# 3. THE ROOT PILLAR (domain.com) - Landing Page & Short Links
 server {
     listen 8080;
-    server_name ${ROOT_DOMAIN_NAME} localhost; # keep localhost for local dev
+    server_name ${ROOT_DOMAIN_NAME} localhost;
     root /usr/share/nginx/html;
+    index index.html;
 
-    # Serve the React SPA (Landing Page)
+    # Exact Root (Landing Page)
     location = / {
         try_files /index.html =404;
+    }
+
+    # Known React Routes
+    location ~ ^/(dashboard|analytics|folders|tags|settings|login|register|expired)(/.*)?$ {
+        try_files $uri $uri/ /index.html;
     }
 
     # Static assets
@@ -37,11 +65,15 @@ server {
         try_files $uri =404;
     }
 
-    # Everything else is a short link, proxy to backend!
+    # Everything else is assumed to be a Short Link -> Proxy to Backend
     location / {
         proxy_pass http://backend:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # If backend returns 404 (short link not found), fallback to React
         proxy_intercept_errors on;
         error_page 404 = /index.html;
     }

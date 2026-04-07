@@ -23,7 +23,7 @@ import java.util.zip.CRC32;
 import org.springframework.security.access.AccessDeniedException;
 
 @Service
-@AllArgsConstructor
+@lombok.RequiredArgsConstructor
 @lombok.extern.slf4j.Slf4j
 public class UrlService {
     private final UrlMapper urlMapper;

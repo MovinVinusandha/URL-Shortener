@@ -50,12 +50,14 @@ public class User {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        // 1. Ensure role is never null
         if (this.role == null) {
-            this.role = Role.USER;
+            this.role = Role.USER; // Or whatever your standard user enum is
         }
+        // 2. Generate Public ID safely
         if (this.publicId == null) {
-            String randomPart = org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric(16);
-            this.publicId = this.getRole().name().toLowerCase() + "_" + randomPart;
+            String randomPart = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+            this.publicId = this.role.name().toLowerCase() + "_" + randomPart;
         }
     }
 }

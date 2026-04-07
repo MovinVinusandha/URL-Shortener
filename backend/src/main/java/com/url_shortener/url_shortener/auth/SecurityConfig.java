@@ -58,6 +58,8 @@ public class SecurityConfig {
                         c.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(c -> {
+                            c.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll();
+                            c.requestMatchers(org.springframework.http.HttpMethod.POST, "/user", "/auth/login").permitAll();
                             featureSecurityRules.forEach(r -> r.configure(c));
                             c.anyRequest().authenticated();
                         }
@@ -80,8 +82,8 @@ public class SecurityConfig {
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
         var configuration = new org.springframework.web.cors.CorsConfiguration();
         configuration.setAllowedOrigins(java.util.Arrays.asList(allowedOrigins.split(",")));
-        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
-        configuration.setAllowedHeaders(java.util.List.of("*"));
+        configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(java.util.Arrays.asList("*"));
         configuration.setAllowCredentials(true);
 
         var source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
