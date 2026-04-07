@@ -60,7 +60,7 @@ class FullBackendFlowIntegrationTest {
         FolderRequestDto folderRequest = new FolderRequestDto();
         folderRequest.setName("Integration Folder");
         
-        MvcResult folderResult = mockMvc.perform(post("/folders")
+        MvcResult folderResult = mockMvc.perform(post("/api/folders")
                 .header("Authorization", bearerToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(folderRequest)))
@@ -73,7 +73,7 @@ class FullBackendFlowIntegrationTest {
         tagRequest.setName("Integration Tag");
         tagRequest.setColor("#000000");
 
-        MvcResult tagResult = mockMvc.perform(post("/tags")
+        MvcResult tagResult = mockMvc.perform(post("/api/tags")
                 .header("Authorization", bearerToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(tagRequest)))

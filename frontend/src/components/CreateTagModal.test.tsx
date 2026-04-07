@@ -32,7 +32,7 @@ describe('CreateTagModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create tag' }));
     
     await waitFor(() => {
-      expect(axiosInstance.post).toHaveBeenCalledWith('/tags', { name: 'New Tag', color: 'blue' });
+      expect(axiosInstance.post).toHaveBeenCalledWith('/api/tags', { name: 'New Tag', color: 'blue' });
       expect(onSuccess).toHaveBeenCalledWith({ id: 1, name: 'New Tag', color: 'blue' });
       expect(onClose).toHaveBeenCalled();
     });

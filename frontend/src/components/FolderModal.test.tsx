@@ -27,7 +27,7 @@ describe('FolderModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save folder' }));
     
     await waitFor(() => {
-      expect(axiosInstance.post).toHaveBeenCalledWith('/folders', { name: 'New Folder' });
+      expect(axiosInstance.post).toHaveBeenCalledWith('/api/folders', { name: 'New Folder' });
       expect(onSuccess).toHaveBeenCalledWith({ id: 1, name: 'New Folder' });
       expect(onClose).toHaveBeenCalled();
     });

@@ -46,7 +46,7 @@ class FolderControllerTest {
         FolderDto folder = new FolderDto(1L, "Work", null, 5);
         when(folderService.getUserFolders(1L)).thenReturn(List.of(folder));
 
-        mockMvc.perform(get("/folders")
+        mockMvc.perform(get("/api/folders")
                 .principal(new UsernamePasswordAuthenticationToken(1L, null, Collections.emptyList())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Work"));
@@ -63,7 +63,7 @@ class FolderControllerTest {
         FolderDto folder = new FolderDto(2L, "Personal", null, 0);
         when(folderService.createFolder(eq("Personal"), eq(user))).thenReturn(folder);
 
-        mockMvc.perform(post("/folders")
+        mockMvc.perform(post("/api/folders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
                 .principal(new UsernamePasswordAuthenticationToken(1L, null, Collections.emptyList())))
@@ -76,7 +76,7 @@ class FolderControllerTest {
         User user = User.builder().id(1L).build();
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-        mockMvc.perform(delete("/folders/1")
+        mockMvc.perform(delete("/api/folders/1")
                 .principal(new UsernamePasswordAuthenticationToken(1L, null, Collections.emptyList())))
                 .andExpect(status().isNoContent());
 

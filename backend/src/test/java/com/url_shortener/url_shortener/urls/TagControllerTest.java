@@ -38,7 +38,7 @@ class TagControllerTest {
         TagDto tag = new TagDto(1L, "Important", "#FF0000", 3);
         when(tagService.getAllTagsForUser()).thenReturn(List.of(tag));
 
-        mockMvc.perform(get("/tags"))
+        mockMvc.perform(get("/api/tags"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Important"));
     }
@@ -52,7 +52,7 @@ class TagControllerTest {
         TagDto tag = new TagDto(2L, "NewTag", "#00FF00", 0);
         when(tagService.createTag(any(TagRequest.class))).thenReturn(tag);
 
-        mockMvc.perform(post("/tags")
+        mockMvc.perform(post("/api/tags")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -61,7 +61,7 @@ class TagControllerTest {
 
     @Test
     void deleteTag_Success() throws Exception {
-        mockMvc.perform(delete("/tags/1"))
+        mockMvc.perform(delete("/api/tags/1"))
                 .andExpect(status().isNoContent());
 
         verify(tagService).deleteTag(1L);
