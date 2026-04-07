@@ -34,13 +34,16 @@ public class UrlService {
     private final TagRepository tagRepository;
     private final FolderRepository folderRepository;
 
+    @org.springframework.beans.factory.annotation.Value("${app.domain.root}")
+    private String rootDomainUrl;
+
     public UrlSend generateShortUrl(UrlRequest urlRequest) {
         var authForCheck = SecurityContextHolder.getContext().getAuthentication();
         if (authForCheck != null && authForCheck.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ROOT") || a.getAuthority().equals("ROOT"))) {
             throw new AccessDeniedException("Admins cannot create short links.");
         }
-        String shortUrl;
+        String hash;
         if (urlRequest.getCustomAlias() != null && !urlRequest.getCustomAlias().trim().isEmpty()) {
             String alias = urlRequest.getCustomAlias().trim();
             if (!alias.matches("^[a-zA-Z0-9-_]+$")) {
@@ -49,15 +52,15 @@ public class UrlService {
             if (urlRepository.existsUrlByShortUrl(alias)) {
                 throw new AliasAlreadyExistsException();
             }
-            shortUrl = alias;
+            hash = alias;
         } else {
-            shortUrl = generateUrlHash(urlRequest.getLongUrl());
-            if (urlRepository.existsUrlByShortUrl(shortUrl)) {
+            hash = generateUrlHash(urlRequest.getLongUrl());
+            if (urlRepository.existsUrlByShortUrl(hash)) {
                 throw new UrlExistInDataBaseException();
             }
         }
         var url = urlMapper.toEntity(urlRequest);
-        url.setShortUrl(shortUrl);
+        url.setShortUrl(hash);
         
         if (urlRequest.getPassword() != null && !urlRequest.getPassword().trim().isEmpty()) {
             var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
@@ -131,7 +134,10 @@ public class UrlService {
             redisTemplate.opsForValue().set(cacheKey, url.getLongUrl(), java.time.Duration.ofHours(24));
         }
         
-        return urlMapper.toSendDto(url);
+        var sendDto = urlMapper.toSendDto(url);
+        String fullShortUrl = rootDomainUrl + "/" + url.getShortUrl();
+        sendDto.setShortUrl(fullShortUrl);
+        return sendDto;
     }
 
     public String generateUrlHash(String data){
@@ -256,6 +262,8 @@ public class UrlService {
         var dto = urlMapper.toDto(url);
         long clicks = clickEventRepository.countByUrl_Id(url.getId(), java.time.LocalDateTime.of(1970, 1, 1, 0, 0));
 
+        dto.setShortUrl(rootDomainUrl + "/" + url.getShortUrl());
+
         return new UrlDto(
                 dto.getId(),
                 dto.getLongUrl(),
@@ -300,7 +308,9 @@ public class UrlService {
             redisTemplate.opsForValue().set(cacheKey, url.getLongUrl(), java.time.Duration.ofHours(24));
         }
 
-        return urlMapper.toUpdateDto(url);
+        var updateDto = urlMapper.toUpdateDto(url);
+        updateDto.setShortUrl(rootDomainUrl + "/" + url.getShortUrl());
+        return updateDto;
     }
 
     public UrlDto updateUrl(String hash, UrlUpdateRequestDto request, User currentUser) {

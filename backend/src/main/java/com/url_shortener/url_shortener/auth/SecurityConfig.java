@@ -31,7 +31,7 @@ public class SecurityConfig {
     private final List<SecurityRules> featureSecurityRules;
 
     @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins}")
-    private List<String> allowedOrigins;
+    private String allowedOrigins;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -79,7 +79,7 @@ public class SecurityConfig {
     @Bean
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
         var configuration = new org.springframework.web.cors.CorsConfiguration();
-        configuration.setAllowedOriginPatterns(allowedOrigins);
+        configuration.setAllowedOrigins(java.util.Arrays.asList(allowedOrigins.split(",")));
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
         configuration.setAllowedHeaders(java.util.List.of("*"));
         configuration.setAllowCredentials(true);

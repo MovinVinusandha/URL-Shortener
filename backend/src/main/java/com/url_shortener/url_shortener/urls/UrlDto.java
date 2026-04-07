@@ -10,6 +10,7 @@ import java.util.List;
 
 @AllArgsConstructor
 @Getter
+@lombok.Setter
 public class UrlDto {
     private BigInteger id;
     private String longUrl;

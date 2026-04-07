@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 
 @AllArgsConstructor
 @Getter
+@lombok.Setter
 public class UrlUpdateDto {
     private String longUrl;
     private String shortUrl;

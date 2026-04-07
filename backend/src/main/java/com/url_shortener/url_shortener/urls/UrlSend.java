@@ -9,6 +9,7 @@ import java.util.List;
 
 @AllArgsConstructor
 @Getter
+@lombok.Setter
 public class UrlSend {
     private String longUrl;
     private String shortUrl;

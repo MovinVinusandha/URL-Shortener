@@ -119,7 +119,7 @@ public class UrlController {
     @Operation(summary = "Generate a QR code for a short url")
     public ResponseEntity<byte[]> getQrCode(@PathVariable String hash) {
         var urlDto = urlService.getUrl(hash);
-        String fullShortUrl = frontendUrl + "/" + urlDto.getShortUrl();
+        String fullShortUrl = urlDto.getShortUrl();
         byte[] qrCodeImage = qrCodeService.generateQrCode(fullShortUrl, 300, 300);
 
         HttpHeaders headers = new HttpHeaders();
