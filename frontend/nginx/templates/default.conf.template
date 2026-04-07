@@ -1,0 +1,48 @@
+# 1. THE API PILLAR (api.domain.com)
+server {
+    listen 8080;
+    server_name ${API_DOMAIN_NAME};
+
+    location / {
+        proxy_pass http://backend:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+
+# 2. THE APP PILLAR (app.domain.com)
+server {
+    listen 8080;
+    server_name ${APP_DOMAIN_NAME};
+    root /usr/share/nginx/html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+# 3. THE ROOT & REDIRECT PILLAR (domain.com)
+server {
+    listen 8080;
+    server_name ${ROOT_DOMAIN_NAME} localhost; # keep localhost for local dev
+    root /usr/share/nginx/html;
+
+    # Serve the React SPA (Landing Page)
+    location = / {
+        try_files /index.html =404;
+    }
+
+    # Static assets
+    location ~ ^/(assets|images|.*\.(svg|png|jpg|jpeg|ico|css|js))$ {
+        try_files $uri =404;
+    }
+
+    # Everything else is a short link, proxy to backend!
+    location / {
+        proxy_pass http://backend:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_intercept_errors on;
+        error_page 404 = /index.html;
+    }
+}

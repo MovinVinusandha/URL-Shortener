@@ -59,6 +59,10 @@ services:
     container_name: url_shortener_frontend
     env_file:
       - .env
+    environment:
+      - API_DOMAIN_NAME=${API_DOMAIN_NAME:-api.localhost}
+      - APP_DOMAIN_NAME=${APP_DOMAIN_NAME:-app.localhost}
+      - ROOT_DOMAIN_NAME=${ROOT_DOMAIN_NAME:-localhost}
     ports:
       - "80:8080"
     networks:

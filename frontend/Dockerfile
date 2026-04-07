@@ -15,7 +15,7 @@ FROM nginxinc/nginx-unprivileged:alpine AS runner
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy secure nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx/templates /etc/nginx/templates
 
 EXPOSE 8080
 
