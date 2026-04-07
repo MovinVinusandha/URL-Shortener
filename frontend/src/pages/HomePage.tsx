@@ -194,8 +194,7 @@ const HomePage: React.FC = () => {
       const { data } = await axiosInstance.post<UrlSend>('/shorten', {
         longUrl: longUrl.trim(),
       });
-      const fullShortUrl = `${window.location.origin}/${data.shortUrl}`;
-      setGeneratedUrl({ shortUrl: fullShortUrl, longUrl: data.longUrl });
+      setGeneratedUrl({ shortUrl: data.shortUrl, longUrl: data.longUrl });
     } catch (err: any) {
       const backendMessage = String(err?.response?.data?.message || err?.message || 'Failed to shorten URL. Please try again.');
       setError(backendMessage);
