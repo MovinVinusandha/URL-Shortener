@@ -71,7 +71,8 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
   onOpenFolderModal
 }) => {
   const domainPrefix = import.meta.env.VITE_API_BASE_URL || window.location.origin;
-  const rootDomainPrefix = (import.meta.env.VITE_ROOT_DOMAIN || window.location.origin).replace(/^https?:\/\//, '');
+  const rawDomain = import.meta.env.VITE_ROOT_DOMAIN || 'http://localhost';
+  const rootDomainPrefix = rawDomain.replace(/^https?:\/\//, '');
   const [longUrl, setLongUrl] = useState(urlToEdit?.longUrl || '');
   const [customAlias, setCustomAlias] = useState(urlToEdit ? urlToEdit.shortUrl.split('/').pop() || '' : '');
   const [selectedFolderId, setSelectedFolderId] = useState(urlToEdit?.folderId || '');

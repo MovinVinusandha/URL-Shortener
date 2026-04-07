@@ -60,6 +60,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(c -> {
                             c.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll();
                             c.requestMatchers(org.springframework.http.HttpMethod.POST, "/user", "/auth/login").permitAll();
+                            c.requestMatchers(org.springframework.http.HttpMethod.GET, "/{hash:[a-zA-Z0-9-_]+}").permitAll();
                             featureSecurityRules.forEach(r -> r.configure(c));
                             c.anyRequest().authenticated();
                         }

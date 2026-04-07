@@ -293,6 +293,7 @@ public class UrlService {
             if (!alias.equals(shortUrl) && urlRepository.existsUrlByShortUrl(alias)) {
                 throw new AliasAlreadyExistsException();
             }
+            url.setShortUrl(alias);
         }
 
         urlMapper.updateUrl(urlRequest, url);
