@@ -54,9 +54,9 @@ server {
         try_files /index.html =404;
     }
 
-    # Known React Routes
+    # Redirect frontend paths typed on the root domain to the app subdomain
     location ~ ^/(dashboard|analytics|folders|tags|settings|login|register|expired)(/.*)?$ {
-        try_files $uri $uri/ /index.html;
+        return 301 $scheme://${APP_DOMAIN_NAME}$request_uri;
     }
 
     # Static assets
