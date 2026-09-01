@@ -141,7 +141,7 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
           className="bg-card text-card-foreground border border-border rounded-2xl shadow-2xl w-full max-w-[440px] overflow-visible flex flex-col z-[251] relative p-6"
         >
           {/* Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-border/70 mb-4">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-foreground">
               {templateToEdit ? 'Edit UTM Template' : 'Create UTM Template'}
             </h2>
@@ -307,7 +307,7 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
             </div>
 
             {/* Footer Actions */}
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-border/70">
+            <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={onClose}
