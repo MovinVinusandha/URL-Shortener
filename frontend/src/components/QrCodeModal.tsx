@@ -295,11 +295,11 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
     <AnimatePresence>
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
         <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 6 }}
+          initial={{ opacity: 0, scale: 0.97, y: 4 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 6 }}
-          transition={{ duration: 0.15, ease: 'easeOut' }}
-          className="bg-background text-foreground border border-border rounded-2xl shadow-2xl w-full max-w-[400px] overflow-visible flex flex-col z-[201] relative"
+          exit={{ opacity: 0, scale: 0.97, y: 4 }}
+          transition={{ duration: 0.12, ease: 'easeOut' }}
+          className="bg-background text-foreground border border-border rounded-xl shadow-lg w-full max-w-[390px] overflow-visible flex flex-col z-[201] relative"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-5 pt-4 pb-1">
@@ -312,29 +312,29 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Main Body */}
-          <div ref={pickerRef} className="px-5 py-3 space-y-3.5 relative">
+          <div ref={pickerRef} className="px-5 py-3 space-y-3 relative">
             
-            {/* Live QR Preview Box matching site surface */}
-            <div className="w-full h-44 rounded-xl border border-dashed border-border bg-secondary/40 flex items-center justify-center relative overflow-hidden group">
+            {/* Live QR Preview Box */}
+            <div className="w-full h-40 rounded-lg border border-dashed border-border bg-secondary/30 flex items-center justify-center relative overflow-hidden group">
               {/* Subtle Grid Canvas Pattern */}
               <div 
-                className="absolute inset-0 opacity-[0.06] pointer-events-none"
+                className="absolute inset-0 opacity-[0.05] pointer-events-none"
                 style={{
                   backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)',
                   backgroundSize: '12px 12px',
                 }}
               />
 
-              {/* Centered QR Card */}
+              {/* Centered QR Card (Flat, no 3D shadow) */}
               <div 
-                className="rounded-xl p-3 shadow-md border border-border flex items-center justify-center relative transition-colors"
+                className="rounded-lg p-2.5 border border-border flex items-center justify-center relative transition-colors shadow-none"
                 style={{ backgroundColor: bgColor }}
               >
                 <svg
@@ -408,7 +408,7 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                           y="0"
                           width={logoBoxSize}
                           height={logoBoxSize}
-                          rx={logoBoxSize / 3}
+                          rx={logoBoxSize / 4}
                           fill={bgColor}
                         />
                         <image
@@ -424,8 +424,8 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                 </svg>
               </div>
 
-              {/* Floating Quick Action Icons (Top-Right: Download Dropdown on left of Copy) */}
-              <div className="absolute top-2 right-2 flex items-center gap-1 bg-background/90 backdrop-blur border border-border rounded-lg p-0.5 shadow-sm">
+              {/* Floating Quick Action Icons (Top-Right) */}
+              <div className="absolute top-2 right-2 flex items-center gap-1 bg-background/90 backdrop-blur border border-border rounded-md p-0.5">
                 {/* Small Download Button with Format Dropdown */}
                 <div className="relative">
                   <button
@@ -445,7 +445,7 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                         initial={{ opacity: 0, scale: 0.95, y: -4 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                        className="absolute top-full mt-1.5 right-0 bg-card border border-border rounded-xl shadow-xl p-1 w-28 z-50 flex flex-col gap-0.5"
+                        className="absolute top-full mt-1.5 right-0 bg-card border border-border rounded-lg shadow-lg p-1 w-28 z-50 flex flex-col gap-0.5"
                       >
                         {(['png', 'jpeg', 'svg'] as ExportFormat[]).map((fmt) => (
                           <button
@@ -453,7 +453,7 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                             type="button"
                             onClick={() => handleDownload(fmt)}
                             disabled={isDownloading}
-                            className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors cursor-pointer text-foreground hover:bg-secondary"
+                            className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-md transition-colors cursor-pointer text-foreground hover:bg-secondary"
                           >
                             <span>{fmt.toUpperCase()}</span>
                             <Download className="w-3 h-3 opacity-60" />
@@ -477,18 +477,18 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
             </div>
 
             {/* Row 1: Logo & Dot Style */}
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-2">
               {/* Logo Switcher */}
               <div className="space-y-1">
                 <span className="text-[11px] font-medium text-muted-foreground">Logo</span>
-                <div className="flex items-center p-0.5 bg-secondary/60 rounded-lg border border-border">
+                <div className="flex items-center p-0.5 bg-secondary/40 rounded-lg border border-border gap-0.5">
                   <button
                     type="button"
                     onClick={() => setHasLogo(true)}
                     className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
                       hasLogo
-                        ? 'bg-primary text-white font-semibold shadow-sm ring-1 ring-primary/40'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+                        ? 'bg-primary text-white font-medium shadow-none'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                     }`}
                   >
                     Logo
@@ -498,8 +498,8 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                     onClick={() => setHasLogo(false)}
                     className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
                       !hasLogo
-                        ? 'bg-primary text-white font-semibold shadow-sm ring-1 ring-primary/40'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+                        ? 'bg-primary text-white font-medium shadow-none'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                     }`}
                   >
                     None
@@ -510,7 +510,7 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
               {/* 3 Distinct Dot Styles */}
               <div className="space-y-1">
                 <span className="text-[11px] font-medium text-muted-foreground">Dot Style</span>
-                <div className="flex items-center p-0.5 bg-secondary/60 rounded-lg border border-border gap-0.5">
+                <div className="flex items-center p-0.5 bg-secondary/40 rounded-lg border border-border gap-0.5">
                   {/* Style 1: Squares */}
                   <button
                     type="button"
@@ -518,8 +518,8 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                     title="Squares"
                     className={`flex-1 py-1.5 flex items-center justify-center rounded-md transition-all cursor-pointer ${
                       dotStyle === 'square'
-                        ? 'bg-primary text-white shadow-sm ring-1 ring-primary/40'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+                        ? 'bg-primary text-white font-medium shadow-none'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                     }`}
                   >
                     <div className="grid grid-cols-2 gap-0.5 w-3 h-3">
@@ -536,8 +536,8 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                     title="Dots"
                     className={`flex-1 py-1.5 flex items-center justify-center rounded-md transition-all cursor-pointer ${
                       dotStyle === 'dots'
-                        ? 'bg-primary text-white shadow-sm ring-1 ring-primary/40'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+                        ? 'bg-primary text-white font-medium shadow-none'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                     }`}
                   >
                     <div className="grid grid-cols-2 gap-0.5 w-3 h-3">
@@ -554,8 +554,8 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                     title="Diamonds"
                     className={`flex-1 py-1.5 flex items-center justify-center rounded-md transition-all cursor-pointer ${
                       dotStyle === 'diamonds'
-                        ? 'bg-primary text-white shadow-sm ring-1 ring-primary/40'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+                        ? 'bg-primary text-white font-medium shadow-none'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                     }`}
                   >
                     <div className="grid grid-cols-2 gap-0.5 w-3 h-3">
@@ -570,19 +570,19 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
             </div>
 
             {/* Row 2: Marker Center & Marker Border */}
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-2">
               {/* Marker Center */}
               <div className="space-y-1">
                 <span className="text-[11px] font-medium text-muted-foreground">Marker Center</span>
-                <div className="flex items-center p-0.5 bg-secondary/60 rounded-lg border border-border gap-0.5">
+                <div className="flex items-center p-0.5 bg-secondary/40 rounded-lg border border-border gap-0.5">
                   <button
                     type="button"
                     onClick={() => setMarkerCenter('square')}
                     title="Square center"
                     className={`flex-1 py-1.5 flex items-center justify-center rounded-md transition-all cursor-pointer ${
                       markerCenter === 'square'
-                        ? 'bg-primary text-white shadow-sm ring-1 ring-primary/40'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+                        ? 'bg-primary text-white font-medium shadow-none'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                     }`}
                   >
                     <div className="w-3 h-3 border border-current rounded-[1px] flex items-center justify-center">
@@ -595,8 +595,8 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                     title="Round center"
                     className={`flex-1 py-1.5 flex items-center justify-center rounded-md transition-all cursor-pointer ${
                       markerCenter === 'round'
-                        ? 'bg-primary text-white shadow-sm ring-1 ring-primary/40'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+                        ? 'bg-primary text-white font-medium shadow-none'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                     }`}
                   >
                     <div className="w-3 h-3 border border-current rounded-[1px] flex items-center justify-center">
@@ -609,15 +609,15 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
               {/* Marker Border */}
               <div className="space-y-1">
                 <span className="text-[11px] font-medium text-muted-foreground">Marker Border</span>
-                <div className="flex items-center p-0.5 bg-secondary/60 rounded-lg border border-border gap-0.5">
+                <div className="flex items-center p-0.5 bg-secondary/40 rounded-lg border border-border gap-0.5">
                   <button
                     type="button"
                     onClick={() => setMarkerBorder('square')}
                     title="Square outer"
                     className={`flex-1 py-1.5 flex items-center justify-center rounded-md transition-all cursor-pointer ${
                       markerBorder === 'square'
-                        ? 'bg-primary text-white shadow-sm ring-1 ring-primary/40'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+                        ? 'bg-primary text-white font-medium shadow-none'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                     }`}
                   >
                     <div className="w-3 h-3 border-2 border-current rounded-[1px]" />
@@ -628,8 +628,8 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                     title="Rounded outer"
                     className={`flex-1 py-1.5 flex items-center justify-center rounded-md transition-all cursor-pointer ${
                       markerBorder === 'rounded'
-                        ? 'bg-primary text-white shadow-sm ring-1 ring-primary/40'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+                        ? 'bg-primary text-white font-medium shadow-none'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                     }`}
                   >
                     <div className="w-3 h-3 border-2 border-current rounded-md" />
@@ -640,8 +640,8 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                     title="Circle outer"
                     className={`flex-1 py-1.5 flex items-center justify-center rounded-md transition-all cursor-pointer ${
                       markerBorder === 'circle'
-                        ? 'bg-primary text-white shadow-sm ring-1 ring-primary/40'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+                        ? 'bg-primary text-white font-medium shadow-none'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                     }`}
                   >
                     <div className="w-3 h-3 border-2 border-current rounded-full" />
@@ -651,7 +651,7 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
             </div>
 
             {/* Row 3: Colors (Pattern Color & Background Color with Modern Pickers) */}
-            <div className="grid grid-cols-2 gap-2.5 pt-1 relative">
+            <div className="grid grid-cols-2 gap-2 pt-0.5 relative">
               
               {/* Pattern Color Selector */}
               <div className="space-y-1 relative">
@@ -662,10 +662,10 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                     setActivePicker(activePicker === 'pattern' ? null : 'pattern');
                     setIsFormatMenuOpen(false);
                   }}
-                  className="flex items-center gap-2 p-1.5 bg-secondary/50 hover:bg-secondary border border-border rounded-lg shadow-sm w-full transition-colors cursor-pointer"
+                  className="flex items-center gap-2 p-1.5 bg-secondary/40 hover:bg-secondary/70 border border-border rounded-md w-full transition-colors cursor-pointer"
                 >
                   <span
-                    className="w-4 h-4 rounded-md border border-black/20 shrink-0 shadow-sm"
+                    className="w-4 h-4 rounded border border-black/20 shrink-0"
                     style={{ backgroundColor: color }}
                   />
                   <span className="text-xs font-mono font-medium text-foreground uppercase truncate">
@@ -677,10 +677,10 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                 <AnimatePresence>
                   {activePicker === 'pattern' && (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -6 }}
+                      initial={{ opacity: 0, scale: 0.95, y: -4 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -6 }}
-                      className="absolute z-50 bottom-full mb-2 left-0 p-3 bg-card border border-border rounded-2xl shadow-2xl space-y-2.5 w-[218px]"
+                      exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                      className="absolute z-50 bottom-full mb-2 left-0 p-3 bg-card border border-border rounded-lg shadow-lg space-y-2.5 w-[218px]"
                     >
                       <div className="modern-color-picker">
                         <HexColorPicker color={color} onChange={setColor} />
@@ -715,10 +715,10 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                     setActivePicker(activePicker === 'bg' ? null : 'bg');
                     setIsFormatMenuOpen(false);
                   }}
-                  className="flex items-center gap-2 p-1.5 bg-secondary/50 hover:bg-secondary border border-border rounded-lg shadow-sm w-full transition-colors cursor-pointer"
+                  className="flex items-center gap-2 p-1.5 bg-secondary/40 hover:bg-secondary/70 border border-border rounded-md w-full transition-colors cursor-pointer"
                 >
                   <span
-                    className="w-4 h-4 rounded-md border border-black/20 shrink-0 shadow-sm"
+                    className="w-4 h-4 rounded border border-black/20 shrink-0"
                     style={{ backgroundColor: bgColor }}
                   />
                   <span className="text-xs font-mono font-medium text-foreground uppercase truncate">
@@ -730,10 +730,10 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                 <AnimatePresence>
                   {activePicker === 'bg' && (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -6 }}
+                      initial={{ opacity: 0, scale: 0.95, y: -4 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -6 }}
-                      className="absolute z-50 bottom-full mb-2 right-0 p-3 bg-card border border-border rounded-2xl shadow-2xl space-y-2.5 w-[218px]"
+                      exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                      className="absolute z-50 bottom-full mb-2 right-0 p-3 bg-card border border-border rounded-lg shadow-lg space-y-2.5 w-[218px]"
                     >
                       <div className="modern-color-picker">
                         <HexColorPicker color={bgColor} onChange={setBgColor} />
@@ -768,14 +768,14 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors cursor-pointer"
+              className="px-3.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSave}
-              className="px-4 py-1.5 text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="px-4 py-1.5 text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-md transition-colors flex items-center gap-1.5 cursor-pointer shadow-none"
             >
               <Check className="w-3.5 h-3.5" />
               <span>Save changes</span>

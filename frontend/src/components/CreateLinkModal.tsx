@@ -1005,9 +1005,9 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                           </button>
                         </div>
                       </div>
-                      <div className="border border-dashed border-border rounded-xl p-4 bg-secondary/30 flex flex-col items-center justify-center relative min-h-[140px]">
+                      <div className="border border-dashed border-border rounded-lg p-3 bg-secondary/30 flex flex-col items-center justify-center relative min-h-[130px]">
                         <div 
-                          className="p-2 rounded-lg shadow-sm border border-border flex items-center justify-center transition-colors"
+                          className="p-2 rounded-md border border-border flex items-center justify-center transition-colors shadow-none"
                           style={{ backgroundColor: qrConfig.bgColor }}
                         >
                           <svg viewBox={`0 0 ${qrSize + 4} ${qrSize + 4}`} className="w-24 h-24">
@@ -1038,7 +1038,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                               )}
                               {qrConfig.hasLogo && (
                                 <g transform={`translate(${centerPos - logoBoxSize / 2}, ${centerPos - logoBoxSize / 2})`}>
-                                  <rect x="0" y="0" width={logoBoxSize} height={logoBoxSize} rx={logoBoxSize / 3} fill={qrConfig.bgColor} />
+                                  <rect x="0" y="0" width={logoBoxSize} height={logoBoxSize} rx={logoBoxSize / 4} fill={qrConfig.bgColor} />
                                   <image href="/trim-logo.svg" x={logoBoxSize * 0.12} y={logoBoxSize * 0.12} width={logoBoxSize * 0.76} height={logoBoxSize * 0.76} />
                                 </g>
                               )}
@@ -1049,7 +1049,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                           type="button" 
                           onClick={() => setIsQrStudioOpen(true)}
                           title="Customize QR Code"
-                          className="absolute top-2 right-2 p-1.5 bg-background hover:bg-secondary border border-border rounded-lg shadow-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                          className="absolute top-2 right-2 p-1.5 bg-background hover:bg-secondary border border-border rounded-md text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>

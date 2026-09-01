@@ -1202,8 +1202,8 @@ const AnalyticsPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Modern Segmented Control Switcher */}
-              <div className="relative flex items-center bg-secondary/50 dark:bg-[#0E0E11] p-1 rounded-xl border border-border/80 gap-1 self-start sm:self-auto shadow-inner">
+              {/* Flat Modern Segmented Control Switcher */}
+              <div className="relative flex items-center bg-secondary/50 dark:bg-[#121215] p-0.5 rounded-lg border border-border gap-0.5 self-start sm:self-auto">
                 {(['area', 'bar', 'cumulative'] as const).map((type) => {
                   const isActive = chartType === type;
                   const label = type === 'area' ? 'Timeline' : type === 'bar' ? 'Volume' : 'Growth';
@@ -1215,7 +1215,7 @@ const AnalyticsPage: React.FC = () => {
                       key={type}
                       type="button"
                       onClick={() => setChartType(type)}
-                      className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                         isActive
                           ? 'text-foreground font-semibold'
                           : 'text-muted-foreground hover:text-foreground'
@@ -1224,7 +1224,7 @@ const AnalyticsPage: React.FC = () => {
                       {isActive && (
                         <motion.div
                           layoutId="activeChartSegment"
-                          className="absolute inset-0 bg-background dark:bg-[#18181C] rounded-lg shadow-sm border border-border/80 dark:border-white/10 z-[-1]"
+                          className="absolute inset-0 bg-card rounded-md border border-border z-[-1]"
                           transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                         />
                       )}
