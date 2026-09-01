@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import CreateLinkModal from '../components/CreateLinkModal';
+import { QrCodeModal } from '../components/QrCodeModal';
 import ClickArrowIcon from '../components/icons/ClickArrowIcon';
 import type { DashboardLayoutContext } from '../layouts/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
@@ -363,27 +364,20 @@ const DashboardPage: React.FC = () => {
     }
   }, [triggerRefresh, handleShortened]);
 
-  const handleOpenQr = async (hash: string) => {
-    setIsQrModalOpen(true);
-    setIsQrLoading(true);
+  const activeQrUrl = useMemo(() => {
+    if (!activeQrHash) return '';
+    const entry = urls.find(u => extractHash(u.shortUrl) === activeQrHash);
+    if (entry) return entry.shortUrl;
+    return `${protocol}//${displayDomain}/${activeQrHash}`;
+  }, [activeQrHash, urls]);
+
+  const handleOpenQr = (hash: string) => {
     setActiveQrHash(hash);
-    try {
-      const response = await axiosInstance.get(`/url/${hash}/qr`, { responseType: 'blob' });
-      const imageUrl = URL.createObjectURL(response.data);
-      setQrImageUrl(imageUrl);
-    } catch (err) {
-      console.error("Failed to load QR code", err);
-    } finally {
-      setIsQrLoading(false);
-    }
+    setIsQrModalOpen(true);
   };
 
   const closeQrModal = () => {
     setIsQrModalOpen(false);
-    if (qrImageUrl) {
-      URL.revokeObjectURL(qrImageUrl);
-    }
-    setQrImageUrl(null);
     setActiveQrHash(null);
   };
 
@@ -1191,46 +1185,14 @@ const DashboardPage: React.FC = () => {
           )}
         </div>
 
-      {/* ── QR Code Modal ────────────────────────────────── */}
+      {/* ── QR Code Studio Modal ──────────────────────────── */}
       {isQrModalOpen && (
-        <div className="bg-black/50 backdrop-blur-sm fixed inset-0 z-50 flex items-center justify-center animate-fade-in px-4">
-          <div className="bg-popover p-6 rounded-xl shadow-xl border border-border w-80 text-center relative animate-slide-up">
-            <button
-              onClick={closeQrModal}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <h3 className="text-base font-semibold text-foreground mb-4">QR Code</h3>
-            
-            {isQrLoading ? (
-              <div className="flex flex-col items-center justify-center py-8 space-y-3">
-                <span className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <p className="text-muted-foreground text-xs">Generating QR...</p>
-              </div>
-            ) : qrImageUrl ? (
-              <div className="flex flex-col items-center">
-                <img src={qrImageUrl} alt="QR Code" className="mx-auto rounded-lg mb-4 border border-border w-48 h-48 bg-white p-2" />
-                <a
-                  href={qrImageUrl}
-                  download={`qr-${activeQrHash}.png`}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold w-full rounded-lg py-2.5 text-sm transition-transform shadow-sm"
-                >
-                  Download PNG
-                </a>
-              </div>
-            ) : (
-              <div className="py-8 text-xs text-rose-500">Failed to generate QR code.</div>
-            )}
-            
-            <button
-              onClick={closeQrModal}
-              className="mt-3 text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <QrCodeModal
+          isOpen={isQrModalOpen}
+          onClose={closeQrModal}
+          shortUrl={activeQrUrl}
+          hash={activeQrHash || undefined}
+        />
       )}
 
       {/* ── Edit Modal ───────────────────────────────────── */}

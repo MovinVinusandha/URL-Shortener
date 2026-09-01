@@ -3,8 +3,11 @@ import {
   ChevronRight, Globe, X, HelpCircle, Shuffle, 
   Tag, FolderArchive, ChevronsUpDown, 
   Lock, CornerDownLeft, Pencil, Check, FolderPlus, Eye, EyeOff, ArrowRight, Folder,
-  Calendar as CalendarIcon, ChevronDown, ChevronLeft
+  Calendar as CalendarIcon, ChevronDown, ChevronLeft, Sparkles
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { QrCodeModal, type QrConfig } from './QrCodeModal';
+import { generateQrMatrix } from '../utils/qrMatrix';
 import axiosInstance from '../api/axiosInstance';
 import axios from 'axios';
 import { 
@@ -109,8 +112,16 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
-  const [isQrLoading, setIsQrLoading] = useState(true);
+  const isSiteDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+  const [qrConfig, setQrConfig] = useState<QrConfig>({
+    hasLogo: true,
+    dotStyle: 'diamonds',
+    markerCenter: 'round',
+    markerBorder: 'rounded',
+    color: isSiteDark ? '#ffffff' : '#000000',
+    bgColor: isSiteDark ? '#000000' : '#ffffff',
+  });
+  const [isQrStudioOpen, setIsQrStudioOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [removePassword, setRemovePassword] = useState(false);
 
@@ -138,9 +149,10 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
   const datePickerRef = useRef<HTMLDivElement>(null);
   const [pickerMonth, setPickerMonth] = useState<Date>(new Date());
   useClickOutside(datePickerRef, () => setIsDatePickerOpen(false));
+  const prevIsOpenRef = useRef(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !prevIsOpenRef.current) {
       if (urlToEdit) {
         const extractHash = (shortUrl: string): string => shortUrl.split('/').pop() ?? shortUrl;
         setCustomAlias(urlToEdit.shortUrl ? extractHash(urlToEdit.shortUrl) : '');
@@ -170,7 +182,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
       setFolderSearchQuery('');
       setIsTagDropdownOpen(false);
       setIsFolderDropdownOpen(false);
-    } else {
+    } else if (!isOpen && prevIsOpenRef.current) {
       setCustomAlias('');
       setLongUrl('');
       setPassword('');
@@ -181,19 +193,8 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
       setSelectedFolderId('');
       setError('');
     }
-  }, [isOpen, urlToEdit, folders, defaultFolderId]);
-
-  useEffect(() => {
-    const fetchQrCode = async () => {
-      if (!customAlias) return;
-      setIsQrLoading(true);
-      const fullShortUrl = `${protocol}//${displayDomain}/${customAlias}`;
-      const previewUrl = `${apiBaseUrl}/public/qr/preview?text=${encodeURIComponent(fullShortUrl)}`;
-      setQrCodeUrl(previewUrl);
-      setIsQrLoading(false);
-    };
-    fetchQrCode();
-  }, [customAlias]);
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen, urlToEdit]);
 
   const toggleTag = (id: number) => {
     setSelectedTagIds(prev => 
@@ -950,34 +951,112 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                 </div>
 
                 {/* QR Code */}
-                {!urlToEdit && (
-                  <div className="space-y-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <label className="text-sm font-medium text-foreground">QR Code</label>
-                    <button type="button" className="text-muted-foreground hover:text-foreground">
-                      <HelpCircle className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <div className="border border-dashed border-border rounded-xl p-6 bg-secondary/30 flex flex-col items-center justify-center relative group min-h-[140px]">
-                    {isQrLoading ? (
-                      <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    ) : qrCodeUrl ? (
-                      <img src={qrCodeUrl} alt="QR Code Preview" className="w-full h-full rounded-lg object-contain max-h-[120px] bg-white p-1" />
-                    ) : (
-                      <div className="bg-white p-2 rounded-lg shadow-sm">
-                        <div className="grid grid-cols-3 gap-0.5 w-8 h-8">
-                          <div className="bg-gray-800 rounded-sm"></div><div className="bg-gray-800 rounded-sm"></div><div className="bg-gray-800 rounded-sm"></div>
-                          <div className="bg-gray-800 rounded-sm"></div><div className="bg-white rounded-sm"></div><div className="bg-gray-800 rounded-sm"></div>
-                          <div className="bg-gray-800 rounded-sm"></div><div className="bg-gray-800 rounded-sm"></div><div className="bg-gray-800 rounded-sm"></div>
+                {!urlToEdit && (() => {
+                  const qrUrl = `${protocol}//${displayDomain}/${customAlias || 'preview'}`;
+                  let matrix: boolean[][] = [];
+                  try {
+                    matrix = generateQrMatrix(qrUrl);
+                  } catch {
+                    matrix = generateQrMatrix('https://trim.ly');
+                  }
+                  const qrSize = matrix.length;
+                  const isFinder = (x: number, y: number) => {
+                    if (x < 7 && y < 7) return true;
+                    if (x >= qrSize - 7 && y < 7) return true;
+                    if (x < 7 && y >= qrSize - 7) return true;
+                    return false;
+                  };
+                  const isExcavated = (x: number, y: number) => {
+                    if (!qrConfig.hasLogo) return false;
+                    const center = qrSize / 2;
+                    const radius = qrSize > 25 ? 3.5 : 2.5;
+                    return Math.abs(x + 0.5 - center) < radius && Math.abs(y + 0.5 - center) < radius;
+                  };
+                  const centerPos = qrSize / 2;
+                  const logoBoxSize = qrSize > 25 ? 6 : 5;
+
+                  const renderFinder = (offsetX: number, offsetY: number, key: string) => (
+                    <g key={key} transform={`translate(${offsetX}, ${offsetY})`}>
+                      {qrConfig.markerBorder === 'square' && (
+                        <path d="M 0 0 H 7 V 7 H 0 Z M 1 1 V 6 H 6 V 1 Z" fill={qrConfig.color} fillRule="evenodd" />
+                      )}
+                      {qrConfig.markerBorder === 'rounded' && (
+                        <rect x="0.5" y="0.5" width="6" height="6" rx="1.75" fill="none" stroke={qrConfig.color} strokeWidth="1" />
+                      )}
+                      {qrConfig.markerBorder === 'circle' && (
+                        <rect x="0.5" y="0.5" width="6" height="6" rx="3" fill="none" stroke={qrConfig.color} strokeWidth="1" />
+                      )}
+                      {qrConfig.markerCenter === 'square' && (
+                        <rect x="2" y="2" width="3" height="3" rx="0.3" fill={qrConfig.color} />
+                      )}
+                      {qrConfig.markerCenter === 'round' && (
+                        <circle cx="3.5" cy="3.5" r="1.5" fill={qrConfig.color} />
+                      )}
+                    </g>
+                  );
+
+                  return (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-sm font-medium text-foreground">QR Code</label>
+                          <button type="button" className="text-muted-foreground hover:text-foreground" title="QR Code is generated automatically">
+                            <HelpCircle className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
-                    )}
-                    <button type="button" className="absolute top-2 right-2 p-1.5 bg-popover border border-border rounded-md shadow-sm text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-                )}
+                      <div className="border border-dashed border-border rounded-xl p-4 bg-secondary/30 flex flex-col items-center justify-center relative min-h-[140px]">
+                        <div 
+                          className="p-2 rounded-lg shadow-sm border border-border flex items-center justify-center transition-colors"
+                          style={{ backgroundColor: qrConfig.bgColor }}
+                        >
+                          <svg viewBox={`0 0 ${qrSize + 4} ${qrSize + 4}`} className="w-24 h-24">
+                            <rect x="0" y="0" width={qrSize + 4} height={qrSize + 4} fill={qrConfig.bgColor} />
+                            <g transform="translate(2, 2)">
+                              {renderFinder(0, 0, 'tl')}
+                              {renderFinder(qrSize - 7, 0, 'tr')}
+                              {renderFinder(0, qrSize - 7, 'bl')}
+                              {matrix.map((row, y) =>
+                                row.map((cell, x) => {
+                                  if (!cell) return null;
+                                  if (isFinder(x, y)) return null;
+                                  if (isExcavated(x, y)) return null;
+                                  if (qrConfig.dotStyle === 'dots') {
+                                    return <circle key={`${x}-${y}`} cx={x + 0.5} cy={y + 0.5} r="0.4" fill={qrConfig.color} />;
+                                  }
+                                  if (qrConfig.dotStyle === 'diamonds') {
+                                    return (
+                                      <polygon
+                                        key={`${x}-${y}`}
+                                        points={`${x + 0.5},${y + 0.08} ${x + 0.92},${y + 0.5} ${x + 0.5},${y + 0.92} ${x + 0.08},${y + 0.5}`}
+                                        fill={qrConfig.color}
+                                      />
+                                    );
+                                  }
+                                  return <rect key={`${x}-${y}`} x={x + 0.06} y={y + 0.06} width="0.88" height="0.88" fill={qrConfig.color} />;
+                                })
+                              )}
+                              {qrConfig.hasLogo && (
+                                <g transform={`translate(${centerPos - logoBoxSize / 2}, ${centerPos - logoBoxSize / 2})`}>
+                                  <rect x="0" y="0" width={logoBoxSize} height={logoBoxSize} rx={logoBoxSize / 3} fill={qrConfig.bgColor} />
+                                  <image href="/trim-logo.svg" x={logoBoxSize * 0.12} y={logoBoxSize * 0.12} width={logoBoxSize * 0.76} height={logoBoxSize * 0.76} />
+                                </g>
+                              )}
+                            </g>
+                          </svg>
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={() => setIsQrStudioOpen(true)}
+                          title="Customize QR Code"
+                          className="absolute top-2 right-2 p-1.5 bg-background hover:bg-secondary border border-border rounded-lg shadow-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </form>
@@ -1002,6 +1081,18 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
         </footer>
           </motion.div>
         </motion.div>
+      )}
+
+      {/* QR Code Studio Modal */}
+      {isQrStudioOpen && (
+        <QrCodeModal
+          isOpen={isQrStudioOpen}
+          onClose={() => setIsQrStudioOpen(false)}
+          shortUrl={`${protocol}//${displayDomain}/${customAlias || 'preview'}`}
+          hash={customAlias || undefined}
+          initialConfig={qrConfig}
+          onSave={setQrConfig}
+        />
       )}
     </AnimatePresence>
   );

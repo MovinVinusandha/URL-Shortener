@@ -159,10 +159,12 @@ describe('DashboardPage', () => {
       fireEvent.click(qrBtns[0]);
       await waitFor(() => {
         expect(screen.getByText('QR Code')).toBeInTheDocument();
-        expect(screen.getByText('Download PNG')).toBeInTheDocument();
+        expect(screen.getByText('Save changes')).toBeInTheDocument();
       });
       // Close QR Modal
-      fireEvent.click(screen.getByText('Close'));
+      const closeButtons = screen.getAllByRole('button');
+      const xBtn = closeButtons.find(b => b.querySelector('svg.lucide-x'));
+      if (xBtn) fireEvent.click(xBtn);
     }
 
     // 1. Open more menu and cancel deletion
@@ -239,9 +241,12 @@ describe('DashboardPage', () => {
     fireEvent.click(moreIconBtn);
     fireEvent.click(screen.getByText('QR Code'));
     await waitFor(() => {
-      expect(screen.getByText('Download PNG')).toBeInTheDocument();
+      expect(screen.getByText('Save changes')).toBeInTheDocument();
+      expect(screen.getByText('QR Code')).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByText('Close'));
+    const closeButtons = screen.getAllByRole('button');
+    const xBtn = closeButtons.find(b => b.querySelector('svg.lucide-x'));
+    if (xBtn) fireEvent.click(xBtn);
 
     // 4. Edit from menu and submit edit modal
     fireEvent.click(moreIconBtn);
@@ -276,14 +281,7 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Analytics View')).toBeInTheDocument();
   });
 
-  it('handles QR code generation failure error display', async () => {
-    (axiosInstance.get as any).mockImplementation((url: string) => {
-      if (url.includes('/qr')) {
-        return Promise.reject(new Error('QR error'));
-      }
-      return Promise.resolve({ data: mockLinks });
-    });
-
+  it('handles QR code studio modal customization and downloads', async () => {
     render(<MemoryRouter><DashboardPage /></MemoryRouter>);
 
     await waitFor(() => {
@@ -294,9 +292,19 @@ describe('DashboardPage', () => {
     if (qrBtns[0]) {
       fireEvent.click(qrBtns[0]);
       await waitFor(() => {
-        expect(screen.getByText('Failed to generate QR code.')).toBeInTheDocument();
+        expect(screen.getByText('QR Code')).toBeInTheDocument();
+        expect(screen.getByText('Dot Style')).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText('Close'));
+
+      // Switch dot style
+      fireEvent.click(screen.getByTitle('Dots'));
+
+      // Toggle logo
+      fireEvent.click(screen.getByRole('button', { name: 'Logo' }));
+
+      const closeButtons = screen.getAllByRole('button');
+      const xBtn = closeButtons.find(b => b.querySelector('svg.lucide-x'));
+      if (xBtn) fireEvent.click(xBtn);
     }
   });
 
