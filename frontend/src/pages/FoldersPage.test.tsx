@@ -150,7 +150,7 @@ describe('FoldersPage', () => {
     const cancelBtn = screen.getByText('Cancel');
     fireEvent.click(cancelBtn);
     await waitFor(() => {
-      expect(screen.queryByRole('heading', { name: 'Delete Folder' })).not.toBeInTheDocument();
+      expect(screen.queryByText(/This folder currently contains 5 links/)).not.toBeInTheDocument();
     });
 
     // Open and confirm deletion

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, Link, useNavigate, useParams } from 'react-router-dom';
-import { Link as LinkIcon, BarChart2, Folder as FolderIcon, Tag as TagIcon, ChevronDown, FolderPlus, Search, HelpCircle, User, Settings, Gift, LogOut, ArrowLeft, Shield, Download, Sun, Moon, Monitor } from 'lucide-react';
+import { Link as LinkIcon, BarChart2, Folder as FolderIcon, Tag as TagIcon, ChevronDown, FolderPlus, Search, HelpCircle, User, Settings, Gift, LogOut, ArrowLeft, Shield, Download, Sun, Moon, Monitor, SlidersHorizontal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -9,23 +9,29 @@ import type { Tag, Folder, UrlEntry } from '../types';
 import CreateLinkModal from '../components/CreateLinkModal';
 import CreateTagModal from '../components/CreateTagModal';
 import FolderModal from '../components/FolderModal';
+import { UtmTemplateModal } from '../components/UtmTemplateModal';
 import BrandLogo from '../components/BrandLogo';
 import ClickArrowIcon from '../components/icons/ClickArrowIcon';
 import { Toaster, toast } from 'react-hot-toast';
 import Skeleton from 'react-loading-skeleton';
+import { getSavedUtmTemplates, fetchUtmTemplatesApi, type UtmTemplate } from '../utils/utmUtils';
 
 export type DashboardLayoutContext = {
   triggerRefresh: UrlEntry | null;
   tags: Tag[];
   folders: Folder[];
+  templates: UtmTemplate[];
   setTags: React.Dispatch<React.SetStateAction<Tag[]>>;
   setFolders: React.Dispatch<React.SetStateAction<Folder[]>>;
+  setTemplates: React.Dispatch<React.SetStateAction<UtmTemplate[]>>;
   activeFolderId: number | null;
   setActiveFolderId: React.Dispatch<React.SetStateAction<number | null>>;
   setIsFolderModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setIsCreateTagModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsCreateUtmTemplateModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setFolderToEdit: React.Dispatch<React.SetStateAction<any | null>>;
   setTagToEdit: React.Dispatch<React.SetStateAction<any | null>>;
+  setUtmTemplateToEdit: React.Dispatch<React.SetStateAction<UtmTemplate | null>>;
   isTagsLoading: boolean;
   isFoldersLoading: boolean;
   navStats: { totalClicks: number; linkCount: number };
@@ -42,13 +48,20 @@ const DashboardLayout: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreateTagModalOpen, setIsCreateTagModalOpen] = useState(false);
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
+  const [isCreateUtmTemplateModalOpen, setIsCreateUtmTemplateModalOpen] = useState(false);
   
   const [folderToEdit, setFolderToEdit] = useState<any | null>(null);
   const [tagToEdit, setTagToEdit] = useState<any | null>(null);
+  const [utmTemplateToEdit, setUtmTemplateToEdit] = useState<UtmTemplate | null>(null);
 
   const [tags, setTags] = useState<Tag[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [templates, setTemplates] = useState<UtmTemplate[]>([]);
   const [activeFolderId, setActiveFolderId] = useState<number | null>(null);
+
+  useEffect(() => {
+    setTemplates(getSavedUtmTemplates());
+  }, []);
 
   const [isTagsLoading, setIsTagsLoading] = useState(true);
   const [isFoldersLoading, setIsFoldersLoading] = useState(true);
@@ -97,13 +110,15 @@ const DashboardLayout: React.FC = () => {
     let cancelled = false;
     const loadTagsAndFolders = async (isBackground = false) => {
       try {
-        const [tagsRes, foldersRes] = await Promise.allSettled([
+        const [tagsRes, foldersRes, utmTemplates] = await Promise.allSettled([
           axiosInstance.get<Tag[]>('/tags'),
-          axiosInstance.get<Folder[]>('/folders')
+          axiosInstance.get<Folder[]>('/folders'),
+          fetchUtmTemplatesApi()
         ]);
         if (!cancelled) {
           if (tagsRes.status === 'fulfilled') setTags(tagsRes.value.data);
           if (foldersRes.status === 'fulfilled') setFolders(foldersRes.value.data);
+          if (utmTemplates.status === 'fulfilled') setTemplates(utmTemplates.value);
         }
       } catch (err) {
         // Silent error in background
@@ -232,6 +247,20 @@ const DashboardLayout: React.FC = () => {
           className="btn-solid flex items-center gap-2"
         >
           <TagIcon className="w-4 h-4" /> Create Tag
+        </button>
+      );
+    }
+
+    if (location.pathname.startsWith('/utm-templates') || location.pathname === '/utm') {
+      return (
+        <button
+          onClick={() => {
+            setUtmTemplateToEdit(null);
+            setIsCreateUtmTemplateModalOpen(true);
+          }}
+          className="btn-solid flex items-center gap-2"
+        >
+          <SlidersHorizontal className="w-4 h-4" /> Create template
         </button>
       );
     }
@@ -510,6 +539,10 @@ const DashboardLayout: React.FC = () => {
               <h1 className="text-base font-semibold text-foreground tracking-tight px-1">
                 Tags
               </h1>
+            ) : location.pathname.startsWith('/utm-templates') || location.pathname === '/utm' ? (
+              <h1 className="text-base font-semibold text-foreground tracking-tight px-1">
+                UTM Templates
+              </h1>
             ) : (
               <h1 className="text-base font-semibold text-foreground tracking-tight px-1">
                 {getTitle()}
@@ -569,6 +602,13 @@ const DashboardLayout: React.FC = () => {
                   <TagIcon className="w-3.5 h-3.5" />
                   Tags
                 </Link>
+                <Link 
+                  to="/utm-templates" 
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-xs transition-colors ${location.pathname.startsWith('/utm-templates') || location.pathname === '/utm' ? 'bg-secondary text-foreground font-semibold' : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'}`}
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  UTM Templates
+                </Link>
               </>
             )}
           </div>
@@ -604,14 +644,18 @@ const DashboardLayout: React.FC = () => {
                 triggerRefresh: latestNewEntry, 
                 tags, 
                 folders, 
+                templates,
                 setTags, 
                 setFolders, 
+                setTemplates,
                 activeFolderId, 
                 setActiveFolderId,
                 setIsFolderModalOpen,
                 setIsCreateTagModalOpen,
+                setIsCreateUtmTemplateModalOpen,
                 setFolderToEdit,
                 setTagToEdit,
+                setUtmTemplateToEdit,
                 isTagsLoading,
                 isFoldersLoading,
                 navStats
@@ -666,6 +710,19 @@ const DashboardLayout: React.FC = () => {
           } else {
             setFolders([...folders, updatedFolder]);
           }
+        }}
+      />
+
+      {/* ── Create / Edit UTM Template Modal ────────────────────────────── */}
+      <UtmTemplateModal
+        isOpen={isCreateUtmTemplateModalOpen}
+        templateToEdit={utmTemplateToEdit}
+        onClose={() => {
+          setIsCreateUtmTemplateModalOpen(false);
+          setUtmTemplateToEdit(null);
+        }}
+        onSuccess={(updated) => {
+          setTemplates(updated);
         }}
       />
       

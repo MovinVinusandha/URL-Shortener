@@ -1,6 +1,9 @@
 package com.url_shortener.url_shortener.config;
 
+import org.apache.coyote.http11.AbstractHttp11Protocol;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
@@ -15,14 +18,6 @@ public class AppConfig {
 
     /**
      * {@link RestTemplate} bean used by {@code GeoLocationService} to call ip-api.com.
-     * <p>
-     * Tight timeouts are critical: a slow external API call runs on the
-     * {@code analyticsExecutor} thread pool, not the HTTP request thread,
-     * but we still want to free up pool threads promptly on network issues.
-     * <ul>
-     *   <li>Connect timeout: 3 seconds — fail fast if the host is unreachable.</li>
-     *   <li>Read timeout: 5 seconds — wait up to 5 s for the response body.</li>
-     * </ul>
      */
     @Bean
     public RestTemplate restTemplate(RestTemplateBuilder builder) {
@@ -30,5 +25,18 @@ public class AppConfig {
                 .connectTimeout(Duration.ofSeconds(3))
                 .readTimeout(Duration.ofSeconds(5))
                 .build();
+    }
+
+    /**
+     * Customize embedded Tomcat connector to accept large request headers and cookies (up to 2MB).
+     */
+    @Bean
+    public WebServerFactoryCustomizer<TomcatServletWebServerFactory> tomcatCustomizer() {
+        return factory -> factory.addConnectorCustomizers(connector -> {
+            if (connector.getProtocolHandler() instanceof AbstractHttp11Protocol<?> protocolHandler) {
+                protocolHandler.setMaxHttpHeaderSize(2 * 1024 * 1024); // 2 MB
+                protocolHandler.setMaxSavePostSize(2 * 1024 * 1024);
+            }
+        });
     }
 }

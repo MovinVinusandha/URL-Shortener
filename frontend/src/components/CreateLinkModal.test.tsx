@@ -393,4 +393,23 @@ describe('CreateLinkModal', () => {
       fireEvent.change(selects[1], { target: { value: '30' } });
     }
   });
+
+  it('clicking UTM toolbar button opens the UTM parameters modal', () => {
+    render(
+      <CreateLinkModal 
+        isOpen={true} 
+        onClose={vi.fn()} 
+        onSuccess={vi.fn()} 
+        folders={[]} 
+        tags={[]} 
+      />
+    );
+
+    const utmToolbarBtn = screen.getByTitle('UTM Builder & Tracking Parameters');
+    expect(utmToolbarBtn).toBeInTheDocument();
+
+    fireEvent.click(utmToolbarBtn);
+    expect(screen.getByText('UTM Builder')).toBeInTheDocument();
+    expect(screen.getByText('Source')).toBeInTheDocument();
+  });
 });

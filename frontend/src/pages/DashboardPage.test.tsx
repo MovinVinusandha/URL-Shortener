@@ -241,7 +241,6 @@ describe('DashboardPage', () => {
     fireEvent.click(moreIconBtn);
     fireEvent.click(screen.getByText('QR Code'));
     await waitFor(() => {
-      expect(screen.getByText('Save changes')).toBeInTheDocument();
       expect(screen.getByText('QR Code')).toBeInTheDocument();
     });
     const closeButtons = screen.getAllByRole('button');

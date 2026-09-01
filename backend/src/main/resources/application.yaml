@@ -10,6 +10,11 @@ spring:
 
 server:
   forward-headers-strategy: framework
+  max-http-request-header-size: 2MB
+  max-http-header-size: 2MB
+  tomcat:
+    max-http-form-post-size: 2MB
+    max-swallow-size: 2MB
 
 root:
   user:

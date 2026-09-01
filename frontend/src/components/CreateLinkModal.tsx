@@ -3,11 +3,15 @@ import {
   ChevronRight, Globe, X, HelpCircle, Shuffle, 
   Tag, FolderArchive, ChevronsUpDown, 
   Lock, CornerDownLeft, Pencil, Check, FolderPlus, Eye, EyeOff, ArrowRight, Folder,
-  Calendar as CalendarIcon, ChevronDown, ChevronLeft, Sparkles
+  Calendar as CalendarIcon, ChevronDown, ChevronLeft, Sparkles,
+  CornerDownRight, FlaskConical, Clock, MoreHorizontal
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { QrCodeModal, type QrConfig } from './QrCodeModal';
+import { UtmModal } from './UtmModal';
 import { generateQrMatrix } from '../utils/qrMatrix';
+import { parseUrlUtms, buildUrlWithUtms, type UtmParams, type CustomParam } from '../utils/utmUtils';
+import toast from 'react-hot-toast';
 import axiosInstance from '../api/axiosInstance';
 import axios from 'axios';
 import { 
@@ -86,7 +90,48 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
   const protocol = window.location.protocol;
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || `${protocol}//api.${rootDomain}`;
   const [longUrl, setLongUrl] = useState(urlToEdit?.longUrl || '');
+  const [baseDestinationUrl, setBaseDestinationUrl] = useState<string>('');
+  const [utms, setUtms] = useState<UtmParams>({
+    source: '',
+    medium: '',
+    campaign: '',
+    term: '',
+    content: '',
+  });
+  const [customParams, setCustomParams] = useState<CustomParam[]>([]);
   const [customAlias, setCustomAlias] = useState(urlToEdit ? urlToEdit.shortUrl.split('/').pop() || '' : '');
+
+  const handleLongUrlChange = (newUrl: string) => {
+    setLongUrl(newUrl);
+    const parsed = parseUrlUtms(newUrl);
+    setBaseDestinationUrl(parsed.baseUrl);
+    if (parsed.hasUtms) {
+      setUtms(parsed.utms);
+    }
+  };
+
+  const handleUtmBuilderChange = (newUtms: UtmParams, newCustomParams: CustomParam[]) => {
+    setUtms(newUtms);
+    setCustomParams(newCustomParams);
+    const parsed = parseUrlUtms(longUrl);
+    const targetBase = baseDestinationUrl || parsed.baseUrl || longUrl;
+    if (targetBase) {
+      const full = buildUrlWithUtms(targetBase, newUtms, newCustomParams);
+      setLongUrl(full);
+    }
+  };
+
+  const handleUtmClear = () => {
+    const emptyUtms: UtmParams = { source: '', medium: '', campaign: '', term: '', content: '' };
+    setUtms(emptyUtms);
+    setCustomParams([]);
+    const parsed = parseUrlUtms(longUrl);
+    const targetBase = baseDestinationUrl || parsed.baseUrl;
+    if (targetBase) {
+      const full = buildUrlWithUtms(targetBase, emptyUtms, []);
+      setLongUrl(full);
+    }
+  };
 
   const resolveDefaultFolderId = () => {
     if (defaultFolderId !== undefined && defaultFolderId !== null) return defaultFolderId;
@@ -122,8 +167,13 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
     bgColor: isSiteDark ? '#000000' : '#ffffff',
   });
   const [isQrStudioOpen, setIsQrStudioOpen] = useState(false);
+  const [isUtmModalOpen, setIsUtmModalOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [removePassword, setRemovePassword] = useState(false);
+
+  const activeUtmCount =
+    Object.values(utms).filter((val) => val.trim() !== '').length +
+    customParams.filter((p) => p.key.trim() !== '').length;
 
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const [tagSearchQuery, setTagSearchQuery] = useState('');
@@ -157,6 +207,10 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
         const extractHash = (shortUrl: string): string => shortUrl.split('/').pop() ?? shortUrl;
         setCustomAlias(urlToEdit.shortUrl ? extractHash(urlToEdit.shortUrl) : '');
         setLongUrl(urlToEdit.longUrl || '');
+        const parsed = parseUrlUtms(urlToEdit.longUrl || '');
+        setBaseDestinationUrl(parsed.baseUrl);
+        setUtms(parsed.utms);
+        setCustomParams(parsed.customParams);
         setPassword('');
         setRemovePassword(false);
         setExpiresAt(urlToEdit.expiresAt ? format(parseISO(urlToEdit.expiresAt + 'Z'), "yyyy-MM-dd'T'HH:mm") : '');
@@ -166,6 +220,9 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
       } else {
         setCustomAlias(generateRandomHash());
         setLongUrl('');
+        setBaseDestinationUrl('');
+        setUtms({ source: '', medium: '', campaign: '', term: '', content: '' });
+        setCustomParams([]);
         setPassword('');
         setRemovePassword(false);
         setExpiresAt('');
@@ -185,6 +242,9 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
     } else if (!isOpen && prevIsOpenRef.current) {
       setCustomAlias('');
       setLongUrl('');
+      setBaseDestinationUrl('');
+      setUtms({ source: '', medium: '', campaign: '', term: '', content: '' });
+      setCustomParams([]);
       setPassword('');
       setRemovePassword(false);
       setExpiresAt('');
@@ -628,7 +688,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-1.5">
                     <label className="text-sm font-medium text-foreground">Destination URL</label>
-                    <button type="button" className="text-muted-foreground hover:text-foreground">
+                    <button type="button" className="text-muted-foreground hover:text-foreground" title="The destination web page to redirect visitors to">
                       <HelpCircle className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -636,8 +696,8 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                     type="url" 
                     required 
                     value={longUrl}
-                    onChange={(e) => setLongUrl(e.target.value)}
-                    className="block w-full rounded-lg border border-input focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors px-3.5 py-2.5 sm:text-sm placeholder:text-muted-foreground bg-background text-foreground"
+                    onChange={(e) => handleLongUrlChange(e.target.value)}
+                    className="block w-full rounded-lg border border-input focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors px-3.5 py-2.5 sm:text-sm placeholder:text-muted-foreground bg-background text-foreground font-mono text-xs"
                     placeholder="https://dub.co/help/article/dub-links" 
                   />
                 </div>
@@ -1063,8 +1123,30 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
         </div>
 
         {/* Footer */}
-        <footer className="relative z-10 border-t border-border bg-secondary/40 px-6 py-4 flex items-center justify-between gap-4 shrink-0 rounded-b-2xl">
-          <div></div>
+        <footer className="relative z-10 border-t border-border bg-secondary/40 px-6 py-3.5 flex items-center justify-between gap-4 shrink-0 rounded-b-2xl">
+          {/* Bottom Action Toolbar */}
+          <div className="flex items-center gap-1.5">
+            {/* UTM Button */}
+            <button
+              type="button"
+              onClick={() => setIsUtmModalOpen(true)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                activeUtmCount > 0
+                  ? 'bg-primary/10 text-primary border-primary/30 font-semibold shadow-sm'
+                  : 'bg-background hover:bg-secondary border-border text-foreground hover:border-border/80'
+              }`}
+              title="UTM Builder & Tracking Parameters"
+            >
+              <CornerDownRight className="w-3.5 h-3.5" />
+              <span>UTM</span>
+              {activeUtmCount > 0 && (
+                <span className="inline-flex items-center justify-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-primary text-primary-foreground">
+                  {activeUtmCount}
+                </span>
+              )}
+            </button>
+          </div>
+
           <div>
             <button 
               type="submit" 
@@ -1092,6 +1174,20 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
           hash={customAlias || undefined}
           initialConfig={qrConfig}
           onSave={setQrConfig}
+        />
+      )}
+
+      {/* UTM Tracking Modal */}
+      {isUtmModalOpen && (
+        <UtmModal
+          isOpen={isUtmModalOpen}
+          onClose={() => setIsUtmModalOpen(false)}
+          baseUrl={baseDestinationUrl || parseUrlUtms(longUrl).baseUrl || longUrl}
+          initialUtms={utms}
+          initialCustomParams={customParams}
+          onSave={(newUtms, newCustomParams) => {
+            handleUtmBuilderChange(newUtms, newCustomParams);
+          }}
         />
       )}
     </AnimatePresence>
