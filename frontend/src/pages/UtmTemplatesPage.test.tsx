@@ -106,4 +106,26 @@ describe('UtmTemplatesPage', () => {
       expect(deleteSpy).toHaveBeenCalledWith('template-1');
     }
   });
+
+  it('handles duplicate template action and pre-fills modal with copy name', async () => {
+    render(
+      <MemoryRouter>
+        <UtmTemplatesPage />
+      </MemoryRouter>
+    );
+
+    const moreButtons = screen.getAllByRole('button');
+    const menuBtn = moreButtons.find((b) => b.querySelector('svg.lucide-ellipsis-vertical'));
+    if (menuBtn) {
+      fireEvent.click(menuBtn);
+      const duplicateOption = screen.getByText('Duplicate');
+      fireEvent.click(duplicateOption);
+
+      expect(screen.getByText('Duplicate UTM Template')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Google Search Ads (Copy)')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('google')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('cpc')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('spring_sale')).toBeInTheDocument();
+    }
+  });
 });

@@ -27,6 +27,7 @@ import toast from 'react-hot-toast';
 interface UtmTemplateModalProps {
   isOpen: boolean;
   templateToEdit?: UtmTemplate | null;
+  templateToDuplicate?: UtmTemplate | null;
   onClose: () => void;
   onSuccess: (updatedTemplates: UtmTemplate[]) => void;
 }
@@ -34,6 +35,7 @@ interface UtmTemplateModalProps {
 export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
   isOpen,
   templateToEdit,
+  templateToDuplicate,
   onClose,
   onSuccess,
 }) => {
@@ -60,6 +62,16 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
             value: cp.value,
           }))
         );
+      } else if (templateToDuplicate) {
+        setName(`${templateToDuplicate.name} (Copy)`);
+        setUtms({ ...templateToDuplicate.utms });
+        setCustomParams(
+          (templateToDuplicate.customParams || []).map((cp) => ({
+            id: Math.random().toString(36).substring(2, 9),
+            key: cp.key,
+            value: cp.value,
+          }))
+        );
       } else {
         setName('');
         setUtms({
@@ -73,7 +85,7 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
         setCustomParams([]);
       }
     }
-  }, [isOpen, templateToEdit]);
+  }, [isOpen, templateToEdit, templateToDuplicate]);
 
   if (!isOpen) return null;
 
@@ -111,7 +123,7 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
         toast.success('Template updated');
       } else {
         await createUtmTemplateApi(name, utms, customParams);
-        toast.success('Template created');
+        toast.success(templateToDuplicate ? 'Template duplicated' : 'Template created');
       }
       const updated = await fetchUtmTemplatesApi();
       onSuccess(updated);
@@ -123,7 +135,7 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
         toast.success('Template updated');
       } else {
         fallback = saveUtmTemplate(name, utms, customParams);
-        toast.success('Template created');
+        toast.success(templateToDuplicate ? 'Template duplicated' : 'Template created');
       }
       onSuccess(fallback);
       onClose();
@@ -143,7 +155,11 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-foreground">
-              {templateToEdit ? 'Edit UTM Template' : 'Create UTM Template'}
+              {templateToEdit
+                ? 'Edit UTM Template'
+                : templateToDuplicate
+                  ? 'Duplicate UTM Template'
+                  : 'Create UTM Template'}
             </h2>
             <button
               type="button"

@@ -32,6 +32,7 @@ export type DashboardLayoutContext = {
   setFolderToEdit: React.Dispatch<React.SetStateAction<any | null>>;
   setTagToEdit: React.Dispatch<React.SetStateAction<any | null>>;
   setUtmTemplateToEdit: React.Dispatch<React.SetStateAction<UtmTemplate | null>>;
+  setUtmTemplateToDuplicate: React.Dispatch<React.SetStateAction<UtmTemplate | null>>;
   isTagsLoading: boolean;
   isFoldersLoading: boolean;
   navStats: { totalClicks: number; linkCount: number };
@@ -53,6 +54,7 @@ const DashboardLayout: React.FC = () => {
   const [folderToEdit, setFolderToEdit] = useState<any | null>(null);
   const [tagToEdit, setTagToEdit] = useState<any | null>(null);
   const [utmTemplateToEdit, setUtmTemplateToEdit] = useState<UtmTemplate | null>(null);
+  const [utmTemplateToDuplicate, setUtmTemplateToDuplicate] = useState<UtmTemplate | null>(null);
 
   const [tags, setTags] = useState<Tag[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -656,6 +658,7 @@ const DashboardLayout: React.FC = () => {
                 setFolderToEdit,
                 setTagToEdit,
                 setUtmTemplateToEdit,
+                setUtmTemplateToDuplicate,
                 isTagsLoading,
                 isFoldersLoading,
                 navStats
@@ -713,13 +716,15 @@ const DashboardLayout: React.FC = () => {
         }}
       />
 
-      {/* ── Create / Edit UTM Template Modal ────────────────────────────── */}
+      {/* ── Create / Edit / Duplicate UTM Template Modal ────────────────────────────── */}
       <UtmTemplateModal
         isOpen={isCreateUtmTemplateModalOpen}
         templateToEdit={utmTemplateToEdit}
+        templateToDuplicate={utmTemplateToDuplicate}
         onClose={() => {
           setIsCreateUtmTemplateModalOpen(false);
           setUtmTemplateToEdit(null);
+          setUtmTemplateToDuplicate(null);
         }}
         onSuccess={(updated) => {
           setTemplates(updated);

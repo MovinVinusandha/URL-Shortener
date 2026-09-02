@@ -5,6 +5,7 @@ import {
   Trash2,
   SlidersHorizontal,
   Pen,
+  Copy,
   Plus,
   CornerDownRight,
   Globe,
@@ -30,12 +31,14 @@ export const UtmTemplatesPage: React.FC = () => {
   const outletCtx = useOutletContext<DashboardLayoutContext | undefined>();
   const [localTemplates, setLocalTemplates] = useState<UtmTemplate[]>([]);
   const [localTemplateToEdit, setLocalTemplateToEdit] = useState<UtmTemplate | null>(null);
+  const [localTemplateToDuplicate, setLocalTemplateToDuplicate] = useState<UtmTemplate | null>(null);
   const [isLocalModalOpen, setIsLocalModalOpen] = useState(false);
 
   const templates = outletCtx?.templates ?? localTemplates;
   const setTemplates = outletCtx?.setTemplates ?? setLocalTemplates;
   const setIsCreateUtmTemplateModalOpen = outletCtx?.setIsCreateUtmTemplateModalOpen;
   const setUtmTemplateToEdit = outletCtx?.setUtmTemplateToEdit;
+  const setUtmTemplateToDuplicate = outletCtx?.setUtmTemplateToDuplicate;
 
   const [search, setSearch] = useState('');
   const [openMenuId, setOpenMenuId] = useState<string | number | null>(null);
@@ -79,21 +82,37 @@ export const UtmTemplatesPage: React.FC = () => {
   };
 
   const handleOpenCreate = () => {
-    if (setIsCreateUtmTemplateModalOpen && setUtmTemplateToEdit) {
-      setUtmTemplateToEdit(null);
+    if (setIsCreateUtmTemplateModalOpen) {
+      if (setUtmTemplateToEdit) setUtmTemplateToEdit(null);
+      if (setUtmTemplateToDuplicate) setUtmTemplateToDuplicate(null);
       setIsCreateUtmTemplateModalOpen(true);
     } else {
       setLocalTemplateToEdit(null);
+      setLocalTemplateToDuplicate(null);
       setIsLocalModalOpen(true);
     }
   };
 
   const handleOpenEdit = (template: UtmTemplate) => {
-    if (setIsCreateUtmTemplateModalOpen && setUtmTemplateToEdit) {
-      setUtmTemplateToEdit(template);
+    if (setIsCreateUtmTemplateModalOpen) {
+      if (setUtmTemplateToDuplicate) setUtmTemplateToDuplicate(null);
+      if (setUtmTemplateToEdit) setUtmTemplateToEdit(template);
       setIsCreateUtmTemplateModalOpen(true);
     } else {
+      setLocalTemplateToDuplicate(null);
       setLocalTemplateToEdit(template);
+      setIsLocalModalOpen(true);
+    }
+  };
+
+  const handleOpenDuplicate = (template: UtmTemplate) => {
+    if (setIsCreateUtmTemplateModalOpen) {
+      if (setUtmTemplateToEdit) setUtmTemplateToEdit(null);
+      if (setUtmTemplateToDuplicate) setUtmTemplateToDuplicate(template);
+      setIsCreateUtmTemplateModalOpen(true);
+    } else {
+      setLocalTemplateToEdit(null);
+      setLocalTemplateToDuplicate(template);
       setIsLocalModalOpen(true);
     }
   };
@@ -236,6 +255,18 @@ export const UtmTemplatesPage: React.FC = () => {
                             onClick={(e) => {
                               e.stopPropagation();
                               setOpenMenuId(null);
+                              handleOpenDuplicate(template);
+                            }}
+                            className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground rounded-lg transition-colors w-full text-left cursor-pointer"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Duplicate</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(null);
                               setTemplateToDelete(template);
                             }}
                             className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors w-full text-left cursor-pointer"
@@ -297,9 +328,11 @@ export const UtmTemplatesPage: React.FC = () => {
         <UtmTemplateModal
           isOpen={isLocalModalOpen}
           templateToEdit={localTemplateToEdit}
+          templateToDuplicate={localTemplateToDuplicate}
           onClose={() => {
             setIsLocalModalOpen(false);
             setLocalTemplateToEdit(null);
+            setLocalTemplateToDuplicate(null);
           }}
           onSuccess={(updated) => setTemplates(updated)}
         />

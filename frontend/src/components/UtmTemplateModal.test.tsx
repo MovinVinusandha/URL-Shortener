@@ -118,4 +118,67 @@ describe('UtmTemplateModal', () => {
       expect(mockOnClose).toHaveBeenCalled();
     });
   });
+
+  it('renders duplicate modal with "(Copy)" suffix and saves as new template', async () => {
+    const createSpy = vi.spyOn(utmUtils, 'createUtmTemplateApi').mockResolvedValue({
+      id: 'template-new',
+      name: 'Google Ads (Copy)',
+      utms: {
+        source: 'google',
+        medium: 'cpc',
+        campaign: 'spring_sale',
+        term: '',
+        content: '',
+        ref: '',
+      },
+      createdAt: 1725177600000,
+    });
+    vi.spyOn(utmUtils, 'fetchUtmTemplatesApi').mockResolvedValue([]);
+
+    const templateToDuplicate: utmUtils.UtmTemplate = {
+      id: 'template-orig',
+      name: 'Google Ads',
+      utms: {
+        source: 'google',
+        medium: 'cpc',
+        campaign: 'spring_sale',
+        term: '',
+        content: '',
+        ref: '',
+      },
+      createdAt: 1725177600000,
+    };
+
+    render(
+      <UtmTemplateModal
+        isOpen={true}
+        templateToDuplicate={templateToDuplicate}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />
+    );
+
+    expect(screen.getByText('Duplicate UTM Template')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Google Ads (Copy)')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('google')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('cpc')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('spring_sale')).toBeInTheDocument();
+
+    const submitBtn = screen.getByRole('button', { name: 'Create Template' });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(createSpy).toHaveBeenCalledWith(
+        'Google Ads (Copy)',
+        expect.objectContaining({
+          source: 'google',
+          medium: 'cpc',
+          campaign: 'spring_sale',
+        }),
+        []
+      );
+      expect(mockOnSuccess).toHaveBeenCalled();
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+  });
 });
