@@ -11,6 +11,9 @@ import {
   Globe,
   Radio,
   Flag,
+  FileText,
+  Gift,
+  Sparkles,
   Star,
 } from 'lucide-react';
 import {
@@ -133,6 +136,71 @@ export const UtmTemplatesPage: React.FC = () => {
     }
   };
 
+  const getTemplateParams = (template: UtmTemplate) => {
+    const list: { key: string; label: string; value: string; icon: React.ReactNode }[] = [];
+    if (template.utms.source) {
+      list.push({
+        key: 'source',
+        label: 'Source',
+        value: template.utms.source,
+        icon: <Globe className="w-2.5 h-2.5 shrink-0" />,
+      });
+    }
+    if (template.utms.medium) {
+      list.push({
+        key: 'medium',
+        label: 'Medium',
+        value: template.utms.medium,
+        icon: <Radio className="w-2.5 h-2.5 shrink-0" />,
+      });
+    }
+    if (template.utms.campaign) {
+      list.push({
+        key: 'campaign',
+        label: 'Campaign',
+        value: template.utms.campaign,
+        icon: <Flag className="w-2.5 h-2.5 shrink-0" />,
+      });
+    }
+    if (template.utms.term) {
+      list.push({
+        key: 'term',
+        label: 'Term',
+        value: template.utms.term,
+        icon: <Search className="w-2.5 h-2.5 shrink-0" />,
+      });
+    }
+    if (template.utms.content) {
+      list.push({
+        key: 'content',
+        label: 'Content',
+        value: template.utms.content,
+        icon: <FileText className="w-2.5 h-2.5 shrink-0" />,
+      });
+    }
+    if (template.utms.ref) {
+      list.push({
+        key: 'ref',
+        label: 'Referral',
+        value: template.utms.ref,
+        icon: <Gift className="w-2.5 h-2.5 shrink-0" />,
+      });
+    }
+    if (template.customParams && template.customParams.length > 0) {
+      template.customParams.forEach((cp, idx) => {
+        if (cp.key && cp.key.trim()) {
+          list.push({
+            key: `custom_${idx}_${cp.key}`,
+            label: cp.key,
+            value: cp.value ? `${cp.key}=${cp.value}` : cp.key,
+            icon: <Sparkles className="w-2.5 h-2.5 shrink-0" />,
+          });
+        }
+      });
+    }
+    return list;
+  };
+
   const filteredTemplates = templates.filter((t) =>
     t.name.toLowerCase().includes(search.toLowerCase()) ||
     t.utms.source.toLowerCase().includes(search.toLowerCase()) ||
@@ -184,9 +252,16 @@ export const UtmTemplatesPage: React.FC = () => {
           </div>
         ) : (
           filteredTemplates.map((template) => {
-            const hasSource = Boolean(template.utms.source);
-            const hasMedium = Boolean(template.utms.medium);
-            const hasCampaign = Boolean(template.utms.campaign);
+            const paramsList = getTemplateParams(template);
+            const visibleParams = paramsList.slice(0, 3);
+            const remainingCount = paramsList.length - 3;
+            const remainingTooltip =
+              remainingCount > 0
+                ? paramsList
+                    .slice(3)
+                    .map((p) => `${p.label}: ${p.value}`)
+                    .join(', ')
+                : undefined;
 
             return (
               <motion.div
@@ -204,24 +279,24 @@ export const UtmTemplatesPage: React.FC = () => {
                     <span className="font-semibold text-foreground truncate">{template.name}</span>
                   </div>
 
-                  {/* Parameter Tags Preview */}
+                  {/* Parameter Tags Preview (Max 3, +count for extra) */}
                   <div className="hidden sm:flex items-center gap-1.5 overflow-x-auto text-[11px] text-muted-foreground">
-                    {hasSource && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary border border-border">
-                        <Globe className="w-2.5 h-2.5" />
-                        <span>{template.utms.source}</span>
+                    {visibleParams.map((param) => (
+                      <span
+                        key={param.key}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary border border-border shrink-0"
+                        title={`${param.label}: ${param.value}`}
+                      >
+                        {param.icon}
+                        <span className="truncate max-w-[120px]">{param.value}</span>
                       </span>
-                    )}
-                    {hasMedium && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary border border-border">
-                        <Radio className="w-2.5 h-2.5" />
-                        <span>{template.utms.medium}</span>
-                      </span>
-                    )}
-                    {hasCampaign && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary border border-border">
-                        <Flag className="w-2.5 h-2.5" />
-                        <span>{template.utms.campaign}</span>
+                    ))}
+                    {remainingCount > 0 && (
+                      <span
+                        className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-secondary/80 border border-border text-[10px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-default shrink-0"
+                        title={remainingTooltip}
+                      >
+                        +{remainingCount}
                       </span>
                     )}
                   </div>

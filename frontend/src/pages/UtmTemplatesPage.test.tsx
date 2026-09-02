@@ -163,4 +163,37 @@ describe('UtmTemplatesPage', () => {
       expect(toggleSpy).toHaveBeenCalledWith('template-1');
     }
   });
+
+  it('renders a maximum of 3 parameter badges and a "+(more count)" badge for remaining parameters', () => {
+    const multiParamTemplate: utmUtils.UtmTemplate = {
+      id: 'template-multi',
+      name: 'Omnichannel Campaign',
+      utms: {
+        source: 'facebook',
+        medium: 'cpc',
+        campaign: 'black_friday',
+        term: 'discounts',
+        content: 'banner_ad',
+        ref: 'partner123',
+      },
+      customParams: [{ key: 'affiliate', value: 'partner_pro' }],
+      createdAt: 1725177600000,
+    };
+
+    vi.spyOn(utmUtils, 'getSavedUtmTemplates').mockReturnValue([multiParamTemplate]);
+
+    render(
+      <MemoryRouter>
+        <UtmTemplatesPage />
+      </MemoryRouter>
+    );
+
+    // First 3 should be visible: source (facebook), medium (cpc), campaign (black_friday)
+    expect(screen.getByText('facebook')).toBeInTheDocument();
+    expect(screen.getByText('cpc')).toBeInTheDocument();
+    expect(screen.getByText('black_friday')).toBeInTheDocument();
+
+    // 4 remaining params (term, content, ref, customParam) -> should show +4
+    expect(screen.getByText('+4')).toBeInTheDocument();
+  });
 });
