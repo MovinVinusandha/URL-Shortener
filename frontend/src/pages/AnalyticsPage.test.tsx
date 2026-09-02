@@ -30,7 +30,7 @@ vi.mock('react-router-dom', async () => {
         { id: 2, name: 'Marketing', slug: 'marketing' },
       ],
       tags: [
-        { id: 10, name: 'Campaign', color: 'blue' },
+        { id: 10, name: 'BrandTag', color: 'blue' },
         { id: 20, name: 'Social', color: 'green' },
       ],
       activeFolderId: null,
@@ -72,7 +72,7 @@ describe('AnalyticsPage', () => {
       if (url === '/url/all') {
         return Promise.resolve({
           data: [
-            { id: 1, shortUrl: 'http://localhost:8080/xyz789', longUrl: 'https://example.com/target', accessed_times: 15, tags: [{ id: 10, name: 'Campaign' }], folderId: 1 },
+            { id: 1, shortUrl: 'http://localhost:8080/xyz789', longUrl: 'https://example.com/target', accessed_times: 15, tags: [{ id: 10, name: 'BrandTag' }], folderId: 1 },
           ],
         });
       }
@@ -86,6 +86,9 @@ describe('AnalyticsPage', () => {
           clicksByCountry: [{ country: 'US', count: 100 }, { country: 'GB', count: 50 }],
           clicksByDevice: [{ device: 'Desktop', count: 80 }, { device: 'Mobile', count: 40 }],
           clicksByBrowser: [{ browser: 'Chrome', count: 90 }, { browser: 'Safari', count: 30 }],
+          clicksByUtmCampaign: [{ name: 'summer_promo', count: 42 }],
+          clicksByUtmSource: [{ name: 'twitter', count: 25 }],
+          clicksByReferer: [{ name: 't.co', count: 18 }],
         },
       });
     });
@@ -125,7 +128,7 @@ describe('AnalyticsPage', () => {
       expect(screen.getAllByText('0').length).toBeGreaterThan(0);
     });
 
-    expect(screen.getAllByText('No data').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/No country data|No data/i).length).toBeGreaterThan(0);
   });
 
   it('renders custom link pill and allows clearing link filter', async () => {
@@ -175,8 +178,8 @@ describe('AnalyticsPage', () => {
     expect(screen.getByPlaceholderText('Tag...')).toBeInTheDocument();
 
     // Search inside tag popover
-    fireEvent.change(screen.getByPlaceholderText('Tag...'), { target: { value: 'Camp' } });
-    expect(screen.getByText('Campaign')).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText('Tag...'), { target: { value: 'Brand' } });
+    expect(screen.getByText('BrandTag')).toBeInTheDocument();
 
     // Toggle checkbox
     const checkboxes = document.querySelectorAll('input[type="checkbox"]');
@@ -312,7 +315,7 @@ describe('AnalyticsPage', () => {
     render(<MemoryRouter><AnalyticsPage /></MemoryRouter>);
 
     await waitFor(() => {
-      expect(screen.getByText('Campaign')).toBeInTheDocument();
+      expect(screen.getByText('BrandTag')).toBeInTheDocument();
     });
   });
 
@@ -365,5 +368,24 @@ describe('AnalyticsPage', () => {
     const timelineBtn = screen.getByRole('button', { name: /Timeline/i });
     fireEvent.click(timelineBtn);
     expect(screen.getByText('Traffic Velocity Timeline')).toBeInTheDocument();
+  });
+
+  it('renders UTM Campaign Performance breakdown and allows tab switching', async () => {
+    render(<MemoryRouter><AnalyticsPage /></MemoryRouter>);
+
+    await waitFor(() => {
+      expect(screen.getByText('Campaign Performance')).toBeInTheDocument();
+      expect(screen.getByText('twitter')).toBeInTheDocument();
+    });
+
+    // Switch to Campaign tab
+    const campaignTab = screen.getByRole('button', { name: 'Campaign' });
+    fireEvent.click(campaignTab);
+    expect(screen.getByText('summer_promo')).toBeInTheDocument();
+
+    // Switch to Referral tab
+    const refTab = screen.getByRole('button', { name: /Referral|Referrer/i });
+    fireEvent.click(refTab);
+    expect(screen.getAllByText('t.co').length).toBeGreaterThan(0);
   });
 });

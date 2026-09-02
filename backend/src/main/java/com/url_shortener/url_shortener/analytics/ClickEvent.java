@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
  * Each record stores enriched metadata parsed from the HTTP request:
  * - Device class, browser, and OS from the User-Agent header (via YAUAA)
  * - Geographic data from the client IP address
+ * - UTM parameters and Referer
  * <p>
  * Persisted asynchronously on the {@code analyticsExecutor} thread pool
  * so redirect response time is never blocked by this write.
@@ -24,7 +25,10 @@ import java.time.LocalDateTime;
 @Setter
 @Table(name = "click_events", indexes = {
         @Index(name = "idx_click_events_url_id", columnList = "url_id"),
-        @Index(name = "idx_click_events_timestamp", columnList = "timestamp")
+        @Index(name = "idx_click_events_timestamp", columnList = "timestamp"),
+        @Index(name = "idx_click_events_utm_source", columnList = "utm_source"),
+        @Index(name = "idx_click_events_utm_medium", columnList = "utm_medium"),
+        @Index(name = "idx_click_events_utm_campaign", columnList = "utm_campaign")
 })
 public class ClickEvent {
 
@@ -76,6 +80,26 @@ public class ClickEvent {
     /** Continent name (e.g., "Asia", "Europe", "North America"). */
     @Column(name = "continent", length = 50)
     private String continent;
+
+    // ── UTM Campaign Tracking ────────────────────────────────────────────────
+
+    @Column(name = "utm_source", length = 150)
+    private String utmSource;
+
+    @Column(name = "utm_medium", length = 150)
+    private String utmMedium;
+
+    @Column(name = "utm_campaign", length = 150)
+    private String utmCampaign;
+
+    @Column(name = "utm_term", length = 150)
+    private String utmTerm;
+
+    @Column(name = "utm_content", length = 150)
+    private String utmContent;
+
+    @Column(name = "referer", length = 255)
+    private String referer;
 
     // ── Network ───────────────────────────────────────────────────────────────
 

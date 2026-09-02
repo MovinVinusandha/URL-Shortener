@@ -16,6 +16,9 @@ import org.springframework.beans.factory.annotation.Value;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -63,7 +66,16 @@ public class UrlController {
             // Fire async click tracking — does not block the redirect response
             String userAgent = request.getHeader("User-Agent");
             String clientIp  = resolveClientIp(request);
-            analyticsService.trackClick(hash, userAgent, clientIp);
+            String referer   = request.getHeader("Referer");
+            Map<String, String> queryParams = extractQueryParams(request);
+
+            analyticsService.trackClick(hash, userAgent, clientIp, referer, queryParams);
+
+            // Query parameter pass-through: append any dynamic query params to destination
+            if (request.getQueryString() != null && !request.getQueryString().isBlank()) {
+                String separator = longUrl.contains("?") ? "&" : "?";
+                longUrl = longUrl + separator + request.getQueryString();
+            }
 
             HttpHeaders headers = new HttpHeaders();
             headers.add("Location", longUrl);
@@ -91,9 +103,24 @@ public class UrlController {
 
         String userAgent = request.getHeader("User-Agent");
         String clientIp  = resolveClientIp(request);
-        analyticsService.trackClick(hash, userAgent, clientIp);
+        String referer   = request.getHeader("Referer");
+        Map<String, String> queryParams = extractQueryParams(request);
+
+        analyticsService.trackClick(hash, userAgent, clientIp, referer, queryParams);
 
         return ResponseEntity.ok(new UnlockResponse(longUrl));
+    }
+
+    private Map<String, String> extractQueryParams(HttpServletRequest request) {
+        Map<String, String> queryParams = new HashMap<>();
+        if (request.getParameterMap() != null) {
+            for (Map.Entry<String, String[]> entry : request.getParameterMap().entrySet()) {
+                if (entry.getValue() != null && entry.getValue().length > 0) {
+                    queryParams.put(entry.getKey(), entry.getValue()[0]);
+                }
+            }
+        }
+        return queryParams;
     }
 
     @GetMapping("/url/{hash}")
@@ -138,41 +165,25 @@ public class UrlController {
 
     @GetMapping("/url/{hash}/qr")
     @Operation(summary = "Generate a QR code for a short url")
-    public ResponseEntity<byte[]> getQrCode(@PathVariable String hash) {
-        var urlDto = urlService.getUrl(hash);
-        String fullShortUrl = urlDto.getShortUrl();
-        byte[] qrCodeImage = qrCodeService.generateQrCode(fullShortUrl, 300, 300);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.IMAGE_PNG);
-        return new ResponseEntity<>(qrCodeImage, headers, HttpStatus.OK);
+    public ResponseEntity<byte[]> getQrCode(
+            @PathVariable String hash,
+            @RequestParam(defaultValue = "300") int size
+    ) {
+        byte[] imageBytes = qrCodeService.generateQrCode(hash, size, size);
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .body(imageBytes);
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
-
-    /**
-     * Resolves the real client IP address, accounting for reverse proxies (e.g., Nginx).
-     * <p>
-     * Priority order:
-     * <ol>
-     *   <li>{@code X-Forwarded-For} header — set by Nginx/load balancer (first IP in list)</li>
-     *   <li>{@code X-Real-IP} header — alternative proxy header</li>
-     *   <li>{@code request.getRemoteAddr()} — direct connection fallback</li>
-     * </ol>
-     */
     private String resolveClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            // X-Forwarded-For can be a comma-separated list: "client, proxy1, proxy2"
-            // The first entry is always the original client IP
-            return xff.split(",")[0].trim();
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isBlank()) {
+            return xForwardedFor.split(",")[0].trim();
         }
-
         String xRealIp = request.getHeader("X-Real-IP");
         if (xRealIp != null && !xRealIp.isBlank()) {
             return xRealIp.trim();
         }
-
         return request.getRemoteAddr();
     }
 }

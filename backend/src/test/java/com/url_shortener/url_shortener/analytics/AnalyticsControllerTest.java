@@ -40,7 +40,19 @@ class AnalyticsControllerTest {
         User currentUser = User.builder().id(1L).build();
         when(userRepository.findById(1L)).thenReturn(Optional.of(currentUser));
 
-        AnalyticsResponseDto responseDto = new AnalyticsResponseDto(100L, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+        AnalyticsResponseDto responseDto = AnalyticsResponseDto.builder()
+                .totalClicks(100L)
+                .clicksByDate(Collections.emptyList())
+                .clicksByCountry(Collections.emptyList())
+                .clicksByDevice(Collections.emptyList())
+                .clicksByBrowser(Collections.emptyList())
+                .clicksByUtmSource(Collections.emptyList())
+                .clicksByUtmMedium(Collections.emptyList())
+                .clicksByUtmCampaign(Collections.emptyList())
+                .clicksByUtmTerm(Collections.emptyList())
+                .clicksByUtmContent(Collections.emptyList())
+                .clicksByReferer(Collections.emptyList())
+                .build();
         when(analyticsService.getAnalytics(eq("hash123"), eq(currentUser), eq("all"), eq(null), eq(null))).thenReturn(responseDto);
 
         mockMvc.perform(get("/analytics/hash123")
@@ -54,7 +66,19 @@ class AnalyticsControllerTest {
         User currentUser = User.builder().id(1L).build();
         when(userRepository.findById(1L)).thenReturn(Optional.of(currentUser));
 
-        AnalyticsResponseDto responseDto = new AnalyticsResponseDto(500L, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+        AnalyticsResponseDto responseDto = AnalyticsResponseDto.builder()
+                .totalClicks(500L)
+                .clicksByDate(Collections.emptyList())
+                .clicksByCountry(Collections.emptyList())
+                .clicksByDevice(Collections.emptyList())
+                .clicksByBrowser(Collections.emptyList())
+                .clicksByUtmSource(Collections.emptyList())
+                .clicksByUtmMedium(Collections.emptyList())
+                .clicksByUtmCampaign(Collections.emptyList())
+                .clicksByUtmTerm(Collections.emptyList())
+                .clicksByUtmContent(Collections.emptyList())
+                .clicksByReferer(Collections.emptyList())
+                .build();
         when(analyticsService.getOverallAnalytics(eq(currentUser), eq("7d"), eq(null), eq(null), eq(null), eq(null), eq(null))).thenReturn(responseDto);
 
         mockMvc.perform(get("/analytics")
@@ -69,7 +93,19 @@ class AnalyticsControllerTest {
         User currentUser = User.builder().id(1L).build();
         when(userRepository.findById(1L)).thenReturn(Optional.of(currentUser));
 
-        AnalyticsResponseDto responseDto = new AnalyticsResponseDto(250L, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+        AnalyticsResponseDto responseDto = AnalyticsResponseDto.builder()
+                .totalClicks(250L)
+                .clicksByDate(Collections.emptyList())
+                .clicksByCountry(Collections.emptyList())
+                .clicksByDevice(Collections.emptyList())
+                .clicksByBrowser(Collections.emptyList())
+                .clicksByUtmSource(Collections.emptyList())
+                .clicksByUtmMedium(Collections.emptyList())
+                .clicksByUtmCampaign(Collections.emptyList())
+                .clicksByUtmTerm(Collections.emptyList())
+                .clicksByUtmContent(Collections.emptyList())
+                .clicksByReferer(Collections.emptyList())
+                .build();
         when(analyticsService.getOverallAnalytics(eq(currentUser), eq("30d"), eq(null), eq(null), eq("hash123"), eq(java.util.List.of(1L, 3L)), eq(10L))).thenReturn(responseDto);
 
         mockMvc.perform(get("/analytics")
@@ -87,7 +123,19 @@ class AnalyticsControllerTest {
         User currentUser = User.builder().id(1L).build();
         when(userRepository.findById(1L)).thenReturn(Optional.of(currentUser));
 
-        AnalyticsResponseDto responseDto = new AnalyticsResponseDto(80L, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+        AnalyticsResponseDto responseDto = AnalyticsResponseDto.builder()
+                .totalClicks(80L)
+                .clicksByDate(Collections.emptyList())
+                .clicksByCountry(Collections.emptyList())
+                .clicksByDevice(Collections.emptyList())
+                .clicksByBrowser(Collections.emptyList())
+                .clicksByUtmSource(Collections.emptyList())
+                .clicksByUtmMedium(Collections.emptyList())
+                .clicksByUtmCampaign(Collections.emptyList())
+                .clicksByUtmTerm(Collections.emptyList())
+                .clicksByUtmContent(Collections.emptyList())
+                .clicksByReferer(Collections.emptyList())
+                .build();
         when(analyticsService.getFolderAnalytics(eq(10L), eq(currentUser), eq("all"), eq(null), eq(null))).thenReturn(responseDto);
 
         mockMvc.perform(get("/analytics/folder/10")
@@ -101,7 +149,19 @@ class AnalyticsControllerTest {
         User currentUser = User.builder().id(1L).build();
         when(userRepository.findById(1L)).thenReturn(Optional.of(currentUser));
 
-        AnalyticsResponseDto responseDto = new AnalyticsResponseDto(120L, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+        AnalyticsResponseDto responseDto = AnalyticsResponseDto.builder()
+                .totalClicks(120L)
+                .clicksByDate(Collections.emptyList())
+                .clicksByCountry(Collections.emptyList())
+                .clicksByDevice(Collections.emptyList())
+                .clicksByBrowser(Collections.emptyList())
+                .clicksByUtmSource(Collections.emptyList())
+                .clicksByUtmMedium(Collections.emptyList())
+                .clicksByUtmCampaign(Collections.emptyList())
+                .clicksByUtmTerm(Collections.emptyList())
+                .clicksByUtmContent(Collections.emptyList())
+                .clicksByReferer(Collections.emptyList())
+                .build();
         when(analyticsService.getFolderAnalyticsBySlug(eq("marketing-2026"), eq(currentUser), eq("all"), eq(null), eq(null))).thenReturn(responseDto);
 
         mockMvc.perform(get("/analytics/folder/slug/marketing-2026")

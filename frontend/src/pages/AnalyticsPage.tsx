@@ -11,7 +11,7 @@ import {
   Link as LinkIcon, Activity,
   Share2, Folder as FolderIcon,
   Tag, X, Search, Filter, ChevronDown, ChevronLeft, Check,
-  BarChart2, Layers, Zap
+  BarChart2, Layers, Zap, Target, Radio, FileText, ExternalLink, SlidersHorizontal, Flag, Gift
 } from 'lucide-react';
 import Skeleton from 'react-loading-skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,12 +20,23 @@ import { DateRangePicker } from '../components/DateRangePicker';
 import type { DateRangeValue } from '../components/DateRangePicker';
 import { format, parseISO } from 'date-fns';
 
+export interface UtmDataPoint {
+  name: string;
+  count: number;
+}
+
 interface AnalyticsData {
   totalClicks: number;
   clicksByDate: { date: string; count: number }[];
   clicksByCountry: { country: string; count: number }[];
   clicksByDevice: { device: string; count: number }[];
   clicksByBrowser: { browser: string; count: number }[];
+  clicksByUtmSource?: UtmDataPoint[];
+  clicksByUtmMedium?: UtmDataPoint[];
+  clicksByUtmCampaign?: UtmDataPoint[];
+  clicksByUtmTerm?: UtmDataPoint[];
+  clicksByUtmContent?: UtmDataPoint[];
+  clicksByReferer?: UtmDataPoint[];
 }
 
 const COLORS = ['#0099ff', '#38bdf8', '#818cf8', '#34d399', '#fbbf24', '#f43f5e'];
@@ -127,7 +138,7 @@ const DeviceDonutWheel: React.FC<{
       </div>
 
       {/* Legend list below */}
-      <div className="w-full flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 mt-2 pt-3 border-t border-border/40">
+      <div className="w-full flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 mt-2 pt-3 border-t border-dashed border-border">
         {data.map((device, i) => {
           const pct = Math.round((device.count / deviceTotal) * 100);
           const isHovered = hoveredIndex === i;
@@ -356,11 +367,36 @@ const AnalyticsPage: React.FC = () => {
   type ChartType = 'area' | 'bar' | 'cumulative';
   const [chartType, setChartType] = useState<ChartType>('area');
 
+  type UtmTab = 'campaign' | 'source' | 'medium' | 'term' | 'content' | 'referer';
+  const [activeUtmTab, setActiveUtmTab] = useState<UtmTab>('source');
+
   const totalClicks = data?.totalClicks || 0;
   const clicksByDate = data?.clicksByDate || [];
   const clicksByCountry = data?.clicksByCountry || [];
   const clicksByDevice = data?.clicksByDevice || [];
   const clicksByBrowser = data?.clicksByBrowser || [];
+  const clicksByUtmSource = data?.clicksByUtmSource || [];
+  const clicksByUtmMedium = data?.clicksByUtmMedium || [];
+  const clicksByUtmCampaign = data?.clicksByUtmCampaign || [];
+  const clicksByUtmTerm = data?.clicksByUtmTerm || [];
+  const clicksByUtmContent = data?.clicksByUtmContent || [];
+  const clicksByReferer = data?.clicksByReferer || [];
+
+  const currentUtmList = useMemo(() => {
+    switch (activeUtmTab) {
+      case 'campaign': return clicksByUtmCampaign;
+      case 'source': return clicksByUtmSource;
+      case 'medium': return clicksByUtmMedium;
+      case 'term': return clicksByUtmTerm;
+      case 'content': return clicksByUtmContent;
+      case 'referer': return clicksByReferer;
+      default: return clicksByUtmCampaign;
+    }
+  }, [activeUtmTab, clicksByUtmCampaign, clicksByUtmSource, clicksByUtmMedium, clicksByUtmTerm, clicksByUtmContent, clicksByReferer]);
+
+  const currentUtmTotal = useMemo(() => {
+    return currentUtmList.reduce((acc, item) => acc + item.count, 0) || totalClicks || 1;
+  }, [currentUtmList, totalClicks]);
 
   const chartData = useMemo(() => {
     if (!clicksByDate || clicksByDate.length === 0) return [];
@@ -1354,85 +1390,195 @@ const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Breakdown Grids */}
-        <section className={`grid grid-cols-1 lg:grid-cols-3 gap-6 transition-opacity duration-200 ${isFetching ? 'opacity-75' : 'opacity-100'}`}>
+        <section className={`space-y-6 transition-opacity duration-200 ${isFetching ? 'opacity-75' : 'opacity-100'}`}>
           
-          {/* Countries */}
-          <div className="bg-background border border-border rounded-xl p-0 flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-border flex items-center gap-2">
-              <Globe className="w-4 h-4 text-primary" />
-              <h3 className="font-medium text-xs text-foreground">Top Countries</h3>
-            </div>
-            <div className="flex flex-col flex-1 overflow-y-auto max-h-[300px]">
-              {clicksByCountry.length > 0 ? (
-                clicksByCountry.slice(0, 5).map((country) => {
-                  const pct = totalClicks > 0 ? (country.count / totalClicks) * 100 : 0;
-                  return (
-                    <div key={country.country} className="group flex items-center justify-between p-3 border-b border-border/50 last:border-0 hover:bg-neutral-100/70 dark:hover:bg-[#111114] transition-all relative">
-                      <div className="absolute left-0 top-0 bottom-0 bg-primary/10 z-0 rounded-r-sm transition-all" style={{ width: `${pct}%` }}></div>
-                      <div className="flex items-center gap-3 z-10">
-                        <Globe className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-xs font-medium text-foreground truncate">{country.country}</span>
+          {/* Row 1: Top Countries, Devices, Browsers */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {/* Countries */}
+            <div className="bg-background border border-border rounded-xl p-0 flex flex-col overflow-hidden shadow-xs">
+              <div className="p-4 border-b border-border flex items-center gap-2 bg-secondary/15">
+                <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+                  <Globe className="w-3.5 h-3.5" />
+                </div>
+                <h3 className="font-semibold text-xs text-foreground">Top Countries</h3>
+              </div>
+              <div className="flex flex-col flex-1 overflow-y-auto max-h-[300px]">
+                {clicksByCountry.length > 0 ? (
+                  clicksByCountry.slice(0, 6).map((country) => {
+                    const pct = totalClicks > 0 ? Math.round((country.count / totalClicks) * 100) : 0;
+                    return (
+                      <div key={country.country} className="group flex items-center justify-between p-3 border-b border-dashed border-border last:border-b-0 hover:bg-neutral-100/70 dark:hover:bg-[#111114] transition-all relative">
+                        <div className="absolute left-0 top-0 bottom-0 bg-primary/10 dark:bg-primary/15 z-0 rounded-r-md transition-all" style={{ width: `${Math.min(100, Math.max(pct, 2))}%` }}></div>
+                        <div className="flex items-center gap-2.5 z-10 min-w-0 pr-2">
+                          <Globe className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <span className="text-xs font-medium text-foreground truncate">{country.country}</span>
+                        </div>
+                        <div className="flex items-center gap-2 z-10 shrink-0 font-mono text-xs">
+                          <span className="text-foreground font-semibold">{country.count.toLocaleString()}</span>
+                          <span className="text-[11px] text-muted-foreground">({pct}%)</span>
+                        </div>
                       </div>
-                      <span className="text-xs text-muted-foreground z-10 font-mono">{country.count}</span>
-                    </div>
-                  )
-                })
-              ) : (
-                <div className="flex items-center justify-center p-8 text-xs text-muted-foreground">No data</div>
-              )}
+                    )
+                  })
+                ) : (
+                  <div className="flex items-center justify-center p-8 text-xs text-muted-foreground">No country data</div>
+                )}
+              </div>
             </div>
+
+            {/* Devices */}
+            <div className="bg-background border border-border rounded-xl p-0 flex flex-col overflow-hidden shadow-xs">
+              <div className="p-4 border-b border-border flex items-center justify-between bg-secondary/15">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+                    <Monitor className="w-3.5 h-3.5" />
+                  </div>
+                  <h3 className="font-semibold text-xs text-foreground">Devices</h3>
+                </div>
+                {clicksByDevice.length > 0 && (
+                  <span className="text-[11px] text-muted-foreground font-medium font-mono">
+                    {clicksByDevice.reduce((acc, d) => acc + d.count, 0)} total
+                  </span>
+                )}
+              </div>
+              <div className="p-4 flex-1 flex flex-col justify-center items-center min-h-[220px]">
+                {clicksByDevice.length > 0 ? (
+                  <DeviceDonutWheel data={clicksByDevice} totalClicks={totalClicks} />
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-8 text-center">
+                    <Monitor className="w-6 h-6 text-muted-foreground/40 mb-2" />
+                    <span className="text-xs text-muted-foreground">No device data available</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Browsers */}
+            <div className="bg-background border border-border rounded-xl p-0 flex flex-col overflow-hidden shadow-xs">
+              <div className="p-4 border-b border-border flex items-center gap-2 bg-secondary/15">
+                <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+                  <Activity className="w-3.5 h-3.5" />
+                </div>
+                <h3 className="font-semibold text-xs text-foreground">Browsers</h3>
+              </div>
+              <div className="flex flex-col flex-1 overflow-y-auto max-h-[300px]">
+                {clicksByBrowser.length > 0 ? (
+                  clicksByBrowser.slice(0, 6).map((browser) => {
+                    const pct = totalClicks > 0 ? Math.round((browser.count / totalClicks) * 100) : 0;
+                    return (
+                      <div key={browser.browser} className="group flex items-center justify-between p-3 border-b border-dashed border-border last:border-b-0 hover:bg-neutral-100/70 dark:hover:bg-[#111114] transition-all relative">
+                        <div className="absolute left-0 top-0 bottom-0 bg-primary/10 dark:bg-primary/15 z-0 rounded-r-md transition-all" style={{ width: `${Math.min(100, Math.max(pct, 2))}%` }}></div>
+                        <div className="flex items-center gap-2.5 z-10 min-w-0 pr-2">
+                          <div className="w-5 h-5 bg-secondary border border-border rounded flex items-center justify-center text-[10px] font-bold text-foreground uppercase shrink-0">
+                            {browser.browser.substring(0, 1)}
+                          </div>
+                          <span className="text-xs font-medium text-foreground truncate">{browser.browser}</span>
+                        </div>
+                        <div className="flex items-center gap-2 z-10 shrink-0 font-mono text-xs">
+                          <span className="text-foreground font-semibold">{browser.count.toLocaleString()}</span>
+                          <span className="text-[11px] text-muted-foreground">({pct}%)</span>
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <div className="flex items-center justify-center p-8 text-xs text-muted-foreground">No browser data</div>
+                )}
+              </div>
+            </div>
+
           </div>
 
-          {/* Devices */}
-          <div className="bg-background border border-border rounded-xl p-0 flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-border flex items-center justify-between">
+          {/* Row 2: UTM Campaign Performance (Whole box below) */}
+          <div className="bg-background border border-border rounded-xl p-0 flex flex-col overflow-hidden shadow-xs">
+            {/* Header row */}
+            <div className="p-4 border-b border-border flex items-center justify-between bg-secondary/15">
               <div className="flex items-center gap-2">
-                <Monitor className="w-4 h-4 text-primary" />
-                <h3 className="font-medium text-xs text-foreground">Devices</h3>
+                <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-xs text-foreground">Campaign Performance</h3>
+                  {/* <p className="text-[11px] text-muted-foreground">Traffic breakdown by UTM parameters & referrers</p> */}
+                </div>
               </div>
-              {clicksByDevice.length > 0 && (
-                <span className="text-[11px] text-muted-foreground font-medium">
-                  {clicksByDevice.reduce((acc, d) => acc + d.count, 0)} total
+              {currentUtmList.length > 0 && (
+                <span className="text-[11px] text-muted-foreground font-medium font-mono">
+                  {currentUtmList.reduce((acc, d) => acc + d.count, 0).toLocaleString()} total clicks
                 </span>
               )}
             </div>
-            <div className="p-4 flex-1 flex flex-col justify-center items-center min-h-[220px]">
-              {clicksByDevice.length > 0 ? (
-                <DeviceDonutWheel data={clicksByDevice} totalClicks={totalClicks} />
-              ) : (
-                <div className="flex flex-col items-center justify-center p-8 text-center">
-                  <Monitor className="w-6 h-6 text-muted-foreground/40 mb-2" />
-                  <span className="text-xs text-muted-foreground">No device data available</span>
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* Referrers */}
-          <div className="bg-background border border-border rounded-xl p-0 flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-border flex items-center gap-2">
-              <LinkIcon className="w-4 h-4 text-primary" />
-              <h3 className="font-medium text-xs text-foreground">Referrers</h3>
+            {/* Subheader row: Dedicated Tabs Section directly below Campaign Performance */}
+            <div className="h-12 border-b border-border bg-background px-4 flex items-center overflow-x-auto scrollbar-none gap-1">
+              {[
+                { id: 'source', label: 'Source', icon: Globe },
+                { id: 'medium', label: 'Medium', icon: Radio },
+                { id: 'campaign', label: 'Campaign', icon: Flag },
+                { id: 'term', label: 'Term', icon: Search },
+                { id: 'content', label: 'Content', icon: FileText },
+                { id: 'referer', label: 'Referral', icon: Gift },
+              ].map((tab) => {
+                const isActive = activeUtmTab === tab.id;
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveUtmTab(tab.id as UtmTab)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-xs transition-colors whitespace-nowrap cursor-pointer ${
+                      isActive
+                        ? 'bg-secondary text-foreground font-semibold'
+                        : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="flex flex-col flex-1 overflow-y-auto max-h-[300px]">
-              {clicksByBrowser.length > 0 ? (
-                clicksByBrowser.slice(0, 5).map((browser) => {
-                  const pct = totalClicks > 0 ? (browser.count / totalClicks) * 100 : 0;
+
+            {/* UTM List Content */}
+            <div className="flex flex-col flex-1 overflow-y-auto max-h-[360px] min-h-[220px]">
+              {currentUtmList.length > 0 ? (
+                currentUtmList.slice(0, 10).map((item, idx) => {
+                  const pct = Math.round((item.count / currentUtmTotal) * 100);
                   return (
-                    <div key={browser.browser} className="group flex items-center justify-between p-3 border-b border-border/50 last:border-0 hover:bg-neutral-100/70 dark:hover:bg-[#111114] transition-all relative">
-                      <div className="absolute left-0 top-0 bottom-0 bg-primary/10 z-0 rounded-r-sm transition-all" style={{ width: `${pct}%` }}></div>
-                      <div className="flex items-center gap-3 z-10">
-                        <div className="w-5 h-5 bg-secondary border border-border rounded flex items-center justify-center text-[10px] font-bold text-foreground uppercase">
-                          {browser.browser.substring(0, 1)}
-                        </div>
-                        <span className="text-xs font-medium text-foreground truncate">{browser.browser}</span>
+                    <div
+                      key={item.name + idx}
+                      className="group flex items-center justify-between p-3.5 border-b border-dashed border-border last:border-b-0 hover:bg-neutral-100/70 dark:hover:bg-[#111114] transition-all relative overflow-hidden"
+                    >
+                      <div
+                        className="absolute left-0 top-0 bottom-0 bg-primary/10 dark:bg-primary/15 z-0 rounded-r-md transition-all duration-300"
+                        style={{ width: `${Math.min(100, Math.max(pct, 2))}%` }}
+                      />
+                      <div className="flex items-center gap-3 z-10 min-w-0 pr-2">
+                        <span className="text-[11px] font-mono text-muted-foreground w-5 text-right shrink-0">
+                          {idx + 1}
+                        </span>
+                        <span className="text-xs font-medium text-foreground truncate select-all">
+                          {item.name}
+                        </span>
                       </div>
-                      <span className="text-xs text-muted-foreground z-10 font-mono">{browser.count}</span>
+                      <div className="flex items-center gap-2 z-10 shrink-0 font-mono text-xs">
+                        <span className="text-foreground font-semibold">{item.count.toLocaleString()}</span>
+                        <span className="text-[11px] text-muted-foreground">({pct}%)</span>
+                      </div>
                     </div>
-                  )
+                  );
                 })
               ) : (
-                <div className="flex items-center justify-center p-8 text-xs text-muted-foreground">No data</div>
+                <div className="flex flex-col items-center justify-center p-12 text-center my-auto">
+                  <Target className="w-7 h-7 text-muted-foreground/40 mb-2.5" />
+                  <span className="text-xs text-muted-foreground font-medium">
+                    No {activeUtmTab} data recorded
+                  </span>
+                  <span className="text-[11px] text-muted-foreground/70 mt-1">
+                    Clicks containing {activeUtmTab === 'referer' ? 'referrers' : `utm_${activeUtmTab}`} will appear here
+                  </span>
+                </div>
               )}
             </div>
           </div>

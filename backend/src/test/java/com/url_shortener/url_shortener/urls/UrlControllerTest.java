@@ -118,7 +118,7 @@ class UrlControllerTest {
                 .andExpect(status().isFound())
                 .andExpect(header().string("Location", "https://example.com"));
 
-        verify(analyticsService).trackClick("hash123", "Mozilla/5.0", "203.0.113.195");
+        verify(analyticsService).trackClick(eq("hash123"), eq("Mozilla/5.0"), eq("203.0.113.195"), any(), any());
     }
 
     @Test
@@ -131,7 +131,7 @@ class UrlControllerTest {
                 .andExpect(status().isFound())
                 .andExpect(header().string("Location", "https://example.com"));
 
-        verify(analyticsService).trackClick("hash123", "Mozilla/5.0", "198.51.100.1");
+        verify(analyticsService).trackClick(eq("hash123"), eq("Mozilla/5.0"), eq("198.51.100.1"), any(), any());
     }
 
     @Test
@@ -143,7 +143,7 @@ class UrlControllerTest {
                 .andExpect(status().isFound())
                 .andExpect(header().string("Location", "https://example.com"));
 
-        verify(analyticsService).trackClick(eq("hash123"), eq("Mozilla/5.0"), any());
+        verify(analyticsService).trackClick(eq("hash123"), eq("Mozilla/5.0"), any(), any(), any());
     }
 
     @Test
@@ -176,7 +176,7 @@ class UrlControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.longUrl").value("https://secret-destination.com"));
 
-        verify(analyticsService).trackClick(eq("sec123"), any(), any());
+        verify(analyticsService).trackClick(eq("sec123"), any(), any(), any(), any());
     }
 
     @Test

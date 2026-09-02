@@ -12,6 +12,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.url_shortener.url_shortener.analytics.dto.AnalyticsResponseDto;
@@ -19,20 +20,13 @@ import com.url_shortener.url_shortener.analytics.dto.ClickDataPoint;
 import com.url_shortener.url_shortener.analytics.dto.CountryDataPoint;
 import com.url_shortener.url_shortener.analytics.dto.DeviceDataPoint;
 import com.url_shortener.url_shortener.analytics.dto.BrowserDataPoint;
+import com.url_shortener.url_shortener.analytics.dto.UtmDataPoint;
 import com.url_shortener.url_shortener.users.User;
 import com.url_shortener.url_shortener.users.Role;
 
 /**
  * Asynchronous analytics orchestrator that records a {@link ClickEvent}
  * for every short URL access.
- * <p>
- * All work happens on the {@code analyticsExecutor} thread pool (configured in
- * {@code AsyncConfig}) — the HTTP request thread returns the 302 redirect
- * immediately and does not wait for this method to complete.
- * <p>
- * This service is intentionally defensive: any exception that occurs (DB outage,
- * service failure, etc.) is caught and logged. Analytics failures must never
- * surface as errors to the end user.
  */
 @Service
 @RequiredArgsConstructor
@@ -104,13 +98,26 @@ public class AnalyticsService {
                 .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        return new AnalyticsResponseDto(
-                totalClicks,
-                clicksByDate,
-                clicksByCountry,
-                clicksByDevice,
-                clicksByBrowser
-        );
+        List<UtmDataPoint> clicksByUtmSource = mapToUtmDataPoints(clickEventRepository.countByUtmSourceForUrl(urlId, startDate, endDate));
+        List<UtmDataPoint> clicksByUtmMedium = mapToUtmDataPoints(clickEventRepository.countByUtmMediumForUrl(urlId, startDate, endDate));
+        List<UtmDataPoint> clicksByUtmCampaign = mapToUtmDataPoints(clickEventRepository.countByUtmCampaignForUrl(urlId, startDate, endDate));
+        List<UtmDataPoint> clicksByUtmTerm = mapToUtmDataPoints(clickEventRepository.countByUtmTermForUrl(urlId, startDate, endDate));
+        List<UtmDataPoint> clicksByUtmContent = mapToUtmDataPoints(clickEventRepository.countByUtmContentForUrl(urlId, startDate, endDate));
+        List<UtmDataPoint> clicksByReferer = mapToUtmDataPoints(clickEventRepository.countByRefererForUrl(urlId, startDate, endDate));
+
+        return AnalyticsResponseDto.builder()
+                .totalClicks(totalClicks)
+                .clicksByDate(clicksByDate)
+                .clicksByCountry(clicksByCountry)
+                .clicksByDevice(clicksByDevice)
+                .clicksByBrowser(clicksByBrowser)
+                .clicksByUtmSource(clicksByUtmSource)
+                .clicksByUtmMedium(clicksByUtmMedium)
+                .clicksByUtmCampaign(clicksByUtmCampaign)
+                .clicksByUtmTerm(clicksByUtmTerm)
+                .clicksByUtmContent(clicksByUtmContent)
+                .clicksByReferer(clicksByReferer)
+                .build();
     }
 
     public AnalyticsResponseDto getOverallAnalytics(User currentUser, String period, String startDateStr, String endDateStr, String hash, List<Long> tagIds, Long folderId) {
@@ -157,13 +164,26 @@ public class AnalyticsService {
                 .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        return new AnalyticsResponseDto(
-                totalClicks,
-                clicksByDate,
-                clicksByCountry,
-                clicksByDevice,
-                clicksByBrowser
-        );
+        List<UtmDataPoint> clicksByUtmSource = mapToUtmDataPoints(clickEventRepository.countOverallClicksByUtmSource(userId, startDate, endDate, hash, tagIds, folderId));
+        List<UtmDataPoint> clicksByUtmMedium = mapToUtmDataPoints(clickEventRepository.countOverallClicksByUtmMedium(userId, startDate, endDate, hash, tagIds, folderId));
+        List<UtmDataPoint> clicksByUtmCampaign = mapToUtmDataPoints(clickEventRepository.countOverallClicksByUtmCampaign(userId, startDate, endDate, hash, tagIds, folderId));
+        List<UtmDataPoint> clicksByUtmTerm = mapToUtmDataPoints(clickEventRepository.countOverallClicksByUtmTerm(userId, startDate, endDate, hash, tagIds, folderId));
+        List<UtmDataPoint> clicksByUtmContent = mapToUtmDataPoints(clickEventRepository.countOverallClicksByUtmContent(userId, startDate, endDate, hash, tagIds, folderId));
+        List<UtmDataPoint> clicksByReferer = mapToUtmDataPoints(clickEventRepository.countOverallClicksByReferer(userId, startDate, endDate, hash, tagIds, folderId));
+
+        return AnalyticsResponseDto.builder()
+                .totalClicks(totalClicks)
+                .clicksByDate(clicksByDate)
+                .clicksByCountry(clicksByCountry)
+                .clicksByDevice(clicksByDevice)
+                .clicksByBrowser(clicksByBrowser)
+                .clicksByUtmSource(clicksByUtmSource)
+                .clicksByUtmMedium(clicksByUtmMedium)
+                .clicksByUtmCampaign(clicksByUtmCampaign)
+                .clicksByUtmTerm(clicksByUtmTerm)
+                .clicksByUtmContent(clicksByUtmContent)
+                .clicksByReferer(clicksByReferer)
+                .build();
     }
 
     public AnalyticsResponseDto getFolderAnalyticsBySlug(String slug, User currentUser, String period, String startDateStr, String endDateStr) {
@@ -220,33 +240,43 @@ public class AnalyticsService {
                 .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        return new AnalyticsResponseDto(
-                totalClicks,
-                clicksByDate,
-                clicksByCountry,
-                clicksByDevice,
-                clicksByBrowser
-        );
+        List<UtmDataPoint> clicksByUtmSource = mapToUtmDataPoints(clickEventRepository.countFolderClicksByUtmSource(folderId, userId, startDate, endDate));
+        List<UtmDataPoint> clicksByUtmMedium = mapToUtmDataPoints(clickEventRepository.countFolderClicksByUtmMedium(folderId, userId, startDate, endDate));
+        List<UtmDataPoint> clicksByUtmCampaign = mapToUtmDataPoints(clickEventRepository.countFolderClicksByUtmCampaign(folderId, userId, startDate, endDate));
+        List<UtmDataPoint> clicksByUtmTerm = mapToUtmDataPoints(clickEventRepository.countFolderClicksByUtmTerm(folderId, userId, startDate, endDate));
+        List<UtmDataPoint> clicksByUtmContent = mapToUtmDataPoints(clickEventRepository.countFolderClicksByUtmContent(folderId, userId, startDate, endDate));
+        List<UtmDataPoint> clicksByReferer = mapToUtmDataPoints(clickEventRepository.countFolderClicksByReferer(folderId, userId, startDate, endDate));
+
+        return AnalyticsResponseDto.builder()
+                .totalClicks(totalClicks)
+                .clicksByDate(clicksByDate)
+                .clicksByCountry(clicksByCountry)
+                .clicksByDevice(clicksByDevice)
+                .clicksByBrowser(clicksByBrowser)
+                .clicksByUtmSource(clicksByUtmSource)
+                .clicksByUtmMedium(clicksByUtmMedium)
+                .clicksByUtmCampaign(clicksByUtmCampaign)
+                .clicksByUtmTerm(clicksByUtmTerm)
+                .clicksByUtmContent(clicksByUtmContent)
+                .clicksByReferer(clicksByReferer)
+                .build();
     }
 
-    /**
-     * Records a click event for the given short URL hash asynchronously.
-     * <p>
-     * Execution flow:
-     * <ol>
-     *   <li>Resolve the {@code shortUrlHash} to a {@link com.url_shortener.url_shortener.urls.Url} entity.</li>
-     *   <li>Parse {@code userAgent} → device, browser, OS via {@link UserAgentParserService}.</li>
-     *   <li>Resolve {@code ipAddress} → country, city, region, continent via {@link GeoLocationService}.</li>
-     *   <li>Hash the raw IP (SHA-256, first 16 hex chars) for pseudonymized storage.</li>
-     *   <li>Build and persist the {@link ClickEvent} entity.</li>
-     * </ol>
-     *
-     * @param shortUrlHash the 8-char CRC32 hash identifying the short URL
-     * @param userAgent    raw {@code User-Agent} header value from the HTTP request
-     * @param ipAddress    resolved client IP (already checked for {@code X-Forwarded-For})
-     */
+    private List<UtmDataPoint> mapToUtmDataPoints(List<Object[]> rawList) {
+        if (rawList == null) return List.of();
+        return rawList.stream()
+                .filter(row -> row != null && row.length >= 2 && row[0] != null && !row[0].toString().isBlank())
+                .map(row -> new UtmDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+    }
+
     @Async("analyticsExecutor")
     public void trackClick(String shortUrlHash, String userAgent, String ipAddress) {
+        trackClick(shortUrlHash, userAgent, ipAddress, null, null);
+    }
+
+    @Async("analyticsExecutor")
+    public void trackClick(String shortUrlHash, String userAgent, String ipAddress, String referer, Map<String, String> queryParams) {
         try {
             // 1. Resolve the URL entity — skip tracking if the URL no longer exists
             var url = urlRepository.findByShortUrl(shortUrlHash);
@@ -273,10 +303,22 @@ public class AnalyticsService {
                 geoInfo = new GeoLocationService.GeoInfo("Unknown", "Unknown", "Unknown", "Unknown");
             }
 
-            // 4. Pseudonymize IP (SHA-256, first 16 hex chars = 64-bit prefix)
+            // 4. Extract UTM Parameters & Referrer
+            String longUrl = url.getLongUrl();
+            String utmSource = extractParam(longUrl, queryParams, "utm_source");
+            String utmMedium = extractParam(longUrl, queryParams, "utm_medium");
+            String utmCampaign = extractParam(longUrl, queryParams, "utm_campaign");
+            String utmTerm = extractParam(longUrl, queryParams, "utm_term");
+            String utmContent = extractParam(longUrl, queryParams, "utm_content");
+
+            String resolvedReferer = (referer != null && !referer.isBlank()) 
+                    ? cleanReferer(referer) 
+                    : extractParam(longUrl, queryParams, "ref");
+
+            // 5. Pseudonymize IP (SHA-256, first 16 hex chars = 64-bit prefix)
             String hashedIp = hashIp(ipAddress);
 
-            // 5. Build and persist the ClickEvent
+            // 6. Build and persist the ClickEvent
             ClickEvent event = ClickEvent.builder()
                     .url(url)
                     .timestamp(LocalDateTime.now())
@@ -287,6 +329,12 @@ public class AnalyticsService {
                     .city(geoInfo.city())
                     .region(geoInfo.region())
                     .continent(geoInfo.continent())
+                    .utmSource(utmSource)
+                    .utmMedium(utmMedium)
+                    .utmCampaign(utmCampaign)
+                    .utmTerm(utmTerm)
+                    .utmContent(utmContent)
+                    .referer(resolvedReferer)
                     .ipAddress(hashedIp)
                     .build();
 
@@ -294,19 +342,52 @@ public class AnalyticsService {
 
             // Keep legacy statistic column in sync for any code paths that still read it
             if (url.getStatistic() != null) {
-                // Total clicks count should be from all time for legacy statistic column
                 url.getStatistic().setAccessedTimes(clickEventRepository.countByUrl_Id(url.getId(), LocalDateTime.of(1970, 1, 1, 0, 0), null));
                 urlRepository.save(url);
             }
 
-            log.debug("Click tracked: hash=[{}] device=[{}] browser=[{}] country=[{}] thread=[{}]",
-                    shortUrlHash, deviceInfo.device(), deviceInfo.browser(),
-                    geoInfo.country(), Thread.currentThread().getName());
+            log.debug("Click tracked: hash=[{}] device=[{}] browser=[{}] country=[{}] utm_source=[{}]",
+                    shortUrlHash, deviceInfo.device(), deviceInfo.browser(), geoInfo.country(), utmSource);
 
         } catch (Exception e) {
-            // Deliberately catch-all: analytics failures must never propagate
             log.error("Failed to track click for hash [{}]: {}", shortUrlHash, e.getMessage(), e);
         }
+    }
+
+    private String cleanReferer(String ref) {
+        if (ref == null || ref.isBlank()) return null;
+        try {
+            java.net.URI uri = java.net.URI.create(ref.trim());
+            if (uri.getHost() != null) {
+                return uri.getHost();
+            }
+        } catch (Exception ignored) {}
+        return ref.trim().length() > 255 ? ref.trim().substring(0, 255) : ref.trim();
+    }
+
+    private String extractParam(String longUrl, Map<String, String> queryParams, String key) {
+        if (queryParams != null && queryParams.containsKey(key)) {
+            String val = queryParams.get(key);
+            if (val != null && !val.isBlank()) {
+                return val.trim().length() > 150 ? val.trim().substring(0, 150) : val.trim();
+            }
+        }
+        if (longUrl != null && longUrl.contains("?")) {
+            try {
+                String query = longUrl.substring(longUrl.indexOf('?') + 1);
+                for (String pair : query.split("&")) {
+                    int idx = pair.indexOf('=');
+                    if (idx > 0) {
+                        String k = java.net.URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8);
+                        if (k.equalsIgnoreCase(key)) {
+                            String v = java.net.URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8).trim();
+                            return v.length() > 150 ? v.substring(0, 150) : v;
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        return null;
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -324,6 +405,9 @@ public class AnalyticsService {
     }
 
     private List<ClickDataPoint> fillMissingHours(List<ClickDataPoint> rawData, LocalDateTime startDate, LocalDateTime endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            return rawData;
+        }
         LocalDateTime effectiveStart;
         if (startDate == null || startDate.equals(LocalDateTime.of(1970, 1, 1, 0, 0))) {
             if (rawData.isEmpty()) {
@@ -349,128 +433,123 @@ public class AnalyticsService {
         }
         effectiveEnd = effectiveEnd.truncatedTo(java.time.temporal.ChronoUnit.HOURS);
 
-        if (effectiveStart.isAfter(effectiveEnd)) {
-            return rawData;
-        }
+        Map<String, Long> countMap = rawData.stream()
+                .collect(Collectors.toMap(ClickDataPoint::getDate, ClickDataPoint::getCount, (v1, v2) -> v1));
 
-        java.util.Map<LocalDateTime, Long> hourMap = new java.util.TreeMap<>();
+        List<ClickDataPoint> result = new java.util.ArrayList<>();
         LocalDateTime current = effectiveStart;
+
         while (!current.isAfter(effectiveEnd)) {
-            hourMap.put(current, 0L);
+            String hourKey = String.format("%04d-%02d-%02d %02d:00:00",
+                    current.getYear(),
+                    current.getMonthValue(),
+                    current.getDayOfMonth(),
+                    current.getHour());
+
+            long count = countMap.getOrDefault(hourKey, 0L);
+            result.add(new ClickDataPoint(hourKey, count));
             current = current.plusHours(1);
         }
 
-        for (ClickDataPoint point : rawData) {
-            try {
-                String d = point.getDate().replace(" ", "T");
-                LocalDateTime pointTime;
-                if (d.length() == 10) {
-                    pointTime = java.time.LocalDate.parse(d).atStartOfDay();
-                } else {
-                    pointTime = LocalDateTime.parse(d);
-                }
-                pointTime = pointTime.truncatedTo(java.time.temporal.ChronoUnit.HOURS);
-                hourMap.put(pointTime, hourMap.getOrDefault(pointTime, 0L) + point.getCount());
-            } catch (Exception e) {
-                log.warn("Invalid hour format from rawData: {}", point.getDate());
-            }
-        }
-
-        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:00:00");
-        return hourMap.entrySet().stream()
-                .map(entry -> new ClickDataPoint(entry.getKey().format(formatter), entry.getValue()))
-                .collect(Collectors.toList());
+        return result;
     }
 
     private List<ClickDataPoint> fillMissingDates(List<ClickDataPoint> rawData, LocalDateTime startDate, LocalDateTime endDate) {
-        java.time.LocalDate effectiveStart;
-        if (startDate == null || startDate.equals(LocalDateTime.of(1970, 1, 1, 0, 0))) {
-            if (rawData.isEmpty()) {
-                effectiveStart = java.time.LocalDate.now(java.time.ZoneOffset.UTC).minusDays(30);
-            } else {
-                effectiveStart = java.time.LocalDate.parse(rawData.get(0).getDate());
-            }
-        } else {
-            effectiveStart = startDate.toLocalDate();
-        }
-
-        java.time.LocalDate effectiveEnd;
-        if (endDate == null) {
-            effectiveEnd = java.time.LocalDate.now(java.time.ZoneOffset.UTC);
-        } else {
-            effectiveEnd = endDate.toLocalDate();
-        }
-
-        if (effectiveStart.isAfter(effectiveEnd)) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
             return rawData;
         }
+        LocalDateTime effectiveStart;
+        if (startDate == null || startDate.equals(LocalDateTime.of(1970, 1, 1, 0, 0))) {
+            if (rawData.isEmpty()) {
+                effectiveStart = LocalDateTime.now(java.time.ZoneOffset.UTC).minusDays(30);
+            } else {
+                try {
+                    effectiveStart = java.time.LocalDate.parse(rawData.get(0).getDate()).atStartOfDay();
+                } catch (Exception e) {
+                    effectiveStart = LocalDateTime.now(java.time.ZoneOffset.UTC).minusDays(30);
+                }
+            }
+        } else {
+            effectiveStart = startDate;
+        }
 
-        java.util.Map<java.time.LocalDate, Long> dateMap = new java.util.TreeMap<>();
-        java.time.LocalDate current = effectiveStart;
-        while (!current.isAfter(effectiveEnd)) {
-            dateMap.put(current, 0L);
+        LocalDateTime effectiveEnd;
+        if (endDate == null) {
+            effectiveEnd = LocalDateTime.now(java.time.ZoneOffset.UTC);
+        } else {
+            effectiveEnd = endDate;
+        }
+
+        Map<String, Long> countMap = rawData.stream()
+                .collect(Collectors.toMap(ClickDataPoint::getDate, ClickDataPoint::getCount, (v1, v2) -> v1));
+
+        List<ClickDataPoint> result = new java.util.ArrayList<>();
+        LocalDateTime current = effectiveStart;
+
+        while (!current.toLocalDate().isAfter(effectiveEnd.toLocalDate())) {
+            String dateKey = current.toLocalDate().toString();
+            long count = countMap.getOrDefault(dateKey, 0L);
+            result.add(new ClickDataPoint(dateKey, count));
             current = current.plusDays(1);
         }
 
-        for (ClickDataPoint point : rawData) {
-            try {
-                java.time.LocalDate pointDate = java.time.LocalDate.parse(point.getDate());
-                dateMap.put(pointDate, dateMap.getOrDefault(pointDate, 0L) + point.getCount());
-            } catch (Exception e) {
-                log.warn("Invalid date format from rawData: {}", point.getDate());
-            }
-        }
-
-        return dateMap.entrySet().stream()
-                .map(entry -> new ClickDataPoint(entry.getKey().toString(), entry.getValue()))
-                .collect(Collectors.toList());
+        return result;
     }
-
-    private record DateRange(LocalDateTime start, LocalDateTime end) {}
 
     private DateRange parseDates(String startDateStr, String endDateStr, String period) {
-        if (startDateStr != null && endDateStr != null) {
-            try {
-                return new DateRange(LocalDateTime.parse(startDateStr), LocalDateTime.parse(endDateStr));
-            } catch (Exception e) {
-                log.warn("Failed to parse custom dates: {} - {}", startDateStr, endDateStr);
-            }
+        LocalDateTime now = LocalDateTime.now(java.time.ZoneOffset.UTC);
+
+        if (startDateStr != null && !startDateStr.isBlank()) {
+            LocalDateTime start = parseIsoDateTime(startDateStr, true);
+            LocalDateTime end = (endDateStr != null && !endDateStr.isBlank())
+                    ? parseIsoDateTime(endDateStr, false)
+                    : now;
+            return new DateRange(start, end);
         }
-        return new DateRange(getStartDateFromPeriod(period), null);
+
+        if (period != null) {
+            return switch (period.toLowerCase()) {
+                case "24h" -> new DateRange(now.minusHours(24), now);
+                case "7d"  -> new DateRange(now.minusDays(7),  now);
+                case "30d" -> new DateRange(now.minusDays(30), now);
+                case "90d" -> new DateRange(now.minusDays(90), now);
+                case "all" -> new DateRange(LocalDateTime.of(1970, 1, 1, 0, 0), now);
+                default    -> new DateRange(now.minusDays(30), now);
+            };
+        }
+
+        return new DateRange(now.minusDays(30), now);
     }
 
-    private LocalDateTime getStartDateFromPeriod(String period) {
-        if (period == null) return LocalDateTime.of(1970, 1, 1, 0, 0);
-        return switch (period) {
-            case "24h" -> LocalDateTime.now(java.time.ZoneOffset.UTC).minusDays(1);
-            case "7d" -> LocalDateTime.now(java.time.ZoneOffset.UTC).minusDays(7);
-            case "30d" -> LocalDateTime.now(java.time.ZoneOffset.UTC).minusDays(30);
-            default -> LocalDateTime.of(1970, 1, 1, 0, 0);
-        };
+    private LocalDateTime parseIsoDateTime(String str, boolean isStart) {
+        try {
+            if (str.contains("T")) {
+                return LocalDateTime.parse(str);
+            }
+            java.time.LocalDate date = java.time.LocalDate.parse(str);
+            return isStart ? date.atStartOfDay() : date.atTime(23, 59, 59, 999999999);
+        } catch (Exception e) {
+            log.warn("Could not parse date string '{}', using fallback", str);
+            return isStart ? LocalDateTime.of(1970, 1, 1, 0, 0) : LocalDateTime.now(java.time.ZoneOffset.UTC);
+        }
     }
 
-    /**
-     * Pseudonymizes an IP address using SHA-256, retaining only the first 16
-     * hex characters (64 bits). This provides enough entropy for analytics
-     * deduplication while being irreversible for privacy compliance.
-     *
-     * @param ipAddress raw IP address string
-     * @return 16-char hex string, or {@code "unknown"} if hashing fails
-     */
-    private String hashIp(String ipAddress) {
-        if (ipAddress == null || ipAddress.isBlank()) return "unknown";
+    private String hashIp(String ip) {
+        if (ip == null || ip.isBlank() || "Unknown".equalsIgnoreCase(ip)) {
+            return "0000000000000000";
+        }
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = digest.digest(ipAddress.getBytes(StandardCharsets.UTF_8));
+            byte[] hash = digest.digest(ip.getBytes(StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder();
-            for (byte b : hashBytes) {
-                sb.append(String.format("%02x", b));
+            for (int i = 0; i < 8; i++) {
+                sb.append(String.format("%02x", hash[i]));
             }
-            // Return first 16 hex chars (= 8 bytes = 64 bits of entropy)
-            return sb.substring(0, 16);
+            return sb.toString();
         } catch (NoSuchAlgorithmException e) {
-            log.warn("SHA-256 not available — storing blank IP hash");
-            return "unknown";
+            return "0000000000000000";
         }
     }
+
+    public record DateRange(LocalDateTime start, LocalDateTime end) {}
 }
