@@ -163,6 +163,22 @@ public class UrlController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/url/batch-campaign")
+    @Operation(summary = "Generate multi-channel campaign short urls in batch")
+    public ResponseEntity<BatchCampaignResponseDto> createBatchCampaignUrls(
+            @Valid @RequestBody BatchCampaignRequestDto request
+    ) {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            throw new org.springframework.security.access.AccessDeniedException("You must be logged in to create multi-channel campaign links.");
+        }
+        Long userId = (Long) auth.getPrincipal();
+        var currentUser = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+
+        var response = urlService.createBatchCampaignUrls(request, currentUser);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/url/{hash}/qr")
     @Operation(summary = "Generate a QR code for a short url")
     public ResponseEntity<byte[]> getQrCode(

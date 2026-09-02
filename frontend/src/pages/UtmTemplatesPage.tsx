@@ -15,6 +15,7 @@ import {
   Gift,
   Sparkles,
   Star,
+  Layers,
 } from 'lucide-react';
 import {
   getSavedUtmTemplates,
@@ -26,6 +27,7 @@ import {
   type UtmTemplate,
 } from '../utils/utmUtils';
 import { UtmTemplateModal } from '../components/UtmTemplateModal';
+import { MultiChannelModal } from '../components/MultiChannelModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -39,6 +41,7 @@ export const UtmTemplatesPage: React.FC = () => {
   const [localTemplateToEdit, setLocalTemplateToEdit] = useState<UtmTemplate | null>(null);
   const [localTemplateToDuplicate, setLocalTemplateToDuplicate] = useState<UtmTemplate | null>(null);
   const [isLocalModalOpen, setIsLocalModalOpen] = useState(false);
+  const [isMultiChannelModalOpen, setIsMultiChannelModalOpen] = useState(false);
 
   const templates = outletCtx?.templates ?? localTemplates;
   const setTemplates = outletCtx?.setTemplates ?? setLocalTemplates;
@@ -214,8 +217,8 @@ export const UtmTemplatesPage: React.FC = () => {
       exit={{ opacity: 0 }}
       className="flex-1 py-4 flex flex-col gap-4 w-full"
     >
-      {/* Top Search Bar */}
-      <div className="flex items-center justify-between gap-4">
+      {/* Top Search Bar & Actions */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="relative w-full max-w-md">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -226,6 +229,15 @@ export const UtmTemplatesPage: React.FC = () => {
             className="w-full pl-9 pr-4 py-2 border border-input rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors bg-background text-foreground placeholder:text-muted-foreground"
           />
         </div>
+
+        <button
+          type="button"
+          onClick={() => setIsMultiChannelModalOpen(true)}
+          className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg border border-border bg-background hover:bg-secondary text-foreground text-xs font-medium transition-all cursor-pointer shadow-xs"
+        >
+          <Layers className="w-4 h-4 text-muted-foreground" />
+          <span>Multi-Channel Campaign</span>
+        </button>
       </div>
 
       {/* Templates List */}
@@ -445,6 +457,18 @@ export const UtmTemplatesPage: React.FC = () => {
             setLocalTemplateToDuplicate(null);
           }}
           onSuccess={(updated) => setTemplates(updated)}
+        />
+      )}
+
+      {/* Multi-Channel Batch Modal */}
+      {isMultiChannelModalOpen && (
+        <MultiChannelModal
+          isOpen={isMultiChannelModalOpen}
+          onClose={() => setIsMultiChannelModalOpen(false)}
+          onSuccess={() => setIsMultiChannelModalOpen(false)}
+          folders={outletCtx?.folders}
+          tags={outletCtx?.tags}
+          defaultFolderId={outletCtx?.activeFolderId}
         />
       )}
     </motion.div>

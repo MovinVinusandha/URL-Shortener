@@ -160,6 +160,125 @@ public class UrlService {
         return sendDto;
     }
 
+    @org.springframework.transaction.annotation.Transactional
+    public BatchCampaignResponseDto createBatchCampaignUrls(BatchCampaignRequestDto request, User currentUser) {
+        if (currentUser.getRole() == com.url_shortener.url_shortener.users.Role.ROOT || currentUser.getRole() == com.url_shortener.url_shortener.users.Role.ADMIN) {
+            throw new AccessDeniedException("Admins cannot create short links.");
+        }
+
+        Folder folder = null;
+        if (request.getFolderId() != null) {
+            folder = folderRepository.findById(request.getFolderId())
+                    .orElseThrow(() -> new IllegalArgumentException("Folder not found"));
+            if (!folder.getUser().getId().equals(currentUser.getId())) {
+                throw new AccessDeniedException("You do not own this folder.");
+            }
+        } else {
+            folder = folderRepository.findByNameIgnoreCaseAndUserId("Links", currentUser.getId())
+                    .orElseGet(() -> folderRepository.save(Folder.builder()
+                            .name("Links")
+                            .slug("links")
+                            .user(currentUser)
+                            .build()));
+        }
+
+        Set<Tag> tags = new HashSet<>();
+        if (request.getTagIds() != null && !request.getTagIds().isEmpty()) {
+            List<Tag> foundTags = tagRepository.findAllById(request.getTagIds());
+            for (Tag t : foundTags) {
+                if (!t.getUser().getId().equals(currentUser.getId())) {
+                    throw new AccessDeniedException("You cannot assign a tag you do not own.");
+                }
+            }
+            tags.addAll(foundTags);
+        }
+
+        List<BatchCampaignResultItemDto> resultItems = new java.util.ArrayList<>();
+
+        for (BatchChannelItemDto channel : request.getChannels()) {
+            String fullTargetUrl = appendUtmParams(request.getLongUrl(), request.getCampaignName(), channel);
+            
+            String hash = generateUrlHash(fullTargetUrl);
+            int attempts = 0;
+            while (urlRepository.existsUrlByShortUrl(hash) && attempts < 10) {
+                hash = generateUrlHash(fullTargetUrl + "#" + System.nanoTime() + "#" + Math.random());
+                attempts++;
+            }
+
+            Url url = Url.builder()
+                    .longUrl(fullTargetUrl)
+                    .shortUrl(hash)
+                    .user(currentUser)
+                    .folder(folder)
+                    .tags(new HashSet<>(tags))
+                    .isActive(true)
+                    .build();
+
+            Url savedUrl = urlRepository.save(url);
+
+            Statistic stat = Statistic.builder()
+                    .accessedTimes(0L)
+                    .urls(savedUrl)
+                    .build();
+            savedUrl.addStatistic(stat);
+            urlRepository.save(savedUrl);
+
+            String cacheKey = "urls::" + savedUrl.getShortUrl();
+            redisTemplate.opsForValue().set(cacheKey, savedUrl.getLongUrl(), java.time.Duration.ofHours(24));
+
+            String fullShortUrl = rootDomainUrl + "/" + savedUrl.getShortUrl();
+            resultItems.add(BatchCampaignResultItemDto.builder()
+                    .channelName(channel.getName())
+                    .shortUrl(savedUrl.getShortUrl())
+                    .fullShortUrl(fullShortUrl)
+                    .longUrlWithUtm(fullTargetUrl)
+                    .utmSource(channel.getUtmSource())
+                    .utmMedium(channel.getUtmMedium())
+                    .urlId(savedUrl.getId())
+                    .build());
+        }
+
+        return BatchCampaignResponseDto.builder()
+                .campaignName(request.getCampaignName())
+                .totalCreated(resultItems.size())
+                .items(resultItems)
+                .build();
+    }
+
+    public String appendUtmParams(String baseUrl, String campaign, BatchChannelItemDto channel) {
+        StringBuilder sb = new StringBuilder(baseUrl.trim());
+        boolean hasQuery = sb.indexOf("?") != -1;
+
+        if (channel.getUtmSource() != null && !channel.getUtmSource().isBlank()) {
+            appendQueryParam(sb, "utm_source", channel.getUtmSource(), hasQuery);
+            hasQuery = true;
+        }
+        if (channel.getUtmMedium() != null && !channel.getUtmMedium().isBlank()) {
+            appendQueryParam(sb, "utm_medium", channel.getUtmMedium(), hasQuery);
+            hasQuery = true;
+        }
+        if (campaign != null && !campaign.isBlank()) {
+            appendQueryParam(sb, "utm_campaign", campaign, hasQuery);
+            hasQuery = true;
+        }
+        if (channel.getUtmTerm() != null && !channel.getUtmTerm().isBlank()) {
+            appendQueryParam(sb, "utm_term", channel.getUtmTerm(), hasQuery);
+            hasQuery = true;
+        }
+        if (channel.getUtmContent() != null && !channel.getUtmContent().isBlank()) {
+            appendQueryParam(sb, "utm_content", channel.getUtmContent(), hasQuery);
+            hasQuery = true;
+        }
+        return sb.toString();
+    }
+
+    private void appendQueryParam(StringBuilder sb, String key, String value, boolean hasQuery) {
+        sb.append(hasQuery ? "&" : "?");
+        sb.append(key);
+        sb.append("=");
+        sb.append(java.net.URLEncoder.encode(value.trim(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
     public String generateUrlHash(String data){
         CRC32 CRC32 = new CRC32();
         CRC32.update(data.getBytes());

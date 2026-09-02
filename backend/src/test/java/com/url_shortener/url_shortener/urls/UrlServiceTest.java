@@ -598,4 +598,67 @@ class UrlServiceTest {
         assertThat(result.isActive()).isFalse();
         verify(urlRepository).save(url);
     }
+
+    @Test
+    void createBatchCampaignUrls_Success() {
+        User user = User.builder().id(1L).role(Role.USER).build();
+        Folder folder = Folder.builder().id(10L).user(user).name("Campaigns").build();
+        when(folderRepository.findById(10L)).thenReturn(Optional.of(folder));
+
+        Tag tag = Tag.builder().id(5L).user(user).name("Promo").build();
+        when(tagRepository.findAllById(List.of(5L))).thenReturn(List.of(tag));
+
+        when(urlRepository.existsUrlByShortUrl(any())).thenReturn(false);
+        when(urlRepository.save(any(Url.class))).thenAnswer(invocation -> {
+            Url u = invocation.getArgument(0);
+            u.setId(100L);
+            return u;
+        });
+
+        BatchChannelItemDto ch1 = BatchChannelItemDto.builder()
+                .name("Facebook")
+                .utmSource("facebook")
+                .utmMedium("social")
+                .build();
+        BatchChannelItemDto ch2 = BatchChannelItemDto.builder()
+                .name("Twitter")
+                .utmSource("twitter")
+                .utmMedium("social")
+                .build();
+
+        BatchCampaignRequestDto request = BatchCampaignRequestDto.builder()
+                .longUrl("https://example.com/product")
+                .campaignName("summer_sale")
+                .folderId(10L)
+                .tagIds(List.of(5L))
+                .channels(List.of(ch1, ch2))
+                .build();
+
+        ReflectionTestUtils.setField(urlService, "rootDomainUrl", "http://localhost");
+
+        BatchCampaignResponseDto response = urlService.createBatchCampaignUrls(request, user);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getCampaignName()).isEqualTo("summer_sale");
+        assertThat(response.getTotalCreated()).isEqualTo(2);
+        assertThat(response.getItems()).hasSize(2);
+        assertThat(response.getItems().get(0).getChannelName()).isEqualTo("Facebook");
+        assertThat(response.getItems().get(0).getLongUrlWithUtm()).contains("utm_source=facebook");
+        assertThat(response.getItems().get(0).getLongUrlWithUtm()).contains("utm_campaign=summer_sale");
+        assertThat(response.getItems().get(1).getChannelName()).isEqualTo("Twitter");
+        assertThat(response.getItems().get(1).getLongUrlWithUtm()).contains("utm_source=twitter");
+    }
+
+    @Test
+    void createBatchCampaignUrls_AdminRole_ThrowsAccessDenied() {
+        User adminUser = User.builder().id(99L).role(Role.ADMIN).build();
+        BatchCampaignRequestDto request = BatchCampaignRequestDto.builder()
+                .longUrl("https://example.com")
+                .campaignName("promo")
+                .channels(List.of(BatchChannelItemDto.builder().name("FB").utmSource("facebook").build()))
+                .build();
+
+        assertThatThrownBy(() -> urlService.createBatchCampaignUrls(request, adminUser))
+                .isInstanceOf(AccessDeniedException.class);
+    }
 }

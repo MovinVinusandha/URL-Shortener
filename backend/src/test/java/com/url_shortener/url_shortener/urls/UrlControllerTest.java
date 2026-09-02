@@ -251,4 +251,44 @@ class UrlControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.IMAGE_PNG));
     }
+
+    @Test
+    void createBatchCampaignUrls_Success() throws Exception {
+        User user = User.builder().id(1L).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        BatchChannelItemDto channel = BatchChannelItemDto.builder().name("Facebook").utmSource("facebook").utmMedium("social").build();
+        BatchCampaignRequestDto request = BatchCampaignRequestDto.builder()
+                .longUrl("https://example.com/shop")
+                .campaignName("summer_sale")
+                .channels(java.util.List.of(channel))
+                .build();
+
+        BatchCampaignResponseDto responseDto = BatchCampaignResponseDto.builder()
+                .campaignName("summer_sale")
+                .totalCreated(1)
+                .items(java.util.List.of(BatchCampaignResultItemDto.builder()
+                        .channelName("Facebook")
+                        .shortUrl("abc12345")
+                        .fullShortUrl("http://localhost/abc12345")
+                        .longUrlWithUtm("https://example.com/shop?utm_source=facebook&utm_medium=social&utm_campaign=summer_sale")
+                        .utmSource("facebook")
+                        .utmMedium("social")
+                        .build()))
+                .build();
+
+        when(urlService.createBatchCampaignUrls(any(BatchCampaignRequestDto.class), eq(user))).thenReturn(responseDto);
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(1L, null, Collections.emptyList())
+        );
+
+        mockMvc.perform(post("/url/batch-campaign")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.campaignName").value("summer_sale"))
+                .andExpect(jsonPath("$.totalCreated").value(1))
+                .andExpect(jsonPath("$.items[0].channelName").value("Facebook"));
+    }
 }
