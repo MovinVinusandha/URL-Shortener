@@ -48,7 +48,7 @@ public class AnalyticsService {
                 .build();
     }
 
-    public AnalyticsResponseDto getAnalytics(String hash, User currentUser, String period, String startDateStr, String endDateStr) {
+    public AnalyticsResponseDto getAnalytics(String hash, User currentUser, String period, String startDateStr, String endDateStr, String utmSource, String utmMedium, String utmCampaign, String utmTerm, String utmContent, String referer) {
         var url = urlRepository.findByShortUrl(hash);
         if (url == null) {
             throw new com.url_shortener.url_shortener.urls.UrlNotFoundException();
@@ -65,45 +65,45 @@ public class AnalyticsService {
         LocalDateTime startDate = dates.start();
         LocalDateTime endDate = dates.end();
 
-        Long totalClicksRaw = clickEventRepository.countByUrl_Id(urlId, startDate, endDate);
+        Long totalClicksRaw = clickEventRepository.countByUrl_Id(urlId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer);
         Long totalClicks = totalClicksRaw != null ? totalClicksRaw : 0L;
 
         List<ClickDataPoint> clicksByDate;
         if (isHourlyGranularity(period, startDate, endDate)) {
-            List<ClickDataPoint> rawClicksByDate = clickEventRepository.countByHourForUrl(urlId, startDate, endDate)
+            List<ClickDataPoint> rawClicksByDate = clickEventRepository.countByHourForUrl(urlId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer)
                     .stream()
                     .map(row -> new ClickDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                     .collect(Collectors.toList());
             clicksByDate = fillMissingHours(rawClicksByDate, startDate, endDate);
         } else {
-            List<ClickDataPoint> rawClicksByDate = clickEventRepository.countByDateForUrl(urlId, startDate, endDate)
+            List<ClickDataPoint> rawClicksByDate = clickEventRepository.countByDateForUrl(urlId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer)
                     .stream()
                     .map(row -> new ClickDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                     .collect(Collectors.toList());
             clicksByDate = fillMissingDates(rawClicksByDate, startDate, endDate);
         }
 
-        List<CountryDataPoint> clicksByCountry = clickEventRepository.countByCountryForUrl(urlId, startDate, endDate)
+        List<CountryDataPoint> clicksByCountry = clickEventRepository.countByCountryForUrl(urlId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer)
                 .stream()
                 .map(row -> new CountryDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countByDeviceForUrl(urlId, startDate, endDate)
+        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countByDeviceForUrl(urlId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer)
                 .stream()
                 .map(row -> new DeviceDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countByBrowserForUrl(urlId, startDate, endDate)
+        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countByBrowserForUrl(urlId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer)
                 .stream()
                 .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<UtmDataPoint> clicksByUtmSource = mapToUtmDataPoints(clickEventRepository.countByUtmSourceForUrl(urlId, startDate, endDate));
-        List<UtmDataPoint> clicksByUtmMedium = mapToUtmDataPoints(clickEventRepository.countByUtmMediumForUrl(urlId, startDate, endDate));
-        List<UtmDataPoint> clicksByUtmCampaign = mapToUtmDataPoints(clickEventRepository.countByUtmCampaignForUrl(urlId, startDate, endDate));
-        List<UtmDataPoint> clicksByUtmTerm = mapToUtmDataPoints(clickEventRepository.countByUtmTermForUrl(urlId, startDate, endDate));
-        List<UtmDataPoint> clicksByUtmContent = mapToUtmDataPoints(clickEventRepository.countByUtmContentForUrl(urlId, startDate, endDate));
-        List<UtmDataPoint> clicksByReferer = mapToUtmDataPoints(clickEventRepository.countByRefererForUrl(urlId, startDate, endDate));
+        List<UtmDataPoint> clicksByUtmSource = mapToUtmDataPoints(clickEventRepository.countByUtmSourceForUrl(urlId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
+        List<UtmDataPoint> clicksByUtmMedium = mapToUtmDataPoints(clickEventRepository.countByUtmMediumForUrl(urlId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
+        List<UtmDataPoint> clicksByUtmCampaign = mapToUtmDataPoints(clickEventRepository.countByUtmCampaignForUrl(urlId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
+        List<UtmDataPoint> clicksByUtmTerm = mapToUtmDataPoints(clickEventRepository.countByUtmTermForUrl(urlId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
+        List<UtmDataPoint> clicksByUtmContent = mapToUtmDataPoints(clickEventRepository.countByUtmContentForUrl(urlId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
+        List<UtmDataPoint> clicksByReferer = mapToUtmDataPoints(clickEventRepository.countByRefererForUrl(urlId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
 
         return AnalyticsResponseDto.builder()
                 .totalClicks(totalClicks)
@@ -120,7 +120,7 @@ public class AnalyticsService {
                 .build();
     }
 
-    public AnalyticsResponseDto getOverallAnalytics(User currentUser, String period, String startDateStr, String endDateStr, String hash, List<Long> tagIds, Long folderId) {
+    public AnalyticsResponseDto getOverallAnalytics(User currentUser, String period, String startDateStr, String endDateStr, String hash, List<Long> tagIds, Long folderId, String utmSource, String utmMedium, String utmCampaign, String utmTerm, String utmContent, String referer) {
         tagIds = tagIds == null ? null : tagIds.stream().filter(id -> id != null && id > 0).collect(Collectors.toList());
         if (tagIds != null && tagIds.isEmpty()) {
             tagIds = null;
@@ -131,45 +131,45 @@ public class AnalyticsService {
         LocalDateTime startDate = dates.start();
         LocalDateTime endDate = dates.end();
 
-        Long totalClicksRaw = clickEventRepository.countTotalOverallClicks(userId, startDate, endDate, hash, tagIds, folderId);
+        Long totalClicksRaw = clickEventRepository.countTotalOverallClicks(userId, startDate, endDate, hash, tagIds, folderId, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer);
         Long totalClicks = totalClicksRaw != null ? totalClicksRaw : 0L;
 
         List<ClickDataPoint> clicksByDate;
         if (isHourlyGranularity(period, startDate, endDate)) {
-            List<ClickDataPoint> rawClicksByDate = clickEventRepository.countOverallClicksByHour(userId, startDate, endDate, hash, tagIds, folderId)
+            List<ClickDataPoint> rawClicksByDate = clickEventRepository.countOverallClicksByHour(userId, startDate, endDate, hash, tagIds, folderId, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer)
                     .stream()
                     .map(row -> new ClickDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                     .collect(Collectors.toList());
             clicksByDate = fillMissingHours(rawClicksByDate, startDate, endDate);
         } else {
-            List<ClickDataPoint> rawClicksByDate = clickEventRepository.countOverallClicksByDate(userId, startDate, endDate, hash, tagIds, folderId)
+            List<ClickDataPoint> rawClicksByDate = clickEventRepository.countOverallClicksByDate(userId, startDate, endDate, hash, tagIds, folderId, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer)
                     .stream()
                     .map(row -> new ClickDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                     .collect(Collectors.toList());
             clicksByDate = fillMissingDates(rawClicksByDate, startDate, endDate);
         }
 
-        List<CountryDataPoint> clicksByCountry = clickEventRepository.countOverallClicksByCountry(userId, startDate, endDate, hash, tagIds, folderId)
+        List<CountryDataPoint> clicksByCountry = clickEventRepository.countOverallClicksByCountry(userId, startDate, endDate, hash, tagIds, folderId, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer)
                 .stream()
                 .map(row -> new CountryDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countOverallClicksByDevice(userId, startDate, endDate, hash, tagIds, folderId)
+        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countOverallClicksByDevice(userId, startDate, endDate, hash, tagIds, folderId, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer)
                 .stream()
                 .map(row -> new DeviceDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countOverallClicksByBrowser(userId, startDate, endDate, hash, tagIds, folderId)
+        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countOverallClicksByBrowser(userId, startDate, endDate, hash, tagIds, folderId, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer)
                 .stream()
                 .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<UtmDataPoint> clicksByUtmSource = mapToUtmDataPoints(clickEventRepository.countOverallClicksByUtmSource(userId, startDate, endDate, hash, tagIds, folderId));
-        List<UtmDataPoint> clicksByUtmMedium = mapToUtmDataPoints(clickEventRepository.countOverallClicksByUtmMedium(userId, startDate, endDate, hash, tagIds, folderId));
-        List<UtmDataPoint> clicksByUtmCampaign = mapToUtmDataPoints(clickEventRepository.countOverallClicksByUtmCampaign(userId, startDate, endDate, hash, tagIds, folderId));
-        List<UtmDataPoint> clicksByUtmTerm = mapToUtmDataPoints(clickEventRepository.countOverallClicksByUtmTerm(userId, startDate, endDate, hash, tagIds, folderId));
-        List<UtmDataPoint> clicksByUtmContent = mapToUtmDataPoints(clickEventRepository.countOverallClicksByUtmContent(userId, startDate, endDate, hash, tagIds, folderId));
-        List<UtmDataPoint> clicksByReferer = mapToUtmDataPoints(clickEventRepository.countOverallClicksByReferer(userId, startDate, endDate, hash, tagIds, folderId));
+        List<UtmDataPoint> clicksByUtmSource = mapToUtmDataPoints(clickEventRepository.countOverallClicksByUtmSource(userId, startDate, endDate, hash, tagIds, folderId, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
+        List<UtmDataPoint> clicksByUtmMedium = mapToUtmDataPoints(clickEventRepository.countOverallClicksByUtmMedium(userId, startDate, endDate, hash, tagIds, folderId, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
+        List<UtmDataPoint> clicksByUtmCampaign = mapToUtmDataPoints(clickEventRepository.countOverallClicksByUtmCampaign(userId, startDate, endDate, hash, tagIds, folderId, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
+        List<UtmDataPoint> clicksByUtmTerm = mapToUtmDataPoints(clickEventRepository.countOverallClicksByUtmTerm(userId, startDate, endDate, hash, tagIds, folderId, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
+        List<UtmDataPoint> clicksByUtmContent = mapToUtmDataPoints(clickEventRepository.countOverallClicksByUtmContent(userId, startDate, endDate, hash, tagIds, folderId, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
+        List<UtmDataPoint> clicksByReferer = mapToUtmDataPoints(clickEventRepository.countOverallClicksByReferer(userId, startDate, endDate, hash, tagIds, folderId, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
 
         return AnalyticsResponseDto.builder()
                 .totalClicks(totalClicks)
@@ -186,13 +186,13 @@ public class AnalyticsService {
                 .build();
     }
 
-    public AnalyticsResponseDto getFolderAnalyticsBySlug(String slug, User currentUser, String period, String startDateStr, String endDateStr) {
+    public AnalyticsResponseDto getFolderAnalyticsBySlug(String slug, User currentUser, String period, String startDateStr, String endDateStr, String utmSource, String utmMedium, String utmCampaign, String utmTerm, String utmContent, String referer) {
         var folder = folderRepository.findByUserIdAndSlug(currentUser.getId(), slug)
                 .orElseThrow(() -> new RuntimeException("Folder not found"));
-        return getFolderAnalytics(folder.getId(), currentUser, period, startDateStr, endDateStr);
+        return getFolderAnalytics(folder.getId(), currentUser, period, startDateStr, endDateStr, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer);
     }
 
-    public AnalyticsResponseDto getFolderAnalytics(Long folderId, User currentUser, String period, String startDateStr, String endDateStr) {
+    public AnalyticsResponseDto getFolderAnalytics(Long folderId, User currentUser, String period, String startDateStr, String endDateStr, String utmSource, String utmMedium, String utmCampaign, String utmTerm, String utmContent, String referer) {
         var folder = folderRepository.findById(folderId)
                 .orElseThrow(() -> new RuntimeException("Folder not found"));
 
@@ -207,45 +207,45 @@ public class AnalyticsService {
         LocalDateTime startDate = dates.start();
         LocalDateTime endDate = dates.end();
 
-        Long totalClicksRaw = clickEventRepository.countTotalFolderClicks(folderId, userId, startDate, endDate);
+        Long totalClicksRaw = clickEventRepository.countTotalFolderClicks(folderId, userId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer);
         Long totalClicks = totalClicksRaw != null ? totalClicksRaw : 0L;
 
         List<ClickDataPoint> clicksByDate;
         if (isHourlyGranularity(period, startDate, endDate)) {
-            List<ClickDataPoint> rawClicksByDate = clickEventRepository.countFolderClicksByHour(folderId, userId, startDate, endDate)
+            List<ClickDataPoint> rawClicksByDate = clickEventRepository.countFolderClicksByHour(folderId, userId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer)
                     .stream()
                     .map(row -> new ClickDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                     .collect(Collectors.toList());
             clicksByDate = fillMissingHours(rawClicksByDate, startDate, endDate);
         } else {
-            List<ClickDataPoint> rawClicksByDate = clickEventRepository.countFolderClicksByDate(folderId, userId, startDate, endDate)
+            List<ClickDataPoint> rawClicksByDate = clickEventRepository.countFolderClicksByDate(folderId, userId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer)
                     .stream()
                     .map(row -> new ClickDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                     .collect(Collectors.toList());
             clicksByDate = fillMissingDates(rawClicksByDate, startDate, endDate);
         }
 
-        List<CountryDataPoint> clicksByCountry = clickEventRepository.countFolderClicksByCountry(folderId, userId, startDate, endDate)
+        List<CountryDataPoint> clicksByCountry = clickEventRepository.countFolderClicksByCountry(folderId, userId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer)
                 .stream()
                 .map(row -> new CountryDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countFolderClicksByDevice(folderId, userId, startDate, endDate)
+        List<DeviceDataPoint> clicksByDevice = clickEventRepository.countFolderClicksByDevice(folderId, userId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer)
                 .stream()
                 .map(row -> new DeviceDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countFolderClicksByBrowser(folderId, userId, startDate, endDate)
+        List<BrowserDataPoint> clicksByBrowser = clickEventRepository.countFolderClicksByBrowser(folderId, userId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer)
                 .stream()
                 .map(row -> new BrowserDataPoint(row[0].toString(), ((Number) row[1]).longValue()))
                 .collect(Collectors.toList());
 
-        List<UtmDataPoint> clicksByUtmSource = mapToUtmDataPoints(clickEventRepository.countFolderClicksByUtmSource(folderId, userId, startDate, endDate));
-        List<UtmDataPoint> clicksByUtmMedium = mapToUtmDataPoints(clickEventRepository.countFolderClicksByUtmMedium(folderId, userId, startDate, endDate));
-        List<UtmDataPoint> clicksByUtmCampaign = mapToUtmDataPoints(clickEventRepository.countFolderClicksByUtmCampaign(folderId, userId, startDate, endDate));
-        List<UtmDataPoint> clicksByUtmTerm = mapToUtmDataPoints(clickEventRepository.countFolderClicksByUtmTerm(folderId, userId, startDate, endDate));
-        List<UtmDataPoint> clicksByUtmContent = mapToUtmDataPoints(clickEventRepository.countFolderClicksByUtmContent(folderId, userId, startDate, endDate));
-        List<UtmDataPoint> clicksByReferer = mapToUtmDataPoints(clickEventRepository.countFolderClicksByReferer(folderId, userId, startDate, endDate));
+        List<UtmDataPoint> clicksByUtmSource = mapToUtmDataPoints(clickEventRepository.countFolderClicksByUtmSource(folderId, userId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
+        List<UtmDataPoint> clicksByUtmMedium = mapToUtmDataPoints(clickEventRepository.countFolderClicksByUtmMedium(folderId, userId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
+        List<UtmDataPoint> clicksByUtmCampaign = mapToUtmDataPoints(clickEventRepository.countFolderClicksByUtmCampaign(folderId, userId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
+        List<UtmDataPoint> clicksByUtmTerm = mapToUtmDataPoints(clickEventRepository.countFolderClicksByUtmTerm(folderId, userId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
+        List<UtmDataPoint> clicksByUtmContent = mapToUtmDataPoints(clickEventRepository.countFolderClicksByUtmContent(folderId, userId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
+        List<UtmDataPoint> clicksByReferer = mapToUtmDataPoints(clickEventRepository.countFolderClicksByReferer(folderId, userId, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
 
         return AnalyticsResponseDto.builder()
                 .totalClicks(totalClicks)

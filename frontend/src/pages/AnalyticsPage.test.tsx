@@ -388,4 +388,36 @@ describe('AnalyticsPage', () => {
     fireEvent.click(refTab);
     expect(screen.getAllByText('t.co').length).toBeGreaterThan(0);
   });
+
+  it('clicking UTM rows activates multiple simultaneous drilldown filters and shows dismissible pills', async () => {
+    render(<MemoryRouter><AnalyticsPage /></MemoryRouter>);
+
+    await waitFor(() => {
+      expect(screen.getByText('twitter')).toBeInTheDocument();
+    });
+
+    // Click on the 'twitter' UTM row
+    const twitterRow = screen.getByText('twitter').closest('div[title*="Click to filter"]');
+    expect(twitterRow).toBeInTheDocument();
+    fireEvent.click(twitterRow!);
+
+    expect(mockSetSearchParams).toHaveBeenCalled();
+
+    // Set multiple UTM params in searchParams (source=twitter AND campaign=summer_promo)
+    mockSearchParams.set('utm_source', 'twitter');
+    mockSearchParams.set('utm_campaign', 'summer_promo');
+
+    render(<MemoryRouter><AnalyticsPage /></MemoryRouter>);
+
+    await waitFor(() => {
+      expect(screen.getByText('Active')).toBeInTheDocument();
+      expect(screen.getByTitle('Clear Source filter')).toBeInTheDocument();
+      expect(screen.getByTitle('Clear Campaign filter')).toBeInTheDocument();
+    });
+
+    // Clicking clear Source filter removes only source
+    const clearSourceBtn = screen.getByTitle('Clear Source filter');
+    fireEvent.click(clearSourceBtn);
+    expect(mockSetSearchParams).toHaveBeenCalled();
+  });
 });

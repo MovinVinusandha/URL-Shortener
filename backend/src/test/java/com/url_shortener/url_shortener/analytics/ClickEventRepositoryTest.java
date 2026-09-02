@@ -47,7 +47,7 @@ class ClickEventRepositoryTest {
 
     @Test
     void countOverallClicksByCountry_Success() {
-        List<Object[]> results = clickEventRepository.countOverallClicksByCountry(testUser.getId(), LocalDateTime.now().minusDays(2), null, null, null, null);
+        List<Object[]> results = clickEventRepository.countOverallClicksByCountry(testUser.getId(), LocalDateTime.now().minusDays(2), null, null, null, null, null, null, null, null, null, null);
         
         assertThat(results).hasSize(1);
         assertThat(results.get(0)[0]).isEqualTo("US");
@@ -56,25 +56,45 @@ class ClickEventRepositoryTest {
     
     @Test
     void countOverallClicksByDate_Success() {
-        List<Object[]> results = clickEventRepository.countOverallClicksByDate(testUser.getId(), LocalDateTime.now().minusDays(2), null, null, null, null);
+        List<Object[]> results = clickEventRepository.countOverallClicksByDate(testUser.getId(), LocalDateTime.now().minusDays(2), null, null, null, null, null, null, null, null, null, null);
         assertThat(results).isNotEmpty();
     }
     
     @Test
     void countOverallClicksByHour_Success() {
-        List<Object[]> results = clickEventRepository.countOverallClicksByHour(testUser.getId(), LocalDateTime.now().minusDays(2), null, null, null, null);
+        List<Object[]> results = clickEventRepository.countOverallClicksByHour(testUser.getId(), LocalDateTime.now().minusDays(2), null, null, null, null, null, null, null, null, null, null);
         assertThat(results).isNotEmpty();
     }
 
     @Test
     void countByHourForUrl_Success() {
-        List<Object[]> results = clickEventRepository.countByHourForUrl(testUrl.getId(), LocalDateTime.now().minusDays(2), null);
+        List<Object[]> results = clickEventRepository.countByHourForUrl(testUrl.getId(), LocalDateTime.now().minusDays(2), null, null, null, null, null, null, null);
         assertThat(results).isNotEmpty();
     }
 
     @Test
     void countByDeviceForUrl_Success() {
-        List<Object[]> results = clickEventRepository.countByDeviceForUrl(testUrl.getId(), LocalDateTime.now().minusDays(2), null);
+        List<Object[]> results = clickEventRepository.countByDeviceForUrl(testUrl.getId(), LocalDateTime.now().minusDays(2), null, null, null, null, null, null, null);
         assertThat(results).hasSize(2);
+    }
+
+    @Test
+    void countOverallClicks_WithUtmFilter() {
+        ClickEvent eventWithUtm = ClickEvent.builder().url(testUrl).timestamp(LocalDateTime.now())
+                .country("UK").device("Tablet").browser("Firefox").ipAddress("1236")
+                .utmSource("newsletter").utmMedium("email").utmCampaign("spring_sale").build();
+        clickEventRepository.save(eventWithUtm);
+
+        Long countSource = clickEventRepository.countTotalOverallClicks(testUser.getId(), LocalDateTime.now().minusDays(2), null, null, null, null, "newsletter", null, null, null, null, null);
+        assertThat(countSource).isEqualTo(1L);
+
+        Long countCampaign = clickEventRepository.countTotalOverallClicks(testUser.getId(), LocalDateTime.now().minusDays(2), null, null, null, null, null, null, "spring_sale", null, null, null);
+        assertThat(countCampaign).isEqualTo(1L);
+
+        Long countCompound = clickEventRepository.countTotalOverallClicks(testUser.getId(), LocalDateTime.now().minusDays(2), null, null, null, null, "newsletter", "email", "spring_sale", null, null, null);
+        assertThat(countCompound).isEqualTo(1L);
+
+        Long countNonMatch = clickEventRepository.countTotalOverallClicks(testUser.getId(), LocalDateTime.now().minusDays(2), null, null, null, null, "facebook", null, null, null, null, null);
+        assertThat(countNonMatch).isEqualTo(0L);
     }
 }

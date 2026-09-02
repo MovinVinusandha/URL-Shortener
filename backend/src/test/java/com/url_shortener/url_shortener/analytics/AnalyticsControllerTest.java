@@ -53,7 +53,7 @@ class AnalyticsControllerTest {
                 .clicksByUtmContent(Collections.emptyList())
                 .clicksByReferer(Collections.emptyList())
                 .build();
-        when(analyticsService.getAnalytics(eq("hash123"), eq(currentUser), eq("all"), eq(null), eq(null))).thenReturn(responseDto);
+        when(analyticsService.getAnalytics(eq("hash123"), eq(currentUser), eq("all"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null))).thenReturn(responseDto);
 
         mockMvc.perform(get("/analytics/hash123")
                 .principal(new UsernamePasswordAuthenticationToken(1L, null, Collections.emptyList())))
@@ -79,7 +79,7 @@ class AnalyticsControllerTest {
                 .clicksByUtmContent(Collections.emptyList())
                 .clicksByReferer(Collections.emptyList())
                 .build();
-        when(analyticsService.getOverallAnalytics(eq(currentUser), eq("7d"), eq(null), eq(null), eq(null), eq(null), eq(null))).thenReturn(responseDto);
+        when(analyticsService.getOverallAnalytics(eq(currentUser), eq("7d"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null))).thenReturn(responseDto);
 
         mockMvc.perform(get("/analytics")
                 .param("period", "7d")
@@ -106,13 +106,16 @@ class AnalyticsControllerTest {
                 .clicksByUtmContent(Collections.emptyList())
                 .clicksByReferer(Collections.emptyList())
                 .build();
-        when(analyticsService.getOverallAnalytics(eq(currentUser), eq("30d"), eq(null), eq(null), eq("hash123"), eq(java.util.List.of(1L, 3L)), eq(10L))).thenReturn(responseDto);
+        when(analyticsService.getOverallAnalytics(eq(currentUser), eq("30d"), eq(null), eq(null), eq("hash123"), eq(java.util.List.of(1L, 3L)), eq(10L), eq("google"), eq("cpc"), eq("summer"), eq(null), eq(null), eq(null))).thenReturn(responseDto);
 
         mockMvc.perform(get("/analytics")
                 .param("period", "30d")
                 .param("hash", "hash123")
                 .param("tagId", "1,3")
                 .param("folderId", "10")
+                .param("utmSource", "google")
+                .param("utmMedium", "cpc")
+                .param("utmCampaign", "summer")
                 .principal(new UsernamePasswordAuthenticationToken(1L, null, Collections.emptyList())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalClicks").value(250));
@@ -136,7 +139,7 @@ class AnalyticsControllerTest {
                 .clicksByUtmContent(Collections.emptyList())
                 .clicksByReferer(Collections.emptyList())
                 .build();
-        when(analyticsService.getFolderAnalytics(eq(10L), eq(currentUser), eq("all"), eq(null), eq(null))).thenReturn(responseDto);
+        when(analyticsService.getFolderAnalytics(eq(10L), eq(currentUser), eq("all"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null))).thenReturn(responseDto);
 
         mockMvc.perform(get("/analytics/folder/10")
                 .principal(new UsernamePasswordAuthenticationToken(1L, null, Collections.emptyList())))
@@ -162,7 +165,7 @@ class AnalyticsControllerTest {
                 .clicksByUtmContent(Collections.emptyList())
                 .clicksByReferer(Collections.emptyList())
                 .build();
-        when(analyticsService.getFolderAnalyticsBySlug(eq("marketing-2026"), eq(currentUser), eq("all"), eq(null), eq(null))).thenReturn(responseDto);
+        when(analyticsService.getFolderAnalyticsBySlug(eq("marketing-2026"), eq(currentUser), eq("all"), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null))).thenReturn(responseDto);
 
         mockMvc.perform(get("/analytics/folder/slug/marketing-2026")
                 .principal(new UsernamePasswordAuthenticationToken(1L, null, Collections.emptyList())))

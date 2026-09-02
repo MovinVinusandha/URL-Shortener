@@ -32,6 +32,12 @@ public class AnalyticsController {
             @RequestParam(name = "period", defaultValue = "all") String period,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String utmSource,
+            @RequestParam(required = false) String utmMedium,
+            @RequestParam(required = false) String utmCampaign,
+            @RequestParam(required = false) String utmTerm,
+            @RequestParam(required = false) String utmContent,
+            @RequestParam(required = false) String referer,
             Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
             throw new UrlNotFoundException();
@@ -41,7 +47,7 @@ public class AnalyticsController {
         User currentUser = userRepository.findById(currentUserId)
                 .orElseThrow(UrlNotFoundException::new);
 
-        AnalyticsResponseDto response = analyticsService.getAnalytics(hash, currentUser, period, startDate, endDate);
+        AnalyticsResponseDto response = analyticsService.getAnalytics(hash, currentUser, period, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer);
         return ResponseEntity.ok(response);
     }
 
@@ -54,11 +60,17 @@ public class AnalyticsController {
             @RequestParam(required = false) String endDate,
             @RequestParam(required = false) String hash,
             @RequestParam(required = false) List<Long> tagId,
-            @RequestParam(required = false) Long folderId) {
+            @RequestParam(required = false) Long folderId,
+            @RequestParam(required = false) String utmSource,
+            @RequestParam(required = false) String utmMedium,
+            @RequestParam(required = false) String utmCampaign,
+            @RequestParam(required = false) String utmTerm,
+            @RequestParam(required = false) String utmContent,
+            @RequestParam(required = false) String referer) {
         Long userId = (Long) authentication.getPrincipal();
         User currentUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return ResponseEntity.ok(analyticsService.getOverallAnalytics(currentUser, period, startDate, endDate, hash, tagId, folderId));
+        return ResponseEntity.ok(analyticsService.getOverallAnalytics(currentUser, period, startDate, endDate, hash, tagId, folderId, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
     }
 
     @GetMapping("/analytics/folder/{folderId}")
@@ -67,11 +79,17 @@ public class AnalyticsController {
             Authentication authentication,
             @RequestParam(name = "period", defaultValue = "all") String period,
             @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate) {
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String utmSource,
+            @RequestParam(required = false) String utmMedium,
+            @RequestParam(required = false) String utmCampaign,
+            @RequestParam(required = false) String utmTerm,
+            @RequestParam(required = false) String utmContent,
+            @RequestParam(required = false) String referer) {
         Long userId = (Long) authentication.getPrincipal();
         User currentUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return ResponseEntity.ok(analyticsService.getFolderAnalytics(folderId, currentUser, period, startDate, endDate));
+        return ResponseEntity.ok(analyticsService.getFolderAnalytics(folderId, currentUser, period, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
     }
 
     @GetMapping("/analytics/folder/slug/{slug}")
@@ -80,11 +98,17 @@ public class AnalyticsController {
             Authentication authentication,
             @RequestParam(name = "period", defaultValue = "all") String period,
             @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate) {
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String utmSource,
+            @RequestParam(required = false) String utmMedium,
+            @RequestParam(required = false) String utmCampaign,
+            @RequestParam(required = false) String utmTerm,
+            @RequestParam(required = false) String utmContent,
+            @RequestParam(required = false) String referer) {
         Long userId = (Long) authentication.getPrincipal();
         User currentUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return ResponseEntity.ok(analyticsService.getFolderAnalyticsBySlug(slug, currentUser, period, startDate, endDate));
+        return ResponseEntity.ok(analyticsService.getFolderAnalyticsBySlug(slug, currentUser, period, startDate, endDate, utmSource, utmMedium, utmCampaign, utmTerm, utmContent, referer));
     }
     @GetMapping("/analytics/usage")
     @Operation(summary = "Get global usage stats for the current user")

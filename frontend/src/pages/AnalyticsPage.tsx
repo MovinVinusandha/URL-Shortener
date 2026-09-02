@@ -180,6 +180,24 @@ const AnalyticsPage: React.FC = () => {
   const tagIdParam = searchParams.get('tagId');
   const hashParam = searchParams.get('hash') || hash;
   
+  const utmSourceParam = searchParams.get('utm_source') || searchParams.get('utmSource');
+  const utmMediumParam = searchParams.get('utm_medium') || searchParams.get('utmMedium');
+  const utmCampaignParam = searchParams.get('utm_campaign') || searchParams.get('utmCampaign');
+  const utmTermParam = searchParams.get('utm_term') || searchParams.get('utmTerm');
+  const utmContentParam = searchParams.get('utm_content') || searchParams.get('utmContent');
+  const refererParam = searchParams.get('utm_referer') || searchParams.get('referer');
+
+  const activeUtmFilters = useMemo(() => {
+    const list: { key: string; param: string; tab: UtmTab; label: string; value: string; icon: any }[] = [];
+    if (utmSourceParam) list.push({ key: 'utm_source', param: 'utmSource', tab: 'source', label: 'Source', value: utmSourceParam, icon: Globe });
+    if (utmMediumParam) list.push({ key: 'utm_medium', param: 'utmMedium', tab: 'medium', label: 'Medium', value: utmMediumParam, icon: Radio });
+    if (utmCampaignParam) list.push({ key: 'utm_campaign', param: 'utmCampaign', tab: 'campaign', label: 'Campaign', value: utmCampaignParam, icon: Flag });
+    if (utmTermParam) list.push({ key: 'utm_term', param: 'utmTerm', tab: 'term', label: 'Term', value: utmTermParam, icon: Search });
+    if (utmContentParam) list.push({ key: 'utm_content', param: 'utmContent', tab: 'content', label: 'Content', value: utmContentParam, icon: FileText });
+    if (refererParam) list.push({ key: 'utm_referer', param: 'referer', tab: 'referer', label: 'Referral', value: refererParam, icon: Gift });
+    return list;
+  }, [utmSourceParam, utmMediumParam, utmCampaignParam, utmTermParam, utmContentParam, refererParam]);
+  
   const currentFolder = folderSlug
     ? folders?.find(f => (f.slug && f.slug.toLowerCase() === folderSlug.toLowerCase()) || f.name.toLowerCase() === folderSlug.toLowerCase() || f.name.toLowerCase().replace(/\s+/g, '-') === folderSlug.toLowerCase())
     : (folderIdParam ? folders?.find(f => f.id === Number(folderIdParam)) : (activeFolderId ? folders?.find(f => f.id === activeFolderId) : null));
@@ -263,6 +281,12 @@ const AnalyticsPage: React.FC = () => {
       if (tagIdParam) {
         params.tagId = tagIdParam;
       }
+      if (utmSourceParam) params.utmSource = utmSourceParam;
+      if (utmMediumParam) params.utmMedium = utmMediumParam;
+      if (utmCampaignParam) params.utmCampaign = utmCampaignParam;
+      if (utmTermParam) params.utmTerm = utmTermParam;
+      if (utmContentParam) params.utmContent = utmContentParam;
+      if (refererParam) params.referer = refererParam;
 
       if (hashParam) {
         endpoint = `/analytics/${hashParam}`;
@@ -287,7 +311,7 @@ const AnalyticsPage: React.FC = () => {
         setIsFetching(false);
       }
     }
-  }, [hashParam, folderSlug, folderIdParam, tagIdParam, dateRange, data]);
+  }, [hashParam, folderSlug, folderIdParam, tagIdParam, utmSourceParam, utmMediumParam, utmCampaignParam, utmTermParam, utmContentParam, refererParam, dateRange, data]);
 
   useEffect(() => {
     fetchAnalytics(false);
@@ -828,7 +852,7 @@ const AnalyticsPage: React.FC = () => {
           </div>
 
           {/* Active Compound Filter Pills */}
-          {(hashParam || folderSlug || folderIdParam || activeTagIds.length > 0) && (
+          {(hashParam || folderSlug || folderIdParam || activeTagIds.length > 0 || activeUtmFilters.length > 0) && (
             <div className="flex flex-wrap items-center gap-2 mb-2">
               {hashParam && (
                 <div className="relative inline-flex items-center" ref={linkPillPopoverRef}>
@@ -1169,6 +1193,40 @@ const AnalyticsPage: React.FC = () => {
                   </AnimatePresence>
                 </div>
               )}
+              {activeUtmFilters.map((filter) => {
+                const FilterIcon = filter.icon;
+                return (
+                  <div key={filter.key} className="relative inline-flex items-center">
+                    <div className="inline-flex items-center h-7 rounded-md border border-primary/40 bg-primary/10 text-xs overflow-hidden divide-x divide-primary/30 shadow-xs">
+                      <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-primary">
+                        <FilterIcon className="w-3 h-3 text-primary shrink-0" />
+                        <span>{filter.label}</span>
+                      </div>
+                      <div className="flex items-center px-2 h-full bg-background/80 text-muted-foreground font-medium">
+                        is
+                      </div>
+                      <div className="flex items-center gap-1 px-2.5 h-full font-medium text-foreground font-mono">
+                        {filter.value}
+                      </div>
+                      <button 
+                        type="button"
+                        title={`Clear ${filter.label} filter`}
+                        className="flex items-center justify-center px-2 h-full text-muted-foreground hover:text-foreground hover:bg-background cursor-pointer transition-colors"
+                        onClick={() => {
+                          setSearchParams(prev => {
+                            const updated = new URLSearchParams(prev);
+                            updated.delete(filter.key);
+                            updated.delete(filter.param);
+                            return updated;
+                          });
+                        }}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -1545,25 +1603,64 @@ const AnalyticsPage: React.FC = () => {
               {currentUtmList.length > 0 ? (
                 currentUtmList.slice(0, 10).map((item, idx) => {
                   const pct = Math.round((item.count / currentUtmTotal) * 100);
+                  const currentActiveValue = 
+                    activeUtmTab === 'source' ? utmSourceParam :
+                    activeUtmTab === 'medium' ? utmMediumParam :
+                    activeUtmTab === 'campaign' ? utmCampaignParam :
+                    activeUtmTab === 'term' ? utmTermParam :
+                    activeUtmTab === 'content' ? utmContentParam :
+                    refererParam;
+
+                  const isFiltered = currentActiveValue === item.name;
+                  const paramKey = activeUtmTab === 'referer' ? 'utm_referer' : `utm_${activeUtmTab}`;
+                  const altKey = activeUtmTab === 'referer' ? 'referer' : `utm${activeUtmTab.charAt(0).toUpperCase() + activeUtmTab.slice(1)}`;
+
                   return (
                     <div
                       key={item.name + idx}
-                      className="group flex items-center justify-between p-3.5 border-b border-dashed border-border last:border-b-0 hover:bg-neutral-100/70 dark:hover:bg-[#111114] transition-all relative overflow-hidden"
+                      onClick={() => {
+                        setSearchParams(prev => {
+                          const updated = new URLSearchParams(prev);
+                          if (isFiltered) {
+                            updated.delete(paramKey);
+                            updated.delete(altKey);
+                          } else {
+                            updated.set(paramKey, item.name);
+                            updated.delete(altKey);
+                          }
+                          return updated;
+                        });
+                      }}
+                      title={isFiltered ? "Click to remove filter" : `Click to filter analytics by ${activeUtmTab}: ${item.name}`}
+                      className={`group flex items-center justify-between p-3.5 border-b border-dashed border-border last:border-b-0 cursor-pointer transition-all relative overflow-hidden ${
+                        isFiltered
+                          ? 'bg-primary/10 dark:bg-primary/15 border-primary/40 shadow-xs'
+                          : 'hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
+                      }`}
                     >
                       <div
-                        className="absolute left-0 top-0 bottom-0 bg-primary/10 dark:bg-primary/15 z-0 rounded-r-md transition-all duration-300"
+                        className={`absolute left-0 top-0 bottom-0 z-0 rounded-r-md transition-all duration-300 ${
+                          isFiltered ? 'bg-primary/20 dark:bg-primary/25' : 'bg-primary/10 dark:bg-primary/15'
+                        }`}
                         style={{ width: `${Math.min(100, Math.max(pct, 2))}%` }}
                       />
                       <div className="flex items-center gap-3 z-10 min-w-0 pr-2">
                         <span className="text-[11px] font-mono text-muted-foreground w-5 text-right shrink-0">
                           {idx + 1}
                         </span>
-                        <span className="text-xs font-medium text-foreground truncate select-all">
-                          {item.name}
-                        </span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className={`text-xs font-medium truncate ${isFiltered ? 'text-primary font-semibold' : 'text-foreground'}`}>
+                            {item.name}
+                          </span>
+                          {isFiltered && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] bg-primary/20 text-primary font-medium">
+                              <Check className="w-2.5 h-2.5 stroke-[2.5]" /> Active
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2 z-10 shrink-0 font-mono text-xs">
-                        <span className="text-foreground font-semibold">{item.count.toLocaleString()}</span>
+                        <span className={`font-semibold ${isFiltered ? 'text-primary' : 'text-foreground'}`}>{item.count.toLocaleString()}</span>
                         <span className="text-[11px] text-muted-foreground">({pct}%)</span>
                       </div>
                     </div>
