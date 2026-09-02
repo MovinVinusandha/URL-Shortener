@@ -53,7 +53,8 @@ describe('UtmTemplateModal', () => {
         expect.objectContaining({
           source: 'linkedin',
         }),
-        []
+        [],
+        false
       );
       expect(mockOnSuccess).toHaveBeenCalled();
       expect(mockOnClose).toHaveBeenCalled();
@@ -112,7 +113,8 @@ describe('UtmTemplateModal', () => {
           source: 'twitter',
           medium: 'social',
         }),
-        []
+        [],
+        false
       );
       expect(mockOnSuccess).toHaveBeenCalled();
       expect(mockOnClose).toHaveBeenCalled();
@@ -175,10 +177,48 @@ describe('UtmTemplateModal', () => {
           medium: 'cpc',
           campaign: 'spring_sale',
         }),
-        []
+        [],
+        false
       );
       expect(mockOnSuccess).toHaveBeenCalled();
       expect(mockOnClose).toHaveBeenCalled();
+    });
+  });
+
+  it('allows toggling set as default template checkbox and sends isDefault=true', async () => {
+    const createSpy = vi.spyOn(utmUtils, 'createUtmTemplateApi').mockResolvedValue({
+      id: 'template-default',
+      name: 'Default Ads',
+      utms: { source: 'google', medium: 'cpc', campaign: '', term: '', content: '', ref: '' },
+      isDefault: true,
+      createdAt: 1725177600000,
+    });
+    vi.spyOn(utmUtils, 'fetchUtmTemplatesApi').mockResolvedValue([]);
+
+    render(
+      <UtmTemplateModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />
+    );
+
+    const nameInput = screen.getByPlaceholderText(/Google Search Ads/i);
+    fireEvent.change(nameInput, { target: { value: 'Default Ads' } });
+
+    const checkbox = screen.getByRole('checkbox');
+    fireEvent.click(checkbox);
+
+    const submitBtn = screen.getByRole('button', { name: 'Create Template' });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(createSpy).toHaveBeenCalledWith(
+        'Default Ads',
+        expect.anything(),
+        [],
+        true
+      );
     });
   });
 });

@@ -10,7 +10,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { QrCodeModal, type QrConfig } from './QrCodeModal';
 import { UtmModal } from './UtmModal';
 import { generateQrMatrix } from '../utils/qrMatrix';
-import { parseUrlUtms, buildUrlWithUtms, type UtmParams, type CustomParam } from '../utils/utmUtils';
+import { parseUrlUtms, buildUrlWithUtms, getSavedUtmTemplates, fetchUtmTemplatesApi, type UtmParams, type CustomParam } from '../utils/utmUtils';
 import toast from 'react-hot-toast';
 import axiosInstance from '../api/axiosInstance';
 import axios from 'axios';
@@ -102,11 +102,23 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
   const [customAlias, setCustomAlias] = useState(urlToEdit ? urlToEdit.shortUrl.split('/').pop() || '' : '');
 
   const handleLongUrlChange = (newUrl: string) => {
-    setLongUrl(newUrl);
     const parsed = parseUrlUtms(newUrl);
-    setBaseDestinationUrl(parsed.baseUrl);
     if (parsed.hasUtms) {
+      setLongUrl(newUrl);
+      setBaseDestinationUrl(parsed.baseUrl);
       setUtms(parsed.utms);
+      setCustomParams(parsed.customParams);
+    } else {
+      setBaseDestinationUrl(parsed.baseUrl);
+      const activeCount =
+        Object.values(utms).filter((val) => val && val.trim() !== '').length +
+        customParams.filter((p) => p.key && p.key.trim() !== '').length;
+      if (activeCount > 0 && parsed.baseUrl && (newUrl.startsWith('http://') || newUrl.startsWith('https://') || newUrl.includes('.'))) {
+        const full = buildUrlWithUtms(parsed.baseUrl, utms, customParams);
+        setLongUrl(full);
+      } else {
+        setLongUrl(newUrl);
+      }
     }
   };
 
@@ -221,8 +233,29 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
         setCustomAlias(generateRandomHash());
         setLongUrl('');
         setBaseDestinationUrl('');
-        setUtms({ source: '', medium: '', campaign: '', term: '', content: '' });
-        setCustomParams([]);
+        
+        // Auto-load default UTM template if configured
+        const applyDefaultTemplate = (templatesList: any[]) => {
+          const defaultTemplate = templatesList.find((t) => t.isDefault);
+          if (defaultTemplate) {
+            setUtms({ ...defaultTemplate.utms });
+            setCustomParams(
+              (defaultTemplate.customParams || []).map((cp: any) => ({
+                id: Math.random().toString(36).substring(2, 9),
+                key: cp.key,
+                value: cp.value,
+              }))
+            );
+          } else {
+            setUtms({ source: '', medium: '', campaign: '', term: '', content: '' });
+            setCustomParams([]);
+          }
+        };
+
+        const localSaved = getSavedUtmTemplates();
+        applyDefaultTemplate(localSaved);
+        fetchUtmTemplatesApi().then(applyDefaultTemplate).catch(() => {});
+
         setPassword('');
         setRemovePassword(false);
         setExpiresAt('');
@@ -330,8 +363,17 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
         const { data } = await axiosInstance.put(`/url/${hash}`, updatePayload);
         onSuccess(data);
       } else {
+        const parsed = parseUrlUtms(longUrl);
+        const targetBase = baseDestinationUrl || parsed.baseUrl || longUrl.trim();
+        const activeCount =
+          Object.values(utms).filter((val) => val && val.trim() !== '').length +
+          customParams.filter((p) => p.key && p.key.trim() !== '').length;
+        const finalLongUrl = (activeCount > 0 && targetBase)
+          ? buildUrlWithUtms(targetBase, utms, customParams)
+          : longUrl.trim();
+
         const createPayload: any = {
-          longUrl: longUrl.trim(),
+          longUrl: finalLongUrl,
           customAlias: customAlias.trim() || undefined,
           password: password.trim() || undefined,
           tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,

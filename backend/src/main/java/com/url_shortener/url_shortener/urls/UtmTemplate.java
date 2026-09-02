@@ -35,6 +35,10 @@ public class UtmTemplate {
     @Column(name = "ref_param")
     private String ref;
 
+    @Column(name = "is_default")
+    @Builder.Default
+    private Boolean isDefault = false;
+
     @Column(columnDefinition = "TEXT")
     private String customParams;
 

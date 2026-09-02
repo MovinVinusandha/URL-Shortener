@@ -12,6 +12,8 @@ public interface UtmTemplateRepository extends JpaRepository<UtmTemplate, Long> 
 
     List<UtmTemplate> findByUserOrderByCreatedAtDesc(User user);
 
+    List<UtmTemplate> findByUserAndIsDefaultTrue(User user);
+
     Optional<UtmTemplate> findByIdAndUser(Long id, User user);
 
     boolean existsByNameIgnoreCaseAndUserId(String name, Long userId);

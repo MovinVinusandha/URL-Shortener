@@ -10,6 +10,7 @@ import {
   HelpCircle,
   RotateCcw,
   Check,
+  Star,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,6 +19,7 @@ import {
   type UtmTemplate,
   POPULAR_UTM_PRESETS,
   getSavedUtmTemplates,
+  fetchUtmTemplatesApi,
   saveUtmTemplate,
   deleteUtmTemplate,
 } from '../utils/utmUtils';
@@ -45,7 +47,14 @@ export const UtmBuilder: React.FC<UtmBuilderProps> = ({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
 
   useEffect(() => {
-    setTemplates(getSavedUtmTemplates());
+    fetchUtmTemplatesApi()
+      .then((data) => {
+        if (data && data.length > 0) setTemplates(data);
+        else setTemplates(getSavedUtmTemplates());
+      })
+      .catch(() => {
+        setTemplates(getSavedUtmTemplates());
+      });
   }, []);
 
   const activeUtmCount =
@@ -242,7 +251,7 @@ export const UtmBuilder: React.FC<UtmBuilderProps> = ({
                       <option value="">Load Template...</option>
                       {templates.map((t) => (
                         <option key={t.id} value={t.id}>
-                          {t.name}
+                          {t.isDefault ? `★ ${t.name} (Default)` : t.name}
                         </option>
                       ))}
                     </select>
@@ -263,6 +272,28 @@ export const UtmBuilder: React.FC<UtmBuilderProps> = ({
 
               {/* Preset Chips */}
               <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {(() => {
+                  const defaultTemplate = templates.find((t) => t.isDefault);
+                  if (!defaultTemplate) return null;
+                  const isDefaultApplied = selectedTemplateId === String(defaultTemplate.id);
+                  return (
+                    <button
+                      key={defaultTemplate.id}
+                      type="button"
+                      onClick={() => handleApplyTemplate(String(defaultTemplate.id))}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-all cursor-pointer ${
+                        isDefaultApplied
+                          ? 'bg-amber-500/20 text-amber-500 border-amber-500/40 shadow-sm font-semibold'
+                          : 'bg-amber-500/10 hover:bg-amber-500/15 border-amber-500/25 text-amber-500 font-semibold'
+                      }`}
+                      title="Apply your default UTM template"
+                    >
+                      <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                      <span>Default: {defaultTemplate.name}</span>
+                    </button>
+                  );
+                })()}
+
                 {POPULAR_UTM_PRESETS.map((preset) => {
                   const isApplied =
                     utms.source.toLowerCase() === preset.utms.source?.toLowerCase() &&

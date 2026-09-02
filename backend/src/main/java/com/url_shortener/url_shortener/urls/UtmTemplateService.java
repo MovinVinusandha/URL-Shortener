@@ -33,6 +33,11 @@ public class UtmTemplateService {
             throw new IllegalArgumentException("A UTM template with this name already exists.");
         }
 
+        boolean isDefault = Boolean.TRUE.equals(request.getIsDefault());
+        if (isDefault) {
+            clearUserDefaultTemplates(user);
+        }
+
         UtmTemplate template = UtmTemplate.builder()
                 .name(trimmedName)
                 .source(trimOrNull(request.getSource()))
@@ -41,6 +46,7 @@ public class UtmTemplateService {
                 .term(trimOrNull(request.getTerm()))
                 .content(trimOrNull(request.getContent()))
                 .ref(trimOrNull(request.getRef()))
+                .isDefault(isDefault)
                 .customParams(request.getCustomParams())
                 .user(user)
                 .build();
@@ -66,6 +72,15 @@ public class UtmTemplateService {
             template.setName(newName);
         }
 
+        if (request.getIsDefault() != null) {
+            if (Boolean.TRUE.equals(request.getIsDefault())) {
+                clearUserDefaultTemplates(user);
+                template.setIsDefault(true);
+            } else {
+                template.setIsDefault(false);
+            }
+        }
+
         template.setSource(trimOrNull(request.getSource()));
         template.setMedium(trimOrNull(request.getMedium()));
         template.setCampaign(trimOrNull(request.getCampaign()));
@@ -76,6 +91,35 @@ public class UtmTemplateService {
 
         UtmTemplate saved = utmTemplateRepository.save(template);
         return mapToDto(saved);
+    }
+
+    @Transactional
+    public UtmTemplateDto toggleDefaultTemplate(Long id, User user) {
+        UtmTemplate template = utmTemplateRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("UTM template not found"));
+
+        if (!template.getUser().getId().equals(user.getId())) {
+            throw new AccessDeniedException("You cannot modify a template you do not own.");
+        }
+
+        boolean currentlyDefault = Boolean.TRUE.equals(template.getIsDefault());
+        if (currentlyDefault) {
+            template.setIsDefault(false);
+        } else {
+            clearUserDefaultTemplates(user);
+            template.setIsDefault(true);
+        }
+
+        UtmTemplate saved = utmTemplateRepository.save(template);
+        return mapToDto(saved);
+    }
+
+    private void clearUserDefaultTemplates(User user) {
+        List<UtmTemplate> defaults = utmTemplateRepository.findByUserAndIsDefaultTrue(user);
+        for (UtmTemplate t : defaults) {
+            t.setIsDefault(false);
+            utmTemplateRepository.save(t);
+        }
     }
 
     @Transactional
@@ -105,6 +149,7 @@ public class UtmTemplateService {
                 .term(t.getTerm())
                 .content(t.getContent())
                 .ref(t.getRef())
+                .isDefault(Boolean.TRUE.equals(t.getIsDefault()))
                 .customParams(t.getCustomParams())
                 .createdAt(t.getCreatedAt())
                 .build();

@@ -50,6 +50,14 @@ public class UtmTemplateController {
         return utmTemplateService.updateTemplate(id, request, user);
     }
 
+    @PatchMapping("/{id}/default")
+    @Operation(summary = "Toggle default status for a UTM template")
+    public UtmTemplateDto toggleDefaultTemplate(@PathVariable Long id, Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+        return utmTemplateService.toggleDefaultTemplate(id, user);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete a UTM template by ID")

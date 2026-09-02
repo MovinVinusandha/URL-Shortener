@@ -11,11 +11,14 @@ import {
   Globe,
   Radio,
   Flag,
+  Star,
 } from 'lucide-react';
 import {
   getSavedUtmTemplates,
   deleteUtmTemplate,
   deleteUtmTemplateApi,
+  toggleDefaultUtmTemplate,
+  toggleDefaultUtmTemplateApi,
   fetchUtmTemplatesApi,
   type UtmTemplate,
 } from '../utils/utmUtils';
@@ -78,6 +81,19 @@ export const UtmTemplatesPage: React.FC = () => {
     } finally {
       setTemplateToDelete(null);
       setOpenMenuId(null);
+    }
+  };
+
+  const handleToggleDefault = async (template: UtmTemplate) => {
+    try {
+      await toggleDefaultUtmTemplateApi(template.id);
+      const updated = await fetchUtmTemplatesApi();
+      setTemplates(updated);
+      toast.success(template.isDefault ? 'Default template removed' : 'Default template updated');
+    } catch {
+      const updated = toggleDefaultUtmTemplate(template.id);
+      setTemplates(updated);
+      toast.success(template.isDefault ? 'Default template removed' : 'Default template updated');
     }
   };
 
@@ -211,8 +227,15 @@ export const UtmTemplatesPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Right: Date & 3-Dot Actions */}
-                <div className="flex items-center gap-3">
+                {/* Right: Default Badge, Date & 3-Dot Actions */}
+                <div className="flex items-center gap-3 shrink-0">
+                  {template.isDefault && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                      <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                      <span>Default</span>
+                    </span>
+                  )}
+
                   <span className="text-xs text-muted-foreground hidden md:inline-block">
                     {template.createdAt ? format(new Date(template.createdAt), 'MMM d, yyyy') : 'Recently'}
                   </span>
@@ -236,8 +259,20 @@ export const UtmTemplatesPage: React.FC = () => {
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95, y: -4 }}
                           transition={{ duration: 0.1 }}
-                          className="absolute right-0 top-full mt-1 w-32 bg-card border border-border rounded-xl shadow-lg z-50 p-1 flex flex-col gap-0.5"
+                          className="absolute right-0 top-full mt-1 w-36 bg-card border border-border rounded-xl shadow-lg z-50 p-1 flex flex-col gap-0.5"
                         >
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(null);
+                              handleToggleDefault(template);
+                            }}
+                            className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground rounded-lg transition-colors w-full text-left cursor-pointer"
+                          >
+                            <Star className={`w-3.5 h-3.5 ${template.isDefault ? 'fill-amber-500 text-amber-500' : ''}`} />
+                            <span>{template.isDefault ? 'Remove Default' : 'Set as Default'}</span>
+                          </button>
                           <button
                             type="button"
                             onClick={(e) => {

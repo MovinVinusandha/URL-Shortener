@@ -127,4 +127,23 @@ class UtmTemplateControllerTest {
 
         verify(utmTemplateService).deleteTemplate(1L, user);
     }
+
+    @Test
+    void toggleDefaultTemplate_Success() throws Exception {
+        User user = User.builder().id(1L).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        UtmTemplateDto dto = UtmTemplateDto.builder()
+                .id(1L)
+                .name("Default Template")
+                .isDefault(true)
+                .build();
+
+        when(utmTemplateService.toggleDefaultTemplate(eq(1L), eq(user))).thenReturn(dto);
+
+        mockMvc.perform(patch("/utm-templates/1/default")
+                        .principal(new UsernamePasswordAuthenticationToken(1L, null, Collections.emptyList())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isDefault").value(true));
+    }
 }

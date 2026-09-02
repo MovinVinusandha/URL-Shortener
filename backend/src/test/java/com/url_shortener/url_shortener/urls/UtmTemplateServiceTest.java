@@ -141,4 +141,35 @@ class UtmTemplateServiceTest {
 
         verify(utmTemplateRepository, times(1)).delete(template);
     }
+
+    @Test
+    void toggleDefaultTemplate_SetsToTrue_ClearsOldDefaults() {
+        UtmTemplate oldDefault = UtmTemplate.builder()
+                .id(20L)
+                .name("Old Default")
+                .isDefault(true)
+                .user(user)
+                .build();
+
+        when(utmTemplateRepository.findById(10L)).thenReturn(Optional.of(template));
+        when(utmTemplateRepository.findByUserAndIsDefaultTrue(user)).thenReturn(List.of(oldDefault));
+        when(utmTemplateRepository.save(any(UtmTemplate.class))).thenAnswer(i -> i.getArgument(0));
+
+        UtmTemplateDto result = utmTemplateService.toggleDefaultTemplate(10L, user);
+
+        assertTrue(result.getIsDefault());
+        assertFalse(oldDefault.getIsDefault());
+        verify(utmTemplateRepository, atLeastOnce()).save(oldDefault);
+    }
+
+    @Test
+    void toggleDefaultTemplate_AlreadyDefault_TogglesToFalse() {
+        template.setIsDefault(true);
+        when(utmTemplateRepository.findById(10L)).thenReturn(Optional.of(template));
+        when(utmTemplateRepository.save(any(UtmTemplate.class))).thenAnswer(i -> i.getArgument(0));
+
+        UtmTemplateDto result = utmTemplateService.toggleDefaultTemplate(10L, user);
+
+        assertFalse(result.getIsDefault());
+    }
 }

@@ -20,6 +20,7 @@ export interface UtmTemplate {
   name: string;
   utms: UtmParams;
   customParams?: { key: string; value: string }[];
+  isDefault?: boolean;
   createdAt: number;
 }
 
@@ -32,6 +33,7 @@ export interface UtmTemplateBackendDto {
   term?: string;
   content?: string;
   ref?: string;
+  isDefault?: boolean;
   customParams?: string;
   createdAt?: string;
 }
@@ -266,14 +268,23 @@ export function getSavedUtmTemplates(): UtmTemplate[] {
   }
 }
 
-export function saveUtmTemplate(name: string, utms: UtmParams, customParams: CustomParam[] = []): UtmTemplate[] {
+export function saveUtmTemplate(
+  name: string,
+  utms: UtmParams,
+  customParams: CustomParam[] = [],
+  isDefault: boolean = false
+): UtmTemplate[] {
   try {
-    const existing = getSavedUtmTemplates();
+    let existing = getSavedUtmTemplates();
+    if (isDefault) {
+      existing = existing.map((t) => ({ ...t, isDefault: false }));
+    }
     const newTemplate: UtmTemplate = {
       id: Math.random().toString(36).substring(2, 9),
       name: name.trim(),
       utms: { ...utms },
       customParams: customParams.filter((p) => p.key.trim()).map((p) => ({ key: p.key.trim(), value: p.value.trim() })),
+      isDefault,
       createdAt: Date.now(),
     };
     const updated = [newTemplate, ...existing.filter((t) => t.name.toLowerCase() !== name.trim().toLowerCase())];
@@ -306,6 +317,7 @@ export function mapBackendDtoToTemplate(dto: UtmTemplateBackendDto): UtmTemplate
       ref: dto.ref || '',
     },
     customParams: parsedCustomParams,
+    isDefault: Boolean(dto.isDefault),
     createdAt: dto.createdAt ? new Date(dto.createdAt).getTime() : Date.now(),
   };
 }
@@ -328,7 +340,8 @@ export async function fetchUtmTemplatesApi(): Promise<UtmTemplate[]> {
 export async function createUtmTemplateApi(
   name: string,
   utms: UtmParams,
-  customParams: CustomParam[] = []
+  customParams: CustomParam[] = [],
+  isDefault?: boolean
 ): Promise<UtmTemplate> {
   const cleanCustomParams = customParams
     .filter((p) => p.key && p.key.trim())
@@ -342,6 +355,7 @@ export async function createUtmTemplateApi(
     term: utms.term?.trim() || null,
     content: utms.content?.trim() || null,
     ref: utms.ref?.trim() || null,
+    isDefault: isDefault ?? false,
     customParams: cleanCustomParams.length > 0 ? JSON.stringify(cleanCustomParams) : null,
   };
 
@@ -353,7 +367,8 @@ export async function updateUtmTemplateApi(
   id: string | number,
   name: string,
   utms: UtmParams,
-  customParams: CustomParam[] = []
+  customParams: CustomParam[] = [],
+  isDefault?: boolean
 ): Promise<UtmTemplate> {
   const cleanCustomParams = customParams
     .filter((p) => p.key && p.key.trim())
@@ -367,10 +382,16 @@ export async function updateUtmTemplateApi(
     term: utms.term?.trim() || null,
     content: utms.content?.trim() || null,
     ref: utms.ref?.trim() || null,
+    isDefault: isDefault !== undefined ? isDefault : undefined,
     customParams: cleanCustomParams.length > 0 ? JSON.stringify(cleanCustomParams) : null,
   };
 
   const res = await axiosInstance.put<UtmTemplateBackendDto>(`/utm-templates/${id}`, payload);
+  return mapBackendDtoToTemplate(res.data);
+}
+
+export async function toggleDefaultUtmTemplateApi(id: string | number): Promise<UtmTemplate> {
+  const res = await axiosInstance.patch<UtmTemplateBackendDto>(`/utm-templates/${id}/default`);
   return mapBackendDtoToTemplate(res.data);
 }
 
@@ -382,10 +403,14 @@ export function updateUtmTemplate(
   id: string | number,
   name: string,
   utms: UtmParams,
-  customParams: CustomParam[] = []
+  customParams: CustomParam[] = [],
+  isDefault?: boolean
 ): UtmTemplate[] {
   try {
-    const existing = getSavedUtmTemplates();
+    let existing = getSavedUtmTemplates();
+    if (isDefault) {
+      existing = existing.map((t) => ({ ...t, isDefault: false }));
+    }
     const updated = existing.map((t) => {
       if (t.id === id || String(t.id) === String(id)) {
         return {
@@ -393,9 +418,28 @@ export function updateUtmTemplate(
           name: name.trim(),
           utms: { ...utms },
           customParams: customParams.filter((p) => p.key.trim()).map((p) => ({ key: p.key.trim(), value: p.value.trim() })),
+          ...(isDefault !== undefined ? { isDefault } : {}),
         };
       }
       return t;
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
+}
+
+export function toggleDefaultUtmTemplate(templateId: string | number): UtmTemplate[] {
+  try {
+    const existing = getSavedUtmTemplates();
+    const target = existing.find((t) => t.id === templateId || String(t.id) === String(templateId));
+    const nextIsDefault = !target?.isDefault;
+    const updated = existing.map((t) => {
+      if (t.id === templateId || String(t.id) === String(templateId)) {
+        return { ...t, isDefault: nextIsDefault };
+      }
+      return nextIsDefault ? { ...t, isDefault: false } : t;
     });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     return updated;

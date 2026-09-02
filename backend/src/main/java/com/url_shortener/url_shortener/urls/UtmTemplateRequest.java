@@ -19,5 +19,6 @@ public class UtmTemplateRequest {
     private String term;
     private String content;
     private String ref;
+    private Boolean isDefault;
     private String customParams;
 }

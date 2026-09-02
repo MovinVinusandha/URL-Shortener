@@ -40,6 +40,7 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
   onSuccess,
 }) => {
   const [name, setName] = useState('');
+  const [isDefault, setIsDefault] = useState(false);
   const [utms, setUtms] = useState<UtmParams>({
     source: '',
     medium: '',
@@ -54,6 +55,7 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
     if (isOpen) {
       if (templateToEdit) {
         setName(templateToEdit.name);
+        setIsDefault(Boolean(templateToEdit.isDefault));
         setUtms({ ...templateToEdit.utms });
         setCustomParams(
           (templateToEdit.customParams || []).map((cp) => ({
@@ -64,6 +66,7 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
         );
       } else if (templateToDuplicate) {
         setName(`${templateToDuplicate.name} (Copy)`);
+        setIsDefault(false);
         setUtms({ ...templateToDuplicate.utms });
         setCustomParams(
           (templateToDuplicate.customParams || []).map((cp) => ({
@@ -74,6 +77,7 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
         );
       } else {
         setName('');
+        setIsDefault(false);
         setUtms({
           source: '',
           medium: '',
@@ -119,10 +123,10 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
 
     try {
       if (templateToEdit) {
-        await updateUtmTemplateApi(templateToEdit.id, name, utms, customParams);
+        await updateUtmTemplateApi(templateToEdit.id, name, utms, customParams, isDefault);
         toast.success('Template updated');
       } else {
-        await createUtmTemplateApi(name, utms, customParams);
+        await createUtmTemplateApi(name, utms, customParams, isDefault);
         toast.success(templateToDuplicate ? 'Template duplicated' : 'Template created');
       }
       const updated = await fetchUtmTemplatesApi();
@@ -131,10 +135,10 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
     } catch {
       let fallback: UtmTemplate[];
       if (templateToEdit) {
-        fallback = updateUtmTemplate(templateToEdit.id, name, utms, customParams);
+        fallback = updateUtmTemplate(templateToEdit.id, name, utms, customParams, isDefault);
         toast.success('Template updated');
       } else {
-        fallback = saveUtmTemplate(name, utms, customParams);
+        fallback = saveUtmTemplate(name, utms, customParams, isDefault);
         toast.success(templateToDuplicate ? 'Template duplicated' : 'Template created');
       }
       onSuccess(fallback);
@@ -320,6 +324,21 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
                   <span>Add custom parameter</span>
                 </button>
               </div>
+            </div>
+
+            {/* Set as Default Checkbox */}
+            <div className="pt-1 pb-1">
+              <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isDefault}
+                  onChange={(e) => setIsDefault(e.target.checked)}
+                  className="w-4 h-4 rounded border-input text-primary focus:ring-primary/20 accent-primary cursor-pointer"
+                />
+                <span className="font-medium text-muted-foreground hover:text-foreground transition-colors">
+                  Set as default UTM template
+                </span>
+              </label>
             </div>
 
             {/* Footer Actions */}

@@ -18,6 +18,7 @@ public class UtmTemplateDto {
     private String term;
     private String content;
     private String ref;
+    private Boolean isDefault;
     private String customParams;
     private LocalDateTime createdAt;
 }

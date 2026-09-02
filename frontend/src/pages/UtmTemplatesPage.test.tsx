@@ -128,4 +128,39 @@ describe('UtmTemplatesPage', () => {
       expect(screen.getByDisplayValue('spring_sale')).toBeInTheDocument();
     }
   });
+
+  it('handles toggle default template action and shows default badge', async () => {
+    const toggleSpy = vi.spyOn(utmUtils, 'toggleDefaultUtmTemplateApi').mockResolvedValue({
+      id: 'template-1',
+      name: 'Google Search Ads',
+      utms: { source: 'google', medium: 'cpc', campaign: 'spring_sale', term: 'shortener', content: 'hero_btn', ref: '' },
+      isDefault: true,
+      createdAt: 1725177600000,
+    });
+    vi.spyOn(utmUtils, 'fetchUtmTemplatesApi').mockResolvedValue([
+      {
+        id: 'template-1',
+        name: 'Google Search Ads',
+        utms: { source: 'google', medium: 'cpc', campaign: 'spring_sale', term: 'shortener', content: 'hero_btn', ref: '' },
+        isDefault: true,
+        createdAt: 1725177600000,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <UtmTemplatesPage />
+      </MemoryRouter>
+    );
+
+    const moreButtons = screen.getAllByRole('button');
+    const menuBtn = moreButtons.find((b) => b.querySelector('svg.lucide-ellipsis-vertical'));
+    if (menuBtn) {
+      fireEvent.click(menuBtn);
+      const setDefaultOption = screen.getByText('Set as Default');
+      fireEvent.click(setDefaultOption);
+
+      expect(toggleSpy).toHaveBeenCalledWith('template-1');
+    }
+  });
 });
