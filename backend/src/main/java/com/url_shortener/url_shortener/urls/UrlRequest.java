@@ -1,13 +1,15 @@
 package com.url_shortener.url_shortener.urls;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.*;
 
 import java.util.List;
 
+@Builder
 @AllArgsConstructor
+@NoArgsConstructor
 @Getter
+@Setter
 public class UrlRequest {
     @NotBlank(message = "url is required")
     private String longUrl;

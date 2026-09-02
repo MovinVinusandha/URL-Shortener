@@ -9,6 +9,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -24,6 +25,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final UserDetailsService userDetailsService;
@@ -64,6 +66,7 @@ public class SecurityConfig {
                             c.requestMatchers(org.springframework.http.HttpMethod.POST, "/users", "/user").permitAll();
                             c.requestMatchers("/public/qr/preview").permitAll();
                             c.requestMatchers(org.springframework.http.HttpMethod.POST, "/unlock/**").permitAll();
+                            c.requestMatchers(org.springframework.http.HttpMethod.POST, "/shorten").permitAll();
                             c.requestMatchers(org.springframework.http.HttpMethod.GET, "/{hash:[a-zA-Z0-9-_]+}").permitAll();
                             featureSecurityRules.forEach(r -> r.configure(c));
                             c.anyRequest().authenticated();
@@ -86,7 +89,6 @@ public class SecurityConfig {
     @Bean
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
         var configuration = new org.springframework.web.cors.CorsConfiguration();
-        // Use the injected allowedOrigins property (e.g., from APP_DOMAIN_URL)
         configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(java.util.Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
