@@ -442,4 +442,44 @@ describe('DashboardPage', () => {
       expect(screen.getByText('No links found.')).toBeInTheDocument();
     });
   });
+
+  it('switches to Campaigns view mode and groups campaign links', async () => {
+    const campaignMockLinks = [
+      {
+        longUrl: 'https://example.com/item?utm_campaign=black_friday&utm_source=twitter&utm_medium=social',
+        shortUrl: 'http://trim.sh/bf_tw',
+        accessed_times: 150,
+        createdAt: '2026-08-01T00:00:00Z',
+      },
+      {
+        longUrl: 'https://example.com/item?utm_campaign=black_friday&utm_source=facebook&utm_medium=social',
+        shortUrl: 'http://trim.sh/bf_fb',
+        accessed_times: 200,
+        createdAt: '2026-08-02T00:00:00Z',
+      },
+      {
+        longUrl: 'https://example.com/item2',
+        shortUrl: 'http://trim.sh/plain1',
+        accessed_times: 10,
+        createdAt: '2026-08-03T00:00:00Z',
+      },
+    ];
+
+    (axiosInstance.get as any).mockResolvedValue({ data: campaignMockLinks });
+
+    render(<MemoryRouter><DashboardPage /></MemoryRouter>);
+
+    await waitFor(() => {
+      expect(screen.getByText(/All Links/i)).toBeInTheDocument();
+    });
+
+    const campaignsTab = screen.getByRole('button', { name: /Campaigns/i });
+    fireEvent.click(campaignsTab);
+
+    await waitFor(() => {
+      expect(screen.getByText('black_friday')).toBeInTheDocument();
+      expect(screen.getByText('2 Channels')).toBeInTheDocument();
+      expect(screen.getByText('350')).toBeInTheDocument();
+    });
+  });
 });

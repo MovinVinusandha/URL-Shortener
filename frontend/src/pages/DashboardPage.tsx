@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useOutletContext, Link, useSearchParams, useParams, useNavigate } from 'react-router-dom';
-import { X, BarChart2, Search, Copy, QrCode, Edit2, Trash2, CornerDownRight, MoreVertical, Filter, SlidersHorizontal, ChevronDown, ArrowUpDown, Check, ArrowDownWideNarrow, Tag, ChevronLeft, CheckCircle2, XCircle, Lock, Folder as FolderIcon, Link as LinkIcon } from 'lucide-react';
+import { X, BarChart2, Search, Copy, QrCode, Edit2, Trash2, CornerDownRight, MoreVertical, Filter, SlidersHorizontal, ChevronDown, ArrowUpDown, Check, ArrowDownWideNarrow, Tag, ChevronLeft, CheckCircle2, XCircle, Lock, Folder as FolderIcon, Link as LinkIcon, Layers } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import CreateLinkModal from '../components/CreateLinkModal';
 import { QrCodeModal } from '../components/QrCodeModal';
+import { CampaignGroupCard } from '../components/CampaignGroupCard';
+import { groupUrlsByCampaign } from '../utils/utmExtractor';
 import ClickArrowIcon from '../components/icons/ClickArrowIcon';
 import type { DashboardLayoutContext } from '../layouts/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
@@ -72,7 +74,7 @@ const DashboardPage: React.FC = () => {
   
   const [sortBy, setSortBy] = useState('dateCreated');
   const [sortOrder, setSortOrder] = useState('desc');
-  const [displayProps, setDisplayProps] = useState({ destinationUrl: true, tags: true, clicks: true, createdAt: true, status: true, password: true });
+  const [displayProps, setDisplayProps] = useState({ destinationUrl: true, tags: true, clicks: true, createdAt: true, campaignCreatedAt: false, status: true, password: true });
   const [isDisplayOpen, setIsDisplayOpen] = useState(false);
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState('none');
@@ -417,6 +419,48 @@ const DashboardPage: React.FC = () => {
 
   const hashParam = searchParams.get('hash');
 
+  const [viewMode, setViewMode] = useState<'all' | 'campaigns'>(() => {
+    const urlView = searchParams.get('view');
+    if (urlView === 'campaigns' || urlView === 'all') {
+      return urlView;
+    }
+    try {
+      const saved = localStorage.getItem('trim_dashboard_view_mode');
+      if (saved === 'campaigns' || saved === 'all') return saved;
+    } catch {
+      // fallback
+    }
+    return 'all';
+  });
+
+  const handleSetViewMode = (mode: 'all' | 'campaigns') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('trim_dashboard_view_mode', mode);
+    } catch {
+      // ignore
+    }
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (mode === 'campaigns') {
+        next.set('view', 'campaigns');
+      } else {
+        next.delete('view');
+      }
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const urlView = searchParams.get('view');
+    if (urlView === 'campaigns' || urlView === 'all') {
+      setViewMode(urlView);
+      try {
+        localStorage.setItem('trim_dashboard_view_mode', urlView);
+      } catch {}
+    }
+  }, [searchParams]);
+
   const displayedUrls = sortedUrls.filter(u => {
     if (currentFolder) {
       const isDefault = currentFolder.name.toLowerCase() === 'links';
@@ -441,6 +485,25 @@ const DashboardPage: React.FC = () => {
     if (selectedFilterTags.length === 0) return true;
     return u.tags?.some(tag => selectedFilterTags.includes(tag.id));
   });
+
+  const { campaigns, ungrouped } = useMemo(() => {
+    return groupUrlsByCampaign(displayedUrls);
+  }, [displayedUrls]);
+
+  const handleDeleteUrl = useCallback((url: UrlEntry) => {
+    if (window.confirm("Are you sure you want to delete this link?")) {
+      const originalIdx = urls.indexOf(url);
+      axiosInstance.delete(`/url/${extractHash(url.shortUrl)}`)
+        .then(() => {
+          handleDeleted(originalIdx);
+          toast.success("Link deleted");
+        })
+        .catch(err => {
+          console.error("Failed to delete", err);
+          toast.error("Failed to delete link");
+        });
+    }
+  }, [urls]);
 
   const availableUrls = useMemo(() => {
     let list = urls;
@@ -483,6 +546,35 @@ const DashboardPage: React.FC = () => {
         <div className="flex-1 py-4 w-full">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
             <div className="flex items-center gap-2 flex-wrap">
+              {/* View Mode Switcher */}
+              <div className="flex items-center p-1 rounded-xl bg-secondary/80 border border-border text-xs">
+                <button
+                  type="button"
+                  onClick={() => handleSetViewMode('all')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                    viewMode === 'all'
+                      ? 'bg-zinc-800 text-white dark:bg-zinc-800 dark:text-zinc-100 shadow-xs font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <LinkIcon className="w-3.5 h-3.5" />
+                  <span>All Links</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSetViewMode('campaigns')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                    viewMode === 'campaigns'
+                      ? 'bg-zinc-800 text-white dark:bg-zinc-800 dark:text-zinc-100 shadow-xs font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Campaigns</span>
+                </button>
+              </div>
+
               <div className="relative" ref={filterRef}>
                 <button 
                   onClick={() => setIsFilterOpen(!isFilterOpen)}
@@ -712,9 +804,13 @@ const DashboardPage: React.FC = () => {
                           Analytics
                         </button>
                         <button 
-                          onClick={() => setDisplayProps(prev => ({ ...prev, createdAt: !prev.createdAt }))}
+                          onClick={() => setDisplayProps(prev => ({
+                            ...prev,
+                            createdAt: !prev.createdAt,
+                            campaignCreatedAt: !prev.campaignCreatedAt,
+                          }))}
                           className={`px-2.5 py-1 text-xs border rounded-lg font-medium transition-all ${
-                            displayProps.createdAt 
+                            displayProps.createdAt || displayProps.campaignCreatedAt
                               ? 'border-neutral-200/80 dark:border-[#27272A] bg-neutral-100 dark:bg-[#18181B] text-foreground shadow-sm' 
                               : 'border-border/60 bg-background/50 text-muted-foreground hover:bg-secondary hover:text-foreground'
                           }`}
@@ -931,6 +1027,49 @@ const DashboardPage: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          ) : viewMode === 'campaigns' ? (
+            <div className="space-y-4">
+              {campaigns.length === 0 ? (
+                <div className="bg-background border border-border rounded-xl p-12 text-center flex flex-col items-center justify-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-secondary/80 border border-border flex items-center justify-center text-muted-foreground shadow-xs">
+                    <Layers className="w-6 h-6 text-muted-foreground/60" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-foreground">No Marketing Campaigns Found</h3>
+                    <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                      Links created with a <code className="text-primary font-mono font-medium">utm_campaign</code> parameter or generated via the Multi-Channel batch generator will appear grouped here.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="mt-2 px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    Create Campaign Links
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {campaigns.map(campaign => (
+                    <CampaignGroupCard
+                      key={campaign.campaignName}
+                      campaign={campaign}
+                      displayDomain={displayDomain}
+                      protocol={protocol}
+                      displayProps={displayProps}
+                      onOpenQr={handleOpenQr}
+                      onEditUrl={(url) => {
+                        setEditingUrl(url);
+                        setIsCreateModalOpen(true);
+                      }}
+                      onDeleteUrl={handleDeleteUrl}
+                      initialExpanded={campaigns.length === 1}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-background border border-border rounded-xl overflow-visible flex flex-col gap-0">
