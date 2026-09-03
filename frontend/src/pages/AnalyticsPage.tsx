@@ -403,7 +403,7 @@ const AnalyticsPage: React.FC = () => {
   const [chartType, setChartType] = useState<ChartType>('area');
 
   type UtmTab = 'campaign' | 'source' | 'medium' | 'term' | 'content' | 'referer';
-  const [activeUtmTab, setActiveUtmTab] = useState<UtmTab>('source');
+  const [activeUtmTab, setActiveUtmTab] = useState<UtmTab>('campaign');
 
   const totalClicks = data?.totalClicks || 0;
   const clicksByDate = data?.clicksByDate || [];
@@ -1745,9 +1745,9 @@ const AnalyticsPage: React.FC = () => {
             {/* Subheader row: Dedicated Tabs Section directly below Campaign Performance */}
             <div className="h-12 border-b border-border bg-background px-4 flex items-center overflow-x-auto scrollbar-none gap-1">
               {[
+                { id: 'campaign', label: 'Campaign', icon: Layers },
                 { id: 'source', label: 'Source', icon: Globe },
                 { id: 'medium', label: 'Medium', icon: Radio },
-                { id: 'campaign', label: 'Campaign', icon: Flag },
                 { id: 'term', label: 'Term', icon: Search },
                 { id: 'content', label: 'Content', icon: FileText },
                 { id: 'referer', label: 'Referral', icon: Gift },

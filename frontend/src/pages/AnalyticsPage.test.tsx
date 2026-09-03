@@ -375,13 +375,13 @@ describe('AnalyticsPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Campaign Performance')).toBeInTheDocument();
-      expect(screen.getByText('twitter')).toBeInTheDocument();
+      expect(screen.getByText('summer_promo')).toBeInTheDocument();
     });
 
-    // Switch to Campaign tab
-    const campaignTab = screen.getByRole('button', { name: 'Campaign' });
-    fireEvent.click(campaignTab);
-    expect(screen.getByText('summer_promo')).toBeInTheDocument();
+    // Switch to Source tab
+    const sourceTab = screen.getByRole('button', { name: 'Source' });
+    fireEvent.click(sourceTab);
+    expect(screen.getByText('twitter')).toBeInTheDocument();
 
     // Switch to Referral tab
     const refTab = screen.getByRole('button', { name: /Referral|Referrer/i });
@@ -391,6 +391,12 @@ describe('AnalyticsPage', () => {
 
   it('clicking UTM rows activates multiple simultaneous drilldown filters and shows dismissible pills', async () => {
     render(<MemoryRouter><AnalyticsPage /></MemoryRouter>);
+
+    // Switch to Source tab to see twitter
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Source' })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Source' }));
 
     await waitFor(() => {
       expect(screen.getByText('twitter')).toBeInTheDocument();
