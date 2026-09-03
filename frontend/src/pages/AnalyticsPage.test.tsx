@@ -420,4 +420,48 @@ describe('AnalyticsPage', () => {
     fireEvent.click(clearSourceBtn);
     expect(mockSetSearchParams).toHaveBeenCalled();
   });
+
+  it('allows filtering by campaign from the main Filter dropdown menu', async () => {
+    (axiosInstance.get as any).mockImplementation((url: string) => {
+      if (url === '/url/all') {
+        return Promise.resolve({
+          data: [
+            { id: 1, shortUrl: 'http://localhost/link1', longUrl: 'https://example.com?utm_campaign=product_launch', accessed_times: 10, createdAt: '2026-01-01' },
+          ]
+        });
+      }
+      return Promise.resolve({
+        data: {
+          totalClicks: 10,
+          clicksByDate: [{ date: '2026-08-01T00:00:00Z', count: 10 }],
+          clicksByCountry: [{ country: 'US', count: 10 }],
+          clicksByDevice: [{ device: 'Desktop', count: 10 }],
+          clicksByBrowser: [{ browser: 'Chrome', count: 10 }],
+        },
+      });
+    });
+
+    render(<MemoryRouter><AnalyticsPage /></MemoryRouter>);
+
+    await waitFor(() => {
+      expect(screen.getByText('Filter')).toBeInTheDocument();
+    });
+
+    // Open Filter dropdown
+    fireEvent.click(screen.getByText('Filter'));
+
+    // Click Campaign option in Filter menu
+    const campaignFilterOption = screen.getAllByRole('button', { name: /Campaign/i })[0];
+    expect(campaignFilterOption).toBeInTheDocument();
+    fireEvent.click(campaignFilterOption);
+
+    // Should see the campaign name in the list
+    await waitFor(() => {
+      expect(screen.getByText('product_launch')).toBeInTheDocument();
+    });
+
+    // Select the campaign
+    fireEvent.click(screen.getByText('product_launch'));
+    expect(mockSetSearchParams).toHaveBeenCalled();
+  });
 });

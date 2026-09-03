@@ -19,6 +19,7 @@ import type { UrlDto } from '../types';
 import { DateRangePicker } from '../components/DateRangePicker';
 import type { DateRangeValue } from '../components/DateRangePicker';
 import { format, parseISO } from 'date-fns';
+import { groupUrlsByCampaign } from '../utils/utmExtractor';
 
 export interface UtmDataPoint {
   name: string;
@@ -182,7 +183,7 @@ const AnalyticsPage: React.FC = () => {
   
   const utmSourceParam = searchParams.get('utm_source') || searchParams.get('utmSource');
   const utmMediumParam = searchParams.get('utm_medium') || searchParams.get('utmMedium');
-  const utmCampaignParam = searchParams.get('utm_campaign') || searchParams.get('utmCampaign');
+  const utmCampaignParam = searchParams.get('utm_campaign') || searchParams.get('utmCampaign') || searchParams.get('campaign');
   const utmTermParam = searchParams.get('utm_term') || searchParams.get('utmTerm');
   const utmContentParam = searchParams.get('utm_content') || searchParams.get('utmContent');
   const refererParam = searchParams.get('utm_referer') || searchParams.get('referer');
@@ -191,12 +192,11 @@ const AnalyticsPage: React.FC = () => {
     const list: { key: string; param: string; tab: UtmTab; label: string; value: string; icon: any }[] = [];
     if (utmSourceParam) list.push({ key: 'utm_source', param: 'utmSource', tab: 'source', label: 'Source', value: utmSourceParam, icon: Globe });
     if (utmMediumParam) list.push({ key: 'utm_medium', param: 'utmMedium', tab: 'medium', label: 'Medium', value: utmMediumParam, icon: Radio });
-    if (utmCampaignParam) list.push({ key: 'utm_campaign', param: 'utmCampaign', tab: 'campaign', label: 'Campaign', value: utmCampaignParam, icon: Flag });
     if (utmTermParam) list.push({ key: 'utm_term', param: 'utmTerm', tab: 'term', label: 'Term', value: utmTermParam, icon: Search });
     if (utmContentParam) list.push({ key: 'utm_content', param: 'utmContent', tab: 'content', label: 'Content', value: utmContentParam, icon: FileText });
     if (refererParam) list.push({ key: 'utm_referer', param: 'referer', tab: 'referer', label: 'Referral', value: refererParam, icon: Gift });
     return list;
-  }, [utmSourceParam, utmMediumParam, utmCampaignParam, utmTermParam, utmContentParam, refererParam]);
+  }, [utmSourceParam, utmMediumParam, utmTermParam, utmContentParam, refererParam]);
   
   const currentFolder = folderSlug
     ? folders?.find(f => (f.slug && f.slug.toLowerCase() === folderSlug.toLowerCase()) || f.name.toLowerCase() === folderSlug.toLowerCase() || f.name.toLowerCase().replace(/\s+/g, '-') === folderSlug.toLowerCase())
@@ -205,7 +205,7 @@ const AnalyticsPage: React.FC = () => {
   // Filter dropdown state
   const filterRef = useRef<HTMLDivElement>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<'none' | 'link' | 'tag' | 'folder'>('none');
+  const [activeFilter, setActiveFilter] = useState<'none' | 'link' | 'tag' | 'folder' | 'campaign'>('none');
   const [filterSearch, setFilterSearch] = useState('');
   
   const [urls, setUrls] = useState<UrlDto[]>([]);
@@ -222,6 +222,10 @@ const AnalyticsPage: React.FC = () => {
   const linkPillPopoverRef = useRef<HTMLDivElement>(null);
   const [isLinkPillPopoverOpen, setIsLinkPillPopoverOpen] = useState(false);
   const [linkPillSearch, setLinkPillSearch] = useState('');
+
+  const campaignPillPopoverRef = useRef<HTMLDivElement>(null);
+  const [isCampaignPillPopoverOpen, setIsCampaignPillPopoverOpen] = useState(false);
+  const [campaignPillSearch, setCampaignPillSearch] = useState('');
 
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -257,6 +261,9 @@ const AnalyticsPage: React.FC = () => {
       }
       if (linkPillPopoverRef.current && !linkPillPopoverRef.current.contains(event.target as Node)) {
         setIsLinkPillPopoverOpen(false);
+      }
+      if (campaignPillPopoverRef.current && !campaignPillPopoverRef.current.contains(event.target as Node)) {
+        setIsCampaignPillPopoverOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -340,7 +347,7 @@ const AnalyticsPage: React.FC = () => {
     return tagIdParam ? tagIdParam.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0) : [];
   }, [tagIdParam]);
 
-  const activeFilterCount = (hashParam ? 1 : 0) + (activeTagIds.length > 0 ? activeTagIds.length : 0) + (folderSlug || folderIdParam ? 1 : 0);
+  const activeFilterCount = (hashParam ? 1 : 0) + (activeTagIds.length > 0 ? activeTagIds.length : 0) + (folderSlug || folderIdParam ? 1 : 0) + (utmCampaignParam ? 1 : 0);
 
   const availableUrls = useMemo(() => {
     let list = urls;
@@ -354,6 +361,10 @@ const AnalyticsPage: React.FC = () => {
     }
     return list;
   }, [urls, currentFolder, folderIdParam, activeTagIds]);
+
+  const { campaigns: availableCampaigns } = useMemo(() => {
+    return groupUrlsByCampaign(availableUrls as any);
+  }, [availableUrls]);
 
   const availableTags = useMemo(() => {
     let list = tags;
@@ -655,6 +666,15 @@ const AnalyticsPage: React.FC = () => {
                             Folder
                           </div>
                         </button>
+                        <button 
+                          onClick={() => { setActiveFilter('campaign'); setFilterSearch(''); }}
+                          className="w-full flex items-center justify-between px-2.5 py-2 text-xs text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114] rounded-lg transition-colors group"
+                        >
+                          <div className="flex items-center">
+                            <Layers className="mr-2.5 h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
+                            Campaign
+                          </div>
+                        </button>
                       </div>
                     ) : activeFilter === 'link' ? (
                       <>
@@ -842,6 +862,63 @@ const AnalyticsPage: React.FC = () => {
                           {availableFolders.length === 0 && <div className="px-2.5 py-2 text-xs text-muted-foreground">No folders found</div>}
                         </div>
                       </>
+                    ) : activeFilter === 'campaign' ? (
+                      <>
+                        <div className="p-1.5 border-b border-border/80 bg-background/80 flex items-center gap-1">
+                          <button 
+                            onClick={() => { setActiveFilter('none'); setFilterSearch(''); }} 
+                            className="p-1 hover:bg-neutral-100/70 dark:hover:bg-[#18181B] rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                          <div className="relative flex-1 flex items-center bg-secondary/40 rounded-md px-2 py-0.5 border border-border/40 focus-within:border-primary/50 transition-all">
+                            <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+                            <input 
+                              type="text" 
+                              autoFocus={true}
+                              value={filterSearch}
+                              onChange={e => setFilterSearch(e.target.value)}
+                              placeholder="Search campaigns..." 
+                              className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1 px-2 text-foreground placeholder:text-muted-foreground"
+                            />
+                          </div>
+                        </div>
+                        <div className="py-1 p-1 max-h-56 overflow-y-auto">
+                          {availableCampaigns.filter(c => 
+                            c.campaignName.toLowerCase().includes(filterSearch.toLowerCase())
+                          ).map(c => {
+                            const isSelected = utmCampaignParam?.toLowerCase() === c.campaignName.toLowerCase();
+                            return (
+                              <button
+                                key={c.campaignName}
+                                onClick={() => {
+                                  setSearchParams(prev => {
+                                    const updated = new URLSearchParams(prev);
+                                    updated.set('utm_campaign', c.campaignName);
+                                    updated.delete('campaign');
+                                    return updated;
+                                  });
+                                  setIsFilterOpen(false);
+                                  setActiveFilter('none');
+                                }}
+                                className={`w-full text-left px-2.5 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-between ${isSelected ? 'bg-primary/10 text-primary font-medium' : 'text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114]'}`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Layers className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="truncate font-medium text-xs text-foreground">{c.campaignName}</span>
+                                    <span className="truncate text-[10px] text-muted-foreground">{c.links.length} {c.links.length === 1 ? 'channel' : 'channels'}</span>
+                                  </div>
+                                </div>
+                                <span className="text-[10px] text-muted-foreground font-mono ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50">
+                                  {c.totalClicks} clicks
+                                </span>
+                              </button>
+                            );
+                          })}
+                          {availableCampaigns.length === 0 && <div className="px-2.5 py-2 text-xs text-muted-foreground">{isUrlsLoading ? 'Loading campaigns...' : 'No campaigns found'}</div>}
+                        </div>
+                      </>
                     ) : null}
                   </motion.div>
                 )}
@@ -852,8 +929,105 @@ const AnalyticsPage: React.FC = () => {
           </div>
 
           {/* Active Compound Filter Pills */}
-          {(hashParam || folderSlug || folderIdParam || activeTagIds.length > 0 || activeUtmFilters.length > 0) && (
+          {(hashParam || folderSlug || folderIdParam || activeTagIds.length > 0 || utmCampaignParam || activeUtmFilters.length > 0) && (
             <div className="flex flex-wrap items-center gap-2 mb-2">
+              {utmCampaignParam && (
+                <div className="relative inline-flex items-center" ref={campaignPillPopoverRef}>
+                  <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
+                    <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
+                      <Layers className="w-3 h-3" />
+                      Campaign
+                    </div>
+                    <div className="flex items-center px-2 h-full bg-background text-muted-foreground font-medium">
+                      is
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setIsCampaignPillPopoverOpen(prev => !prev)}
+                      className="flex items-center gap-1 px-2.5 h-full font-medium text-foreground cursor-pointer hover:bg-background transition-colors max-w-[200px] truncate"
+                    >
+                      {utmCampaignParam}
+                    </button>
+                    <button 
+                      type="button"
+                      title="Clear Campaign filter"
+                      className="flex items-center justify-center px-2 h-full text-muted-foreground hover:text-foreground hover:bg-background cursor-pointer transition-colors"
+                      onClick={() => {
+                        setSearchParams(prev => {
+                          const updated = new URLSearchParams(prev);
+                          updated.delete('utm_campaign');
+                          updated.delete('utmCampaign');
+                          updated.delete('campaign');
+                          return updated;
+                        });
+                        setIsCampaignPillPopoverOpen(false);
+                      }}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Campaign Popover Dropdown */}
+                  <AnimatePresence>
+                    {isCampaignPillPopoverOpen && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.1, ease: "easeOut" }}
+                        className="absolute left-0 top-full mt-1 w-72 rounded-xl shadow-lg bg-popover border border-border divide-y divide-border focus:outline-none z-[70] overflow-hidden"
+                      >
+                        <div className="p-1 border-b border-border">
+                          <div className="relative flex items-center">
+                            <Search className="w-3 h-3 text-muted-foreground ml-2" />
+                            <input 
+                              type="text" 
+                              autoFocus={true}
+                              value={campaignPillSearch}
+                              onChange={e => setCampaignPillSearch(e.target.value)}
+                              placeholder="Search campaigns..." 
+                              className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1.5 px-2.5 text-foreground placeholder:text-muted-foreground"
+                            />
+                          </div>
+                        </div>
+                        <div className="py-1 p-1 max-h-56 overflow-y-auto">
+                          {availableCampaigns.filter(c => 
+                            c.campaignName.toLowerCase().includes(campaignPillSearch.toLowerCase())
+                          ).map(c => {
+                            const isSelected = utmCampaignParam?.toLowerCase() === c.campaignName.toLowerCase();
+                            return (
+                              <button
+                                key={c.campaignName}
+                                onClick={() => {
+                                  setSearchParams(prev => {
+                                    const updated = new URLSearchParams(prev);
+                                    updated.set('utm_campaign', c.campaignName);
+                                    updated.delete('campaign');
+                                    return updated;
+                                  });
+                                  setIsCampaignPillPopoverOpen(false);
+                                }}
+                                className={`w-full text-left px-2.5 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-between ${isSelected ? 'bg-primary/10 text-primary font-medium' : 'text-foreground hover:bg-secondary'}`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Layers className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="truncate font-medium text-xs text-foreground">{c.campaignName}</span>
+                                    <span className="truncate text-[10px] text-muted-foreground">{c.links.length} {c.links.length === 1 ? 'channel' : 'channels'}</span>
+                                  </div>
+                                </div>
+                                <span className="text-[10px] text-muted-foreground font-mono ml-2 shrink-0">
+                                  {c.totalClicks} clicks
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
               {hashParam && (
                 <div className="relative inline-flex items-center" ref={linkPillPopoverRef}>
                   <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
