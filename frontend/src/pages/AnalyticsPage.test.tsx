@@ -470,4 +470,29 @@ describe('AnalyticsPage', () => {
     fireEvent.click(screen.getByText('product_launch'));
     expect(mockSetSearchParams).toHaveBeenCalled();
   });
+
+  it('allows toggling between List and Comparison ROI Bar Chart views in Campaign Performance', async () => {
+    render(<MemoryRouter><AnalyticsPage /></MemoryRouter>);
+
+    await waitFor(() => {
+      expect(screen.getByText('Campaign Performance')).toBeInTheDocument();
+      expect(screen.getByText('Comparison')).toBeInTheDocument();
+    });
+
+    // Switch to Comparison view
+    fireEvent.click(screen.getByText('Comparison'));
+
+    // Should render ROI summary cards and BarChart
+    await waitFor(() => {
+      expect(screen.getByText('Top Performer')).toBeInTheDocument();
+      expect(screen.getByText('Channel Breadth')).toBeInTheDocument();
+      expect(screen.getAllByTestId('bar-chart').length).toBeGreaterThan(0);
+    });
+
+    // Switch back to List view
+    fireEvent.click(screen.getByText('List'));
+    await waitFor(() => {
+      expect(screen.getByText('summer_promo')).toBeInTheDocument();
+    });
+  });
 });

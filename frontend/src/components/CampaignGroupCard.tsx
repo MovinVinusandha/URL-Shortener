@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Layers, Copy, Download, BarChart2, Check, QrCode, 
-  Edit2, Trash2, CornerDownRight, Trophy, Lock, MoreVertical, XCircle 
+  Edit2, Trash2, CornerDownRight, Trophy, Lock, MoreVertical, XCircle, SlidersHorizontal
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -246,6 +246,35 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
             transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="border-t border-zinc-200 dark:border-zinc-800 overflow-visible bg-background/30 rounded-b-xl"
           >
+            {/* Channel Traffic Share Distribution Bar */}
+            {campaign.links.length > 1 && campaign.totalClicks > 0 && (
+              <div className="p-3 px-4 sm:px-6 bg-secondary/15 border-b border-zinc-200 dark:border-zinc-800">
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1.5">
+                  <span className="font-medium text-foreground flex items-center gap-1.5">
+                    <SlidersHorizontal className="w-3 h-3 text-primary" /> Channel ROI Distribution
+                  </span>
+                  <span className="font-mono">{campaign.totalClicks.toLocaleString()} total clicks</span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-secondary overflow-hidden flex">
+                  {campaign.links.map((linkItem, idx) => {
+                    const utms = extractUtmParams(linkItem.longUrl);
+                    const chan = formatChannelName(utms.source, utms.medium);
+                    const clicks = linkItem.accessed_times || 0;
+                    const pct = Math.round((clicks / campaign.totalClicks) * 100);
+                    if (clicks === 0) return null;
+                    const color = ['#0099ff', '#38bdf8', '#818cf8', '#34d399', '#fbbf24', '#f43f5e'][idx % 6];
+                    return (
+                      <div
+                        key={linkItem.shortUrl}
+                        style={{ width: `${Math.max(pct, 2)}%`, backgroundColor: color }}
+                        className="h-full transition-all duration-300 hover:brightness-125 cursor-pointer"
+                        title={`${chan}: ${clicks} clicks (${pct}%)`}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div>
               {campaign.links.map(url => {
                 const hash = extractHash(url.shortUrl);
