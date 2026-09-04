@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, Download, Copy, Check, ChevronDown
 } from 'lucide-react';
@@ -291,7 +292,9 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
   const centerPos = size / 2;
   const logoBoxSize = size > 25 ? 6 : 5;
 
-  return (
+  if (!isOpen) return null;
+
+  const content = (
     <AnimatePresence>
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
         <motion.div
@@ -786,4 +789,6 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
       </div>
     </AnimatePresence>
   );
+
+  return typeof document !== 'undefined' ? createPortal(content, document.body) : null;
 };

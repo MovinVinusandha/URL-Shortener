@@ -466,15 +466,13 @@ describe('DashboardPage', () => {
     ];
 
     (axiosInstance.get as any).mockResolvedValue({ data: campaignMockLinks });
+    mockDashboardSearchParams = new URLSearchParams('view=campaigns');
 
-    render(<MemoryRouter><DashboardPage /></MemoryRouter>);
-
-    await waitFor(() => {
-      expect(screen.getByText(/All Links/i)).toBeInTheDocument();
-    });
-
-    const campaignsTab = screen.getByRole('button', { name: /Campaigns/i });
-    fireEvent.click(campaignsTab);
+    render(
+      <MemoryRouter initialEntries={['/dashboard?view=campaigns']}>
+        <DashboardPage />
+      </MemoryRouter>
+    );
 
     await waitFor(() => {
       expect(screen.getByText('black_friday')).toBeInTheDocument();

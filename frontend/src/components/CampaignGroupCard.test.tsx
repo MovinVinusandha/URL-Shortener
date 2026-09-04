@@ -6,6 +6,15 @@ import { CampaignGroupCard } from './CampaignGroupCard';
 import { extractUtmParams, groupUrlsByCampaign, formatChannelName } from '../utils/utmExtractor';
 import type { UrlEntry } from '../types';
 
+import axiosInstance from '../api/axiosInstance';
+
+vi.mock('../api/axiosInstance', () => ({
+  default: {
+    post: vi.fn(),
+    get: vi.fn(),
+  },
+}));
+
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -100,6 +109,15 @@ describe('CampaignGroupCard', () => {
     campaign: sampleCampaign,
     displayDomain: 'app.localhost',
     protocol: 'http:',
+    folders: [
+      { id: 10, name: 'Marketing 2026', slug: 'marketing' },
+      { id: 20, name: 'Product Launches', slug: 'product' },
+    ],
+    tags: [
+      { id: 101, name: 'Promotion' },
+      { id: 102, name: 'Social' },
+    ],
+    onRefresh: vi.fn(),
     onOpenQr: vi.fn(),
     onEditUrl: vi.fn(),
     onDeleteUrl: vi.fn(),
@@ -108,6 +126,7 @@ describe('CampaignGroupCard', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    (axiosInstance.post as any).mockResolvedValue({ data: { success: true, message: 'Done' } });
     Object.assign(navigator, {
       clipboard: {
         writeText: vi.fn().mockResolvedValue(undefined),
@@ -173,5 +192,102 @@ describe('CampaignGroupCard', () => {
     fireEvent.click(analyticsBtn);
 
     expect(mockNavigate).toHaveBeenCalledWith('/analytics?campaign=spring_sale_2026');
+  });
+
+  it('opens Move to Folder modal and performs bulk move', async () => {
+    render(
+      <MemoryRouter>
+        <CampaignGroupCard {...defaultProps} />
+      </MemoryRouter>
+    );
+
+    // Open menu
+    fireEvent.click(screen.getByTitle('Campaign Options'));
+    fireEvent.click(screen.getByText('Move to Folder'));
+
+    // Select a folder
+    expect(screen.getByText('Marketing 2026')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Marketing 2026'));
+
+    // Click confirm button
+    const submitBtn = screen.getByRole('button', { name: /Move 2 Links/i });
+    fireEvent.click(submitBtn);
+
+    expect(axiosInstance.post).toHaveBeenCalledWith('/url/bulk-action', {
+      hashes: ['fb1', 'em1'],
+      action: 'MOVE_FOLDER',
+      folderId: 10,
+    });
+  });
+
+  it('opens Assign Tags modal and performs bulk tag assignment', async () => {
+    render(
+      <MemoryRouter>
+        <CampaignGroupCard {...defaultProps} />
+      </MemoryRouter>
+    );
+
+    // Open menu
+    fireEvent.click(screen.getByTitle('Campaign Options'));
+    fireEvent.click(screen.getByText('Assign Tags'));
+
+    // Select tags
+    expect(screen.getByText('Promotion')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Promotion'));
+
+    // Click confirm button
+    const submitBtn = screen.getByRole('button', { name: /Apply Tags/i });
+    fireEvent.click(submitBtn);
+
+    expect(axiosInstance.post).toHaveBeenCalledWith('/url/bulk-action', {
+      hashes: ['fb1', 'em1'],
+      action: 'ADD_TAGS',
+      tagIds: [101],
+    });
+  });
+
+  it('opens Set Expiration modal and performs bulk expiration update', async () => {
+    render(
+      <MemoryRouter>
+        <CampaignGroupCard {...defaultProps} />
+      </MemoryRouter>
+    );
+
+    // Open menu
+    fireEvent.click(screen.getByTitle('Campaign Options'));
+    fireEvent.click(screen.getByText('Set Expiration'));
+
+    // Select 7 days
+    fireEvent.click(screen.getByText('In 7 Days'));
+
+    // Click confirm button
+    const submitBtn = screen.getByRole('button', { name: /Save Expiration/i });
+    fireEvent.click(submitBtn);
+
+    expect(axiosInstance.post).toHaveBeenCalledWith('/url/bulk-action', expect.objectContaining({
+      hashes: ['fb1', 'em1'],
+      action: 'SET_EXPIRATION',
+    }));
+  });
+
+  it('opens Delete Campaign modal and performs bulk deletion', async () => {
+    render(
+      <MemoryRouter>
+        <CampaignGroupCard {...defaultProps} />
+      </MemoryRouter>
+    );
+
+    // Open menu
+    fireEvent.click(screen.getByTitle('Campaign Options'));
+    fireEvent.click(screen.getByText('Delete Campaign'));
+
+    // Click delete confirm button
+    const deleteBtn = screen.getByRole('button', { name: /Delete 2 Links/i });
+    fireEvent.click(deleteBtn);
+
+    expect(axiosInstance.post).toHaveBeenCalledWith('/url/bulk-action', {
+      hashes: ['fb1', 'em1'],
+      action: 'DELETE',
+    });
   });
 });

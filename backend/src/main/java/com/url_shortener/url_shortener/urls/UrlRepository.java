@@ -21,5 +21,7 @@ public interface UrlRepository extends JpaRepository<Url, Long> {
     @org.springframework.data.jpa.repository.Query("SELECT DISTINCT u FROM Url u LEFT JOIN FETCH u.tags t LEFT JOIN FETCH u.folder f WHERE u.user.id = :userId AND (:tagId IS NULL OR t.id = :tagId) AND (:folderId IS NULL OR f.id = :folderId) AND (:folderSlug IS NULL OR f.slug = :folderSlug) AND (:search IS NULL OR LOWER(u.longUrl) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(u.shortUrl) LIKE LOWER(CONCAT('%', :search, '%')))")
     java.util.List<Url> findAllByUserIdWithFilters(@org.springframework.data.repository.query.Param("userId") Long userId, @org.springframework.data.repository.query.Param("tagId") Long tagId, @org.springframework.data.repository.query.Param("folderId") Long folderId, @org.springframework.data.repository.query.Param("folderSlug") String folderSlug, @org.springframework.data.repository.query.Param("search") String search);
 
+    java.util.List<Url> findAllByShortUrlIn(java.util.Collection<String> shortUrls);
+
     long countByUserId(Long userId);
 }

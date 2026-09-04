@@ -127,57 +127,32 @@ describe('DashboardLayout', () => {
     expect(mockLogout).toHaveBeenCalled();
   });
 
-  it('handles folder switcher dropdown, search, selecting folder, and click outside', async () => {
+  it('handles view switcher dropdown, selecting campaigns, and click outside', async () => {
     render(
       <MemoryRouter initialEntries={['/dashboard']}>
         <Routes>
           <Route path="/dashboard" element={<DashboardLayout />} />
-          <Route path="/dashboard/f/:folderSlug" element={<DashboardLayout />} />
         </Routes>
       </MemoryRouter>
     );
 
     await waitFor(() => {
-      expect(screen.getByText('All Links')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Links/i })).toBeInTheDocument();
     });
 
-    const folderDropdownTrigger = screen.getByText('All Links');
-    fireEvent.click(folderDropdownTrigger);
+    const viewDropdownTrigger = screen.getByRole('button', { name: /Links/i });
+    fireEvent.click(viewDropdownTrigger);
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Search folders...')).toBeInTheDocument();
-      expect(screen.getByText('Campaign 2026')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Campaigns/i })).toBeInTheDocument();
     });
 
-    // Search folder and select
-    const searchInput = screen.getByPlaceholderText('Search folders...');
-    fireEvent.change(searchInput, { target: { value: 'Camp' } });
-    expect(screen.getByText('Campaign 2026')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('Campaign 2026'));
+    // Select Campaigns
+    fireEvent.click(screen.getByRole('button', { name: /Campaigns/i }));
 
-    // Click outside
+    // Re-open and test click outside
+    fireEvent.click(viewDropdownTrigger);
     fireEvent.mouseDown(document.body);
-  });
-
-  it('handles folder switcher create new folder trigger', async () => {
-    render(
-      <MemoryRouter initialEntries={['/dashboard']}>
-        <Routes>
-          <Route path="/dashboard" element={<DashboardLayout />} />
-          <Route path="/folders" element={<DashboardLayout />} />
-        </Routes>
-      </MemoryRouter>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('All Links')).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByText('All Links'));
-    await waitFor(() => {
-      expect(screen.getByText('Create new folder')).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByText('Create new folder'));
   });
 
   it('handles top navigation tabs and creating a link via modal onSuccess', async () => {
@@ -289,7 +264,7 @@ describe('DashboardLayout', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('All Links')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Links/i })).toBeInTheDocument();
   });
 
   it('handles API errors gracefully during background data load', async () => {
@@ -303,6 +278,6 @@ describe('DashboardLayout', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('All Links')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Links/i })).toBeInTheDocument();
   });
 });

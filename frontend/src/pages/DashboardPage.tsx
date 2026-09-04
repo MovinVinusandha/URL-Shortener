@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useOutletContext, Link, useSearchParams, useParams, useNavigate } from 'react-router-dom';
-import { X, BarChart2, Search, Copy, QrCode, Edit2, Trash2, CornerDownRight, MoreVertical, Filter, SlidersHorizontal, ChevronDown, ArrowUpDown, Check, ArrowDownWideNarrow, Tag, ChevronLeft, CheckCircle2, XCircle, Lock, Folder as FolderIcon, Link as LinkIcon, Layers } from 'lucide-react';
+import { X, BarChart2, Search, Copy, QrCode, Edit2, Trash2, CornerDownRight, MoreVertical, Filter, SlidersHorizontal, ChevronDown, ArrowUpDown, Check, ArrowDownWideNarrow, Tag, ChevronLeft, CheckCircle2, XCircle, Lock, Folder as FolderIcon, Link as LinkIcon, Layers, FolderPlus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import CreateLinkModal from '../components/CreateLinkModal';
 import { QrCodeModal } from '../components/QrCodeModal';
 import { CampaignGroupCard } from '../components/CampaignGroupCard';
-import { groupUrlsByCampaign } from '../utils/utmExtractor';
+import { groupUrlsByCampaign, extractUtmParams, formatChannelName } from '../utils/utmExtractor';
 import ClickArrowIcon from '../components/icons/ClickArrowIcon';
 import type { DashboardLayoutContext } from '../layouts/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
@@ -77,14 +77,28 @@ const DashboardPage: React.FC = () => {
   const [displayProps, setDisplayProps] = useState({ destinationUrl: true, tags: true, clicks: true, createdAt: true, campaignCreatedAt: false, status: true, password: true });
   const [isDisplayOpen, setIsDisplayOpen] = useState(false);
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+  const [isToolbarFolderOpen, setIsToolbarFolderOpen] = useState(false);
+  const [toolbarFolderSearch, setToolbarFolderSearch] = useState('');
+  const toolbarFolderRef = useRef<HTMLDivElement>(null);
+
   const [activeFilter, setActiveFilter] = useState('none');
   const [selectedFilterTags, setSelectedFilterTags] = useState<number[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
+  const [selectedLinkType, setSelectedLinkType] = useState<'all' | 'standalone' | 'campaign'>('all');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [tagSearch, setTagSearch] = useState('');
+  const [campaignSearch, setCampaignSearch] = useState('');
   
   const [isTagPillPopoverOpen, setIsTagPillPopoverOpen] = useState(false);
   const [tagPillSearch, setTagPillSearch] = useState('');
   const tagPillPopoverRef = useRef<HTMLDivElement>(null);
+
+  const [isCampaignPillPopoverOpen, setIsCampaignPillPopoverOpen] = useState(false);
+  const [campaignPillSearch, setCampaignPillSearch] = useState('');
+  const campaignPillPopoverRef = useRef<HTMLDivElement>(null);
+
+  const [isLinkTypePillPopoverOpen, setIsLinkTypePillPopoverOpen] = useState(false);
+  const linkTypePillPopoverRef = useRef<HTMLDivElement>(null);
 
   const [isFolderPillPopoverOpen, setIsFolderPillPopoverOpen] = useState(false);
   const [folderPillSearch, setFolderPillSearch] = useState('');
@@ -124,6 +138,16 @@ const DashboardPage: React.FC = () => {
       }
       return nextTags;
     });
+
+    const campaignParam = searchParams.get('campaign');
+    setSelectedCampaign(campaignParam || null);
+
+    const linkTypeParam = searchParams.get('linkType');
+    if (linkTypeParam === 'standalone' || linkTypeParam === 'campaign') {
+      setSelectedLinkType(linkTypeParam);
+    } else {
+      setSelectedLinkType('all');
+    }
   }, [searchParams.toString(), tags]);
 
   useEffect(() => {
@@ -144,8 +168,16 @@ const DashboardPage: React.FC = () => {
         setIsTagPillPopoverOpen(false);
       }
 
-      if (folderPillPopoverRef.current && !folderPillPopoverRef.current.contains(event.target as Node)) {
-        setIsFolderPillPopoverOpen(false);
+      if (campaignPillPopoverRef.current && !campaignPillPopoverRef.current.contains(event.target as Node)) {
+        setIsCampaignPillPopoverOpen(false);
+      }
+
+      if (linkTypePillPopoverRef.current && !linkTypePillPopoverRef.current.contains(event.target as Node)) {
+        setIsLinkTypePillPopoverOpen(false);
+      }
+
+      if (toolbarFolderRef.current && !toolbarFolderRef.current.contains(event.target as Node)) {
+        setIsToolbarFolderOpen(false);
       }
 
       if (linkPillPopoverRef.current && !linkPillPopoverRef.current.contains(event.target as Node)) {
@@ -242,6 +274,23 @@ const DashboardPage: React.FC = () => {
     return updatedUrls.filter((u): u is UrlEntry => u !== null);
   }, [user]);
 
+
+  const refreshDashboardData = async () => {
+    if (user) {
+      let url = '/url/all';
+      if (folderSlug) {
+        url = `/url/folder/slug/${folderSlug}`;
+      }
+      try {
+        const { data: serverUrls } = await axiosInstance.get<UrlDto[]>(url);
+        const mapped = serverUrls.map(mapDtoToEntry);
+        setUrls(mapped);
+        saveToStorage(mapped);
+      } catch (err) {
+        console.error('Failed to reload dashboard data', err);
+      }
+    }
+  };
 
   // Initial load logic on mount / user change / folderSlug change
   useEffect(() => {
@@ -419,22 +468,9 @@ const DashboardPage: React.FC = () => {
 
   const hashParam = searchParams.get('hash');
 
-  const [viewMode, setViewMode] = useState<'all' | 'campaigns'>(() => {
-    const urlView = searchParams.get('view');
-    if (urlView === 'campaigns' || urlView === 'all') {
-      return urlView;
-    }
-    try {
-      const saved = localStorage.getItem('trim_dashboard_view_mode');
-      if (saved === 'campaigns' || saved === 'all') return saved;
-    } catch {
-      // fallback
-    }
-    return 'all';
-  });
+  const viewMode: 'all' | 'campaigns' = searchParams.get('view') === 'campaigns' ? 'campaigns' : 'all';
 
-  const handleSetViewMode = (mode: 'all' | 'campaigns') => {
-    setViewMode(mode);
+  const handleSetViewMode = useCallback((mode: 'all' | 'campaigns') => {
     try {
       localStorage.setItem('trim_dashboard_view_mode', mode);
     } catch {
@@ -449,17 +485,7 @@ const DashboardPage: React.FC = () => {
       }
       return next;
     });
-  };
-
-  useEffect(() => {
-    const urlView = searchParams.get('view');
-    if (urlView === 'campaigns' || urlView === 'all') {
-      setViewMode(urlView);
-      try {
-        localStorage.setItem('trim_dashboard_view_mode', urlView);
-      } catch {}
-    }
-  }, [searchParams]);
+  }, [setSearchParams]);
 
   const displayedUrls = sortedUrls.filter(u => {
     if (currentFolder) {
@@ -484,6 +510,22 @@ const DashboardPage: React.FC = () => {
   }).filter(u => {
     if (selectedFilterTags.length === 0) return true;
     return u.tags?.some(tag => selectedFilterTags.includes(tag.id));
+  }).filter(u => {
+    const utm = extractUtmParams(u.longUrl);
+    if (selectedCampaign) {
+      return utm.campaign?.toLowerCase() === selectedCampaign.toLowerCase();
+    }
+    if (selectedLinkType === 'standalone') {
+      return !utm.campaign;
+    }
+    if (selectedLinkType === 'campaign') {
+      return !!utm.campaign;
+    }
+    // In "All Links" view mode, only show standalone links by default
+    if (viewMode === 'all') {
+      return !utm.campaign;
+    }
+    return true;
   });
 
   const { campaigns, ungrouped } = useMemo(() => {
@@ -526,6 +568,21 @@ const DashboardPage: React.FC = () => {
     return list;
   }, [tags, urls, currentFolder]);
 
+  const availableCampaigns = useMemo(() => {
+    let list = urls;
+    if (currentFolder && currentFolder.name.toLowerCase() !== 'links') {
+      list = list.filter(u => u.folderId === currentFolder.id);
+    }
+    const campaignMap = new Map<string, number>();
+    list.forEach(u => {
+      const utm = extractUtmParams(u.longUrl);
+      if (utm.campaign) {
+        campaignMap.set(utm.campaign, (campaignMap.get(utm.campaign) || 0) + 1);
+      }
+    });
+    return Array.from(campaignMap.entries()).map(([name, count]) => ({ name, count }));
+  }, [urls, currentFolder]);
+
   const availableFolders = useMemo(() => {
     let list = folders;
     if (selectedFilterTags.length > 0) {
@@ -546,47 +603,154 @@ const DashboardPage: React.FC = () => {
         <div className="flex-1 py-4 w-full">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
             <div className="flex items-center gap-2 flex-wrap">
-              {/* View Mode Switcher */}
-              <div className="flex items-center p-1 rounded-xl bg-secondary/80 border border-border text-xs">
+              {/* Folder Selector Dropdown */}
+              <div className="relative" ref={toolbarFolderRef}>
                 <button
                   type="button"
-                  onClick={() => handleSetViewMode('all')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
-                    viewMode === 'all'
-                      ? 'bg-zinc-800 text-white dark:bg-zinc-800 dark:text-zinc-100 shadow-xs font-semibold'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  onClick={() => setIsToolbarFolderOpen(!isToolbarFolderOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 border border-input rounded-lg text-xs font-medium bg-background text-foreground hover:bg-secondary transition-all cursor-pointer shadow-xs"
                 >
-                  <LinkIcon className="w-3.5 h-3.5" />
-                  <span>All Links</span>
+                  <FolderIcon className={`w-3.5 h-3.5 ${currentFolder && currentFolder.name.toLowerCase() !== 'links' ? 'text-emerald-500' : 'text-primary'}`} />
+                  <span className="font-semibold max-w-[130px] sm:max-w-[180px] truncate">
+                    {currentFolder ? currentFolder.name : 'All Folders'}
+                  </span>
+                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground opacity-70 ml-0.5" />
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleSetViewMode('campaigns')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
-                    viewMode === 'campaigns'
-                      ? 'bg-zinc-800 text-white dark:bg-zinc-800 dark:text-zinc-100 shadow-xs font-semibold'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>Campaigns</span>
-                </button>
+                <AnimatePresence>
+                  {isToolbarFolderOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                      transition={{ duration: 0.1, ease: "easeOut" }}
+                      className="absolute top-full left-0 mt-1 w-64 bg-background border border-border shadow-lg rounded-xl p-2 z-[100] flex flex-col gap-1.5"
+                    >
+                      <div className="relative flex items-center px-2 border-b border-border pb-1">
+                        <Search className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 ml-1" />
+                        <input
+                          type="text"
+                          autoFocus={true}
+                          placeholder="Search folders..."
+                          value={toolbarFolderSearch}
+                          onChange={(e) => setToolbarFolderSearch(e.target.value)}
+                          className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1.5 px-2.5 text-foreground placeholder:text-muted-foreground"
+                        />
+                        <button
+                          onClick={() => {
+                            navigate('/folders');
+                            setIsToolbarFolderOpen(false);
+                          }}
+                          className="text-xs font-medium text-muted-foreground hover:text-foreground flex-shrink-0 whitespace-nowrap cursor-pointer"
+                        >
+                          View All
+                        </button>
+                      </div>
+
+                      <div className="max-h-56 overflow-y-auto flex flex-col gap-0.5 py-1">
+                        {/* All Folders Option */}
+                        <button
+                          onClick={() => {
+                            if (setActiveFolderId) setActiveFolderId(null);
+                            const currentParams = searchParams.toString();
+                            navigate(currentParams ? `/dashboard?${currentParams}` : '/dashboard');
+                            setIsToolbarFolderOpen(false);
+                          }}
+                          className={`w-full text-left px-2.5 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-between cursor-pointer ${
+                            !folderSlug && !activeFolderId
+                              ? 'bg-secondary text-foreground font-medium'
+                              : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <FolderIcon className="w-3.5 h-3.5 text-primary" />
+                            <span>All Folders</span>
+                          </div>
+                          {!folderSlug && !activeFolderId && (
+                            <Check className="w-3.5 h-3.5 text-primary" />
+                          )}
+                        </button>
+
+                        {folders
+                          .filter(f => f.name.toLowerCase().includes(toolbarFolderSearch.toLowerCase()))
+                          .map(folder => {
+                            const isDefault = folder.name.toLowerCase() === 'links';
+                            const slug = folder.slug || encodeURIComponent(folder.name.toLowerCase().replace(/\s+/g, '-'));
+                            const isSelected =
+                              (folderSlug &&
+                                ((folder.slug && folder.slug.toLowerCase() === folderSlug.toLowerCase()) ||
+                                  folder.name.toLowerCase() === folderSlug.toLowerCase() ||
+                                  folder.name.toLowerCase().replace(/\s+/g, '-') === folderSlug.toLowerCase())) ||
+                              (!folderSlug && activeFolderId === folder.id);
+
+                            return (
+                              <button
+                                key={folder.id}
+                                onClick={() => {
+                                  if (setActiveFolderId) setActiveFolderId(folder.id);
+                                  const currentParams = searchParams.toString();
+                                  navigate(currentParams ? `/dashboard/f/${slug}?${currentParams}` : `/dashboard/f/${slug}`);
+                                  setIsToolbarFolderOpen(false);
+                                }}
+                                className={`w-full text-left px-2.5 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-between cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-secondary text-foreground font-medium'
+                                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 truncate">
+                                  <FolderIcon
+                                    className={`w-3.5 h-3.5 shrink-0 ${isDefault ? 'text-primary' : 'text-emerald-500'}`}
+                                  />
+                                  <span className="truncate">{folder.name}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {isDefault && (
+                                    <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold">
+                                      Default
+                                    </span>
+                                  )}
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        {folders.length === 0 && (
+                          <div className="px-2.5 py-2 text-xs text-muted-foreground">No folders found</div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          navigate('/folders?create=true');
+                          setIsToolbarFolderOpen(false);
+                        }}
+                        className="w-full text-left px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground rounded-lg transition-colors flex items-center gap-2 font-medium border-t border-border pt-1.5 cursor-pointer"
+                      >
+                        <FolderPlus className="w-3.5 h-3.5 text-muted-foreground" />
+                        Create new folder
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               <div className="relative" ref={filterRef}>
                 <button 
                   onClick={() => setIsFilterOpen(!isFilterOpen)}
                   className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-medium transition-all ${
-                    selectedFilterTags.length > 0 
+                    (selectedFilterTags.length > 0 || selectedCampaign || selectedLinkType !== 'all')
                       ? 'border-neutral-200/80 dark:border-[#27272A] bg-neutral-100 dark:bg-[#18181B] text-foreground shadow-sm hover:bg-neutral-200/60 dark:hover:bg-[#202024]' 
                       : 'bg-background border-input text-foreground hover:bg-secondary'
                   }`}
                 >
-                  <Filter className={`w-3.5 h-3.5 ${selectedFilterTags.length > 0 ? 'text-[#0099ff]' : 'text-muted-foreground'}`} />
+                  <Filter className={`w-3.5 h-3.5 ${(selectedFilterTags.length > 0 || selectedCampaign || selectedLinkType !== 'all') ? 'text-[#0099ff]' : 'text-muted-foreground'}`} />
                   Filter
-                  {selectedFilterTags.length > 0 && <span className="bg-[#0099ff] text-white text-[10px] px-1.5 py-0.5 rounded-full leading-none font-semibold shadow-sm">{selectedFilterTags.length}</span>}
+                  {(selectedFilterTags.length > 0 || selectedCampaign || selectedLinkType !== 'all') && (
+                    <span className="bg-[#0099ff] text-white text-[10px] px-1.5 py-0.5 rounded-full leading-none font-semibold shadow-sm">
+                      {selectedFilterTags.length + (selectedCampaign ? 1 : 0) + (selectedLinkType !== 'all' ? 1 : 0)}
+                    </span>
+                  )}
                   <ChevronDown className="w-3 h-3 opacity-70" />
                 </button>
 
@@ -600,7 +764,7 @@ const DashboardPage: React.FC = () => {
                     className="absolute left-0 top-full mt-1 w-64 rounded-xl shadow-lg bg-popover border border-border divide-y divide-border focus:outline-none z-[60] overflow-hidden"
                   >
                     {activeFilter === 'none' ? (
-                      <div className="py-1 p-1">
+                      <div className="py-1 p-1 space-y-0.5">
                         <button 
                           onClick={() => { setActiveFilter('tag'); setTagSearch(''); }}
                           className="w-full flex items-center justify-between px-2.5 py-2 text-xs text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114] rounded-lg transition-colors group"
@@ -609,6 +773,41 @@ const DashboardPage: React.FC = () => {
                             <Tag className="mr-2.5 h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
                             Tag
                           </div>
+                          {selectedFilterTags.length > 0 && (
+                            <span className="text-[10px] text-muted-foreground font-mono bg-secondary px-1.5 py-0.2 rounded-full">
+                              {selectedFilterTags.length}
+                            </span>
+                          )}
+                        </button>
+
+                        <button 
+                          onClick={() => { setActiveFilter('campaign'); setCampaignSearch(''); }}
+                          className="w-full flex items-center justify-between px-2.5 py-2 text-xs text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114] rounded-lg transition-colors group"
+                        >
+                          <div className="flex items-center">
+                            <Layers className="mr-2.5 h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
+                            Campaign
+                          </div>
+                          {selectedCampaign && (
+                            <span className="text-[10px] text-primary font-medium truncate max-w-[80px]">
+                              {selectedCampaign}
+                            </span>
+                          )}
+                        </button>
+
+                        <button 
+                          onClick={() => { setActiveFilter('type'); }}
+                          className="w-full flex items-center justify-between px-2.5 py-2 text-xs text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114] rounded-lg transition-colors group"
+                        >
+                          <div className="flex items-center">
+                            <LinkIcon className="mr-2.5 h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
+                            Link Type
+                          </div>
+                          {selectedLinkType !== 'all' && (
+                            <span className="text-[10px] text-primary capitalize">
+                              {selectedLinkType}
+                            </span>
+                          )}
                         </button>
                       </div>
                     ) : activeFilter === 'tag' ? (
@@ -682,6 +881,124 @@ const DashboardPage: React.FC = () => {
                             );
                           })}
                           {availableTags.length === 0 && <div className="px-2.5 py-2 text-xs text-muted-foreground">No tags found</div>}
+                        </div>
+                      </>
+                    ) : activeFilter === 'campaign' ? (
+                      <>
+                        <div className="p-1.5 border-b border-border/80 bg-background/80 flex items-center gap-1">
+                          <button 
+                            onClick={() => { setActiveFilter('none'); setCampaignSearch(''); }} 
+                            className="p-1 hover:bg-neutral-100/70 dark:hover:bg-[#18181B] rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                          <div className="relative flex-1 flex items-center bg-secondary/40 rounded-md px-2 py-0.5 border border-border/40 focus-within:border-primary/50 transition-all">
+                            <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+                            <input 
+                              type="text" 
+                              autoFocus={true}
+                              value={campaignSearch}
+                              onChange={e => setCampaignSearch(e.target.value)}
+                              placeholder="Search campaigns..." 
+                              className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1 px-2 text-foreground placeholder:text-muted-foreground"
+                            />
+                          </div>
+                        </div>
+                        <div className="py-1 p-1 max-h-48 overflow-y-auto">
+                          {availableCampaigns.filter(c => c.name.toLowerCase().includes(campaignSearch.toLowerCase())).map(c => {
+                            const isSelected = selectedCampaign === c.name;
+                            return (
+                              <button
+                                key={c.name}
+                                type="button"
+                                onClick={() => {
+                                  const nextCampaign = isSelected ? null : c.name;
+                                  setSelectedCampaign(nextCampaign);
+                                  setSearchParams(prev => {
+                                    const next = new URLSearchParams(prev);
+                                    if (nextCampaign) {
+                                      next.set('campaign', nextCampaign);
+                                    } else {
+                                      next.delete('campaign');
+                                    }
+                                    return next;
+                                  });
+                                  setIsFilterOpen(false);
+                                  setActiveFilter('none');
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg cursor-pointer transition-colors ${
+                                  isSelected 
+                                    ? 'bg-primary/10 text-primary font-semibold' 
+                                    : 'text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Layers className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                                  <span className="truncate font-medium">{c.name}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <span className="text-[10px] text-muted-foreground font-mono px-1.5 py-0.5 rounded-full bg-secondary/50">
+                                    {c.count}
+                                  </span>
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-primary stroke-[2.5]" />}
+                                </div>
+                              </button>
+                            );
+                          })}
+                          {availableCampaigns.length === 0 && <div className="px-2.5 py-2 text-xs text-muted-foreground">No UTM campaigns found</div>}
+                        </div>
+                      </>
+                    ) : activeFilter === 'type' ? (
+                      <>
+                        <div className="p-1.5 border-b border-border/80 bg-background/80 flex items-center gap-1">
+                          <button 
+                            onClick={() => { setActiveFilter('none'); }} 
+                            className="p-1 hover:bg-neutral-100/70 dark:hover:bg-[#18181B] rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="text-xs font-semibold text-foreground px-2">Link Type</span>
+                        </div>
+                        <div className="py-1 p-1 space-y-0.5">
+                          {[
+                            { value: 'all', label: 'All Links', desc: 'Show standalone & campaign links' },
+                            { value: 'standalone', label: 'Standalone Only', desc: 'Links without UTM campaign' },
+                            { value: 'campaign', label: 'Campaign Links Only', desc: 'Links with UTM campaign' },
+                          ].map((item) => {
+                            const isSelected = selectedLinkType === item.value;
+                            return (
+                              <button
+                                key={item.value}
+                                type="button"
+                                onClick={() => {
+                                  const val = item.value as 'all' | 'standalone' | 'campaign';
+                                  setSelectedLinkType(val);
+                                  setSearchParams(prev => {
+                                    const next = new URLSearchParams(prev);
+                                    if (val !== 'all') {
+                                      next.set('linkType', val);
+                                    } else {
+                                      next.delete('linkType');
+                                    }
+                                    return next;
+                                  });
+                                  setIsFilterOpen(false);
+                                  setActiveFilter('none');
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-2 text-xs rounded-lg cursor-pointer transition-colors ${
+                                  isSelected 
+                                    ? 'bg-primary/10 text-primary font-medium' 
+                                    : 'text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
+                                }`}
+                              >
+                                <div className="flex flex-col items-start min-w-0">
+                                  <span className="font-medium truncate">{item.label}</span>
+                                  <span className="text-[10px] text-muted-foreground">{item.desc}</span>
+                                </div>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-primary stroke-[2.5] shrink-0 ml-2" />}
+                              </button>
+                            );
+                          })}
                         </div>
                       </>
                     ) : null}
@@ -868,145 +1185,338 @@ const DashboardPage: React.FC = () => {
           </div>
 
           {/* Active Compound Filter Pills */}
-          {validFilterTags.length > 0 && (
+          {(validFilterTags.length > 0 || selectedCampaign || selectedLinkType !== 'all') && (
             <div className="flex flex-wrap items-center gap-2 mb-4">
-              <div className="relative inline-flex items-center" ref={tagPillPopoverRef}>
-                    <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
-                      <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
-                        <Tag className="w-3 h-3" />
-                        Tag
-                      </div>
-                      <div className="flex items-center px-2 h-full bg-background text-muted-foreground font-medium">
-                        is
-                      </div>
-                      <button 
-                        type="button"
-                        onClick={() => setIsTagPillPopoverOpen(prev => !prev)}
-                        className="flex items-center gap-1 px-2.5 h-full font-medium text-foreground cursor-pointer hover:bg-background transition-colors"
-                      >
-                        {selectedFilterTags.length === 1 ? (
-                          (() => {
-                            const tag = tags.find(t => t.id === selectedFilterTags[0]);
-                            return (
-                              <span className="inline-flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: tag?.color || '#374151' }} />
-                                <span>{tag?.name || selectedFilterTags[0]}</span>
-                              </span>
-                            );
-                          })()
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5">
-                            <div className="flex items-center -space-x-1">
-                              {selectedFilterTags.slice(0, 4).map(id => {
-                                const tag = tags.find(t => t.id === id);
-                                return (
-                                  <span 
-                                    key={id} 
-                                    className="inline-block w-2.5 h-2.5 rounded-full ring-1 ring-background" 
-                                    style={{ backgroundColor: tag?.color || '#374151' }} 
-                                  />
-                                );
-                              })}
-                            </div>
-                            <span>{selectedFilterTags.length} Tags</span>
-                          </span>
-                        )}
-                      </button>
-                      <button 
-                        type="button"
-                        className="flex items-center justify-center px-2 h-full text-muted-foreground hover:text-foreground hover:bg-background cursor-pointer transition-colors"
-                        onClick={() => {
-                          setSelectedFilterTags([]);
-                          setSearchParams(prev => {
-                            const next = new URLSearchParams(prev);
-                            next.delete('tagId');
-                            return next;
-                          });
-                          setIsTagPillPopoverOpen(false);
-                        }}
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+              {/* Tag Filter Pill */}
+              {validFilterTags.length > 0 && (
+                <div className="relative inline-flex items-center" ref={tagPillPopoverRef}>
+                  <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
+                    <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
+                      <Tag className="w-3 h-3" />
+                      Tag
                     </div>
-
-                    {/* Popover Dropdown */}
-                    <AnimatePresence>
-                      {isTagPillPopoverOpen && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: -4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -4 }}
-                          transition={{ duration: 0.1, ease: "easeOut" }}
-                          className="absolute left-0 top-full mt-1 w-64 rounded-xl shadow-lg bg-popover border border-border divide-y divide-border focus:outline-none z-[70] overflow-hidden"
-                        >
-                          <div className="p-1.5 border-b border-border/80 bg-background/80 flex items-center">
-                            <div className="relative flex-1 flex items-center bg-secondary/40 rounded-md px-2 py-0.5 border border-border/40 focus-within:border-primary/50 transition-all">
-                              <Search className="w-3 h-3 text-muted-foreground shrink-0" />
-                              <input 
-                                type="text" 
-                                autoFocus={true}
-                                value={tagPillSearch}
-                                onChange={e => setTagPillSearch(e.target.value)}
-                                placeholder="Tag..." 
-                                className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1 px-2 text-foreground placeholder:text-muted-foreground"
-                              />
-                            </div>
-                          </div>
-                          <div className="py-1 p-1 max-h-48 overflow-y-auto">
-                            {availableTags.filter(t => t.name.toLowerCase().includes(tagPillSearch.toLowerCase())).map(t => {
-                              const isChecked = selectedFilterTags.includes(t.id);
+                    <div className="flex items-center px-2 h-full bg-background text-muted-foreground font-medium">
+                      is
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setIsTagPillPopoverOpen(prev => !prev)}
+                      className="flex items-center gap-1 px-2.5 h-full font-medium text-foreground cursor-pointer hover:bg-background transition-colors"
+                    >
+                      {selectedFilterTags.length === 1 ? (
+                        (() => {
+                          const tag = tags.find(t => t.id === selectedFilterTags[0]);
+                          return (
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: tag?.color || '#374151' }} />
+                              <span>{tag?.name || selectedFilterTags[0]}</span>
+                            </span>
+                          );
+                        })()
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5">
+                          <div className="flex items-center -space-x-1">
+                            {selectedFilterTags.slice(0, 4).map(id => {
+                              const tag = tags.find(t => t.id === id);
                               return (
-                                <label key={t.id} className="flex items-center justify-between px-2.5 py-1.5 text-xs text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114] rounded-lg cursor-pointer group transition-colors">
-                                  <div className="flex items-center gap-2.5 min-w-0">
-                                    <div className="relative flex items-center justify-center">
-                                      <input 
-                                        type="checkbox" 
-                                        checked={isChecked}
-                                        onChange={() => {
-                                          const updated = isChecked 
-                                            ? selectedFilterTags.filter(id => id !== t.id)
-                                            : [...selectedFilterTags, t.id];
-                                          setSelectedFilterTags(updated);
-                                          setSearchParams(prev => {
-                                            const next = new URLSearchParams(prev);
-                                            if (updated.length > 0) {
-                                              next.set('tagId', updated.join(','));
-                                            } else {
-                                              next.delete('tagId');
-                                            }
-                                            return next;
-                                          });
-                                        }}
-                                        className="sr-only"
-                                      />
-                                      <div 
-                                        className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${
-                                          isChecked 
-                                            ? 'bg-[#0099ff] border-[#0099ff] text-white shadow-sm' 
-                                            : 'border-border/80 bg-background/60 group-hover:border-muted-foreground'
-                                        }`}
-                                      >
-                                        {isChecked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                                      </div>
-                                    </div>
-                                    <span 
-                                      className="w-2 h-2 rounded-full shrink-0 shadow-sm" 
-                                      style={{ backgroundColor: t.color || '#374151' }}
-                                    />
-                                    <span className="truncate font-medium">{t.name}</span>
-                                  </div>
-                                  <span className="text-[10px] text-muted-foreground font-mono ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50 group-hover:bg-secondary transition-colors">
-                                    {t.linkCount ?? 0}
-                                  </span>
-                                </label>
+                                <span 
+                                  key={id} 
+                                  className="inline-block w-2.5 h-2.5 rounded-full ring-1 ring-background" 
+                                  style={{ backgroundColor: tag?.color || '#374151' }} 
+                                />
                               );
                             })}
-                            {availableTags.length === 0 && <div className="px-2.5 py-2 text-xs text-muted-foreground">No tags found</div>}
                           </div>
-                        </motion.div>
+                          <span>{selectedFilterTags.length} Tags</span>
+                        </span>
                       )}
-                    </AnimatePresence>
+                    </button>
+                    <button 
+                      type="button"
+                      className="flex items-center justify-center px-2 h-full text-muted-foreground hover:text-foreground hover:bg-background cursor-pointer transition-colors"
+                      onClick={() => {
+                        setSelectedFilterTags([]);
+                        setSearchParams(prev => {
+                          const next = new URLSearchParams(prev);
+                          next.delete('tagId');
+                          return next;
+                        });
+                        setIsTagPillPopoverOpen(false);
+                      }}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
+
+                  {/* Popover Dropdown */}
+                  <AnimatePresence>
+                    {isTagPillPopoverOpen && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.1, ease: "easeOut" }}
+                        className="absolute left-0 top-full mt-1 w-64 rounded-xl shadow-lg bg-popover border border-border divide-y divide-border focus:outline-none z-[70] overflow-hidden"
+                      >
+                        <div className="p-1.5 border-b border-border/80 bg-background/80 flex items-center">
+                          <div className="relative flex-1 flex items-center bg-secondary/40 rounded-md px-2 py-0.5 border border-border/40 focus-within:border-primary/50 transition-all">
+                            <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+                            <input 
+                              type="text" 
+                              autoFocus={true}
+                              value={tagPillSearch}
+                              onChange={e => setTagPillSearch(e.target.value)}
+                              placeholder="Tag..." 
+                              className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1 px-2 text-foreground placeholder:text-muted-foreground"
+                            />
+                          </div>
+                        </div>
+                        <div className="py-1 p-1 max-h-48 overflow-y-auto">
+                          {availableTags.filter(t => t.name.toLowerCase().includes(tagPillSearch.toLowerCase())).map(t => {
+                            const isChecked = selectedFilterTags.includes(t.id);
+                            return (
+                              <label key={t.id} className="flex items-center justify-between px-2.5 py-1.5 text-xs text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114] rounded-lg cursor-pointer group transition-colors">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="relative flex items-center justify-center">
+                                    <input 
+                                      type="checkbox" 
+                                      checked={isChecked}
+                                      onChange={() => {
+                                        const updated = isChecked 
+                                          ? selectedFilterTags.filter(id => id !== t.id)
+                                          : [...selectedFilterTags, t.id];
+                                        setSelectedFilterTags(updated);
+                                        setSearchParams(prev => {
+                                          const next = new URLSearchParams(prev);
+                                          if (updated.length > 0) {
+                                            next.set('tagId', updated.join(','));
+                                          } else {
+                                            next.delete('tagId');
+                                          }
+                                          return next;
+                                        });
+                                      }}
+                                      className="sr-only"
+                                    />
+                                    <div 
+                                      className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${
+                                        isChecked 
+                                          ? 'bg-[#0099ff] border-[#0099ff] text-white shadow-sm' 
+                                          : 'border-border/80 bg-background/60 group-hover:border-muted-foreground'
+                                      }`}
+                                    >
+                                      {isChecked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                                    </div>
+                                  </div>
+                                  <span 
+                                    className="w-2 h-2 rounded-full shrink-0 shadow-sm" 
+                                    style={{ backgroundColor: t.color || '#374151' }}
+                                  />
+                                  <span className="truncate font-medium">{t.name}</span>
+                                </div>
+                                <span className="text-[10px] text-muted-foreground font-mono ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50 group-hover:bg-secondary transition-colors">
+                                  {t.linkCount ?? 0}
+                                </span>
+                              </label>
+                            );
+                          })}
+                          {availableTags.length === 0 && <div className="px-2.5 py-2 text-xs text-muted-foreground">No tags found</div>}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {/* Campaign Filter Pill */}
+              {selectedCampaign && (
+                <div className="relative inline-flex items-center" ref={campaignPillPopoverRef}>
+                  <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
+                    <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
+                      <Layers className="w-3 h-3 text-primary" />
+                      Campaign
+                    </div>
+                    <div className="flex items-center px-2 h-full bg-background text-muted-foreground font-medium">
+                      is
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setIsCampaignPillPopoverOpen(prev => !prev)}
+                      className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground cursor-pointer hover:bg-background transition-colors"
+                    >
+                      <span className="truncate max-w-[150px] font-semibold text-primary">{selectedCampaign}</span>
+                    </button>
+                    <button 
+                      type="button"
+                      className="flex items-center justify-center px-2 h-full text-muted-foreground hover:text-foreground hover:bg-background cursor-pointer transition-colors"
+                      onClick={() => {
+                        setSelectedCampaign(null);
+                        setSearchParams(prev => {
+                          const next = new URLSearchParams(prev);
+                          next.delete('campaign');
+                          return next;
+                        });
+                        setIsCampaignPillPopoverOpen(false);
+                      }}
+                      title="Clear campaign filter"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Popover Dropdown for Campaign */}
+                  <AnimatePresence>
+                    {isCampaignPillPopoverOpen && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.1, ease: "easeOut" }}
+                        className="absolute left-0 top-full mt-1 w-64 rounded-xl shadow-lg bg-popover border border-border divide-y divide-border focus:outline-none z-[70] overflow-hidden"
+                      >
+                        <div className="p-1.5 border-b border-border/80 bg-background/80 flex items-center">
+                          <div className="relative flex-1 flex items-center bg-secondary/40 rounded-md px-2 py-0.5 border border-border/40 focus-within:border-primary/50 transition-all">
+                            <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+                            <input 
+                              type="text" 
+                              autoFocus={true}
+                              value={campaignPillSearch}
+                              onChange={e => setCampaignPillSearch(e.target.value)}
+                              placeholder="Search campaigns..." 
+                              className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1 px-2 text-foreground placeholder:text-muted-foreground"
+                            />
+                          </div>
+                        </div>
+                        <div className="py-1 p-1 max-h-48 overflow-y-auto">
+                          {availableCampaigns.filter(c => c.name.toLowerCase().includes(campaignPillSearch.toLowerCase())).map(c => {
+                            const isSelected = selectedCampaign === c.name;
+                            return (
+                              <button
+                                key={c.name}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCampaign(c.name);
+                                  setSearchParams(prev => {
+                                    const next = new URLSearchParams(prev);
+                                    next.set('campaign', c.name);
+                                    return next;
+                                  });
+                                  setIsCampaignPillPopoverOpen(false);
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg cursor-pointer transition-colors ${
+                                  isSelected 
+                                    ? 'bg-primary/10 text-primary font-semibold' 
+                                    : 'text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Layers className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                                  <span className="truncate font-medium">{c.name}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <span className="text-[10px] text-muted-foreground font-mono px-1.5 py-0.5 rounded-full bg-secondary/50">
+                                    {c.count}
+                                  </span>
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-primary stroke-[2.5]" />}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {/* Link Type Filter Pill */}
+              {selectedLinkType !== 'all' && (
+                <div className="relative inline-flex items-center" ref={linkTypePillPopoverRef}>
+                  <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
+                    <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
+                      <LinkIcon className="w-3 h-3 text-primary" />
+                      Type
+                    </div>
+                    <div className="flex items-center px-2 h-full bg-background text-muted-foreground font-medium">
+                      is
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setIsLinkTypePillPopoverOpen(prev => !prev)}
+                      className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground cursor-pointer hover:bg-background transition-colors capitalize"
+                    >
+                      <span className="font-semibold text-primary">{selectedLinkType === 'standalone' ? 'Standalone' : 'Campaign Links'}</span>
+                    </button>
+                    <button 
+                      type="button"
+                      className="flex items-center justify-center px-2 h-full text-muted-foreground hover:text-foreground hover:bg-background cursor-pointer transition-colors"
+                      onClick={() => {
+                        setSelectedLinkType('all');
+                        setSearchParams(prev => {
+                          const next = new URLSearchParams(prev);
+                          next.delete('linkType');
+                          return next;
+                        });
+                        setIsLinkTypePillPopoverOpen(false);
+                      }}
+                      title="Clear type filter"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Popover Dropdown for Link Type */}
+                  <AnimatePresence>
+                    {isLinkTypePillPopoverOpen && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.1, ease: "easeOut" }}
+                        className="absolute left-0 top-full mt-1 w-56 rounded-xl shadow-lg bg-popover border border-border divide-y divide-border focus:outline-none z-[70] overflow-hidden"
+                      >
+                        <div className="py-1 p-1 space-y-0.5">
+                          {[
+                            { value: 'all', label: 'All Links' },
+                            { value: 'standalone', label: 'Standalone Only' },
+                            { value: 'campaign', label: 'Campaign Links Only' },
+                          ].map((item) => {
+                            const isSelected = selectedLinkType === item.value;
+                            return (
+                              <button
+                                key={item.value}
+                                type="button"
+                                onClick={() => {
+                                  const val = item.value as 'all' | 'standalone' | 'campaign';
+                                  setSelectedLinkType(val);
+                                  setSearchParams(prev => {
+                                    const next = new URLSearchParams(prev);
+                                    if (val !== 'all') {
+                                      next.set('linkType', val);
+                                    } else {
+                                      next.delete('linkType');
+                                    }
+                                    return next;
+                                  });
+                                  setIsLinkTypePillPopoverOpen(false);
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg cursor-pointer transition-colors ${
+                                  isSelected 
+                                    ? 'bg-primary/10 text-primary font-semibold' 
+                                    : 'text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
+                                }`}
+                              >
+                                <span>{item.label}</span>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-primary stroke-[2.5]" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
             </div>
           )}
 
@@ -1028,8 +1538,17 @@ const DashboardPage: React.FC = () => {
                 </div>
               ))}
             </div>
-          ) : viewMode === 'campaigns' ? (
-            <div className="space-y-4">
+          ) : (
+            <AnimatePresence mode="wait" initial={false}>
+              {viewMode === 'campaigns' ? (
+                <motion.div 
+                  key="campaigns-view"
+                  initial={{ opacity: 0, y: 3 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -3 }}
+                  transition={{ duration: 0.12, ease: "easeOut" }}
+                  className="space-y-4"
+                >
               {campaigns.length === 0 ? (
                 <div className="bg-background border border-border rounded-xl p-12 text-center flex flex-col items-center justify-center gap-3">
                   <div className="w-12 h-12 rounded-2xl bg-secondary/80 border border-border flex items-center justify-center text-muted-foreground shadow-xs">
@@ -1059,6 +1578,9 @@ const DashboardPage: React.FC = () => {
                       displayDomain={displayDomain}
                       protocol={protocol}
                       displayProps={displayProps}
+                      folders={folders}
+                      tags={tags}
+                      onRefresh={refreshDashboardData}
                       onOpenQr={handleOpenQr}
                       onEditUrl={(url) => {
                         setEditingUrl(url);
@@ -1070,9 +1592,16 @@ const DashboardPage: React.FC = () => {
                   ))}
                 </div>
               )}
-            </div>
-          ) : (
-            <div className="bg-background border border-border rounded-xl overflow-visible flex flex-col gap-0">
+                </motion.div>
+              ) : (
+                <motion.div 
+                  key="links-view"
+                  initial={{ opacity: 0, y: 3 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -3 }}
+                  transition={{ duration: 0.12, ease: "easeOut" }}
+                  className="bg-background border border-border rounded-xl overflow-visible flex flex-col gap-0"
+                >
               {displayedUrls.length === 0 ? (
                 <div className="p-12 text-center text-muted-foreground text-sm">No links found.</div>
               ) : (
@@ -1094,10 +1623,11 @@ const DashboardPage: React.FC = () => {
                     
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <a href={`${protocol}//${displayDomain}/${extractHash(url.shortUrl)}`} target="_blank" rel="noreferrer" className="text-sm font-semibold text-foreground truncate hover:underline">
                           {displayDomain}/{extractHash(url.shortUrl)}
                         </a>
+
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
                           <button 
                             onClick={() => {
@@ -1158,7 +1688,7 @@ const DashboardPage: React.FC = () => {
                           
                           {/* Tooltip */}
                           {url.tags.length > 1 && (
-                            <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover/tag:flex items-center bg-background/95 backdrop-blur-md shadow-xl border border-border rounded-xl p-1.5 gap-1.5 z-[60] min-w-max">
+                            <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover/tag:flex items-center bg-popover text-popover-foreground shadow-xl border border-border rounded-xl p-1.5 gap-1.5 z-[60] min-w-max">
                               {url.tags.map(t => (
                                 <span 
                                   key={t.id} 
@@ -1320,7 +1850,9 @@ const DashboardPage: React.FC = () => {
                   </motion.div>
                 ))
               )}
-            </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           )}
         </div>
 

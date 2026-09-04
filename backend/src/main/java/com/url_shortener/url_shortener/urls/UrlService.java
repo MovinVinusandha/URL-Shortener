@@ -573,6 +573,111 @@ public class UrlService {
         return url;
     }
 
+    @org.springframework.transaction.annotation.Transactional
+    public BulkUrlActionResponseDto executeBulkAction(BulkUrlActionRequestDto request, User currentUser) {
+        boolean isAdmin = currentUser.getRole() == com.url_shortener.url_shortener.users.Role.ROOT || currentUser.getRole() == com.url_shortener.url_shortener.users.Role.ADMIN;
+
+        List<Url> urls = urlRepository.findAllByShortUrlIn(request.getHashes());
+        if (urls.isEmpty()) {
+            return new BulkUrlActionResponseDto(true, 0, "No matching links found.");
+        }
+
+        // Verify ownership
+        for (Url url : urls) {
+            if (!isAdmin && !url.getUser().getId().equals(currentUser.getId())) {
+                throw new org.springframework.security.access.AccessDeniedException("You do not own all of the selected URLs.");
+            }
+        }
+
+        String action = request.getAction().toUpperCase();
+        int affected = 0;
+
+        switch (action) {
+            case "MOVE_FOLDER":
+                Folder folder = null;
+                if (request.getFolderId() != null) {
+                    folder = folderRepository.findById(request.getFolderId())
+                            .orElseThrow(() -> new IllegalArgumentException("Folder not found"));
+                    if (!isAdmin && !folder.getUser().getId().equals(currentUser.getId())) {
+                        throw new org.springframework.security.access.AccessDeniedException("You do not own this folder.");
+                    }
+                }
+                for (Url url : urls) {
+                    url.setFolder(folder);
+                }
+                urlRepository.saveAll(urls);
+                affected = urls.size();
+                break;
+
+            case "ADD_TAGS":
+                Set<Tag> tagsToAssign = new HashSet<>();
+                if (request.getTagIds() != null && !request.getTagIds().isEmpty()) {
+                    List<Tag> tags = tagRepository.findAllById(request.getTagIds());
+                    for (Tag t : tags) {
+                        if (!isAdmin && !t.getUser().getId().equals(currentUser.getId())) {
+                            throw new org.springframework.security.access.AccessDeniedException("You cannot assign a tag you do not own.");
+                        }
+                    }
+                    tagsToAssign.addAll(tags);
+                }
+                for (Url url : urls) {
+                    url.setTags(new HashSet<>(tagsToAssign));
+                }
+                urlRepository.saveAll(urls);
+                affected = urls.size();
+                break;
+
+            case "SET_EXPIRATION":
+                for (Url url : urls) {
+                    url.setExpiresAt(request.getExpiresAt());
+                    if (request.getExpiresAt() == null || request.getExpiresAt().isAfter(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC))) {
+                        url.setActive(true);
+                    } else {
+                        url.setActive(false);
+                    }
+                    redisTemplate.delete("urls::" + url.getShortUrl());
+                    org.springframework.cache.Cache cache = cacheManager.getCache("urls");
+                    if (cache != null) {
+                        cache.evict(url.getShortUrl());
+                    }
+                }
+                urlRepository.saveAll(urls);
+                affected = urls.size();
+                break;
+
+            case "TOGGLE_STATUS":
+                boolean newActive = request.getDisabled() == null || !request.getDisabled();
+                for (Url url : urls) {
+                    url.setActive(newActive);
+                    redisTemplate.delete("urls::" + url.getShortUrl());
+                    org.springframework.cache.Cache cache = cacheManager.getCache("urls");
+                    if (cache != null) {
+                        cache.evict(url.getShortUrl());
+                    }
+                }
+                urlRepository.saveAll(urls);
+                affected = urls.size();
+                break;
+
+            case "DELETE":
+                for (Url url : urls) {
+                    redisTemplate.delete("urls::" + url.getShortUrl());
+                    org.springframework.cache.Cache cache = cacheManager.getCache("urls");
+                    if (cache != null) {
+                        cache.evict(url.getShortUrl());
+                    }
+                }
+                urlRepository.deleteAll(urls);
+                affected = urls.size();
+                break;
+
+            default:
+                throw new IllegalArgumentException("Unknown bulk action: " + action);
+        }
+
+        return new BulkUrlActionResponseDto(true, affected, "Successfully performed " + action + " on " + affected + " links.");
+    }
+
     private static Long getUserId() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         return (Long) authentication.getPrincipal();

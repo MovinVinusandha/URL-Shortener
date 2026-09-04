@@ -490,7 +490,7 @@ const AnalyticsPage: React.FC = () => {
       const value = payload[0].value;
 
       return (
-        <div className="bg-popover border border-border rounded-xl p-3 shadow-xl text-xs min-w-[150px] backdrop-blur-md">
+        <div className="bg-popover text-popover-foreground border border-border rounded-xl p-3 shadow-xl text-xs min-w-[150px]">
           <div className="text-muted-foreground pb-1.5 mb-2 border-b border-border font-medium">
             {formattedLabel}
           </div>
@@ -1846,8 +1846,45 @@ const AnalyticsPage: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Proportional Traffic Share Distribution Bar */}
+                    {currentUtmList.length > 1 && currentUtmTotal > 0 && (
+                      <div className="p-3 px-4 rounded-xl bg-secondary/20 border border-zinc-200 dark:border-zinc-800">
+                        <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1.5">
+                          <span className="font-medium text-foreground flex items-center gap-1.5">
+                            <SlidersHorizontal className="w-3 h-3 text-primary" /> Traffic Share Distribution
+                          </span>
+                          <span className="font-mono">{currentUtmTotal.toLocaleString()} total clicks</span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-secondary overflow-hidden flex">
+                          {currentUtmList.slice(0, 8).map((d, idx) => {
+                            const pct = Math.round((d.count / currentUtmTotal) * 100);
+                            if (d.count === 0) return null;
+                            const color = COLORS[idx % COLORS.length];
+                            return (
+                              <div
+                                key={`dist-${d.name}-${idx}`}
+                                style={{ width: `${Math.max(pct, 2)}%`, backgroundColor: color }}
+                                className="h-full transition-all duration-300 hover:brightness-125 cursor-pointer"
+                                title={`${d.name}: ${d.count} clicks (${pct}%)`}
+                                onClick={() => {
+                                  const paramKey = activeUtmTab === 'referer' ? 'utm_referer' : `utm_${activeUtmTab}`;
+                                  const altKey = activeUtmTab === 'referer' ? 'referer' : `utm${activeUtmTab.charAt(0).toUpperCase() + activeUtmTab.slice(1)}`;
+                                  setSearchParams(prev => {
+                                    const updated = new URLSearchParams(prev);
+                                    updated.set(paramKey, d.name);
+                                    updated.delete(altKey);
+                                    return updated;
+                                  });
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Comparative ROI Bar Chart */}
-                    <div className="h-64 w-full pt-3">
+                    <div className="h-64 w-full pt-1">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart
                           data={currentUtmList.slice(0, 8).map((d, i) => ({
@@ -1878,7 +1915,7 @@ const AnalyticsPage: React.FC = () => {
                               if (active && payload && payload.length) {
                                 const item = payload[0].payload;
                                 return (
-                                  <div className="bg-popover border border-border rounded-xl p-3 shadow-xl text-xs backdrop-blur-md min-w-[160px]">
+                                  <div className="bg-popover text-popover-foreground border border-border rounded-xl p-3 shadow-xl text-xs min-w-[160px]">
                                     <div className="flex items-center gap-1.5 pb-1.5 mb-1.5 border-b border-border font-semibold text-foreground">
                                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                                       <span className="truncate">{item.name}</span>

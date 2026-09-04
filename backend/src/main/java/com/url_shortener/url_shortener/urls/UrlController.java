@@ -179,6 +179,22 @@ public class UrlController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/url/bulk-action")
+    @Operation(summary = "Execute bulk actions on multiple short URLs")
+    public ResponseEntity<BulkUrlActionResponseDto> executeBulkAction(
+            @Valid @RequestBody BulkUrlActionRequestDto request
+    ) {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            throw new org.springframework.security.access.AccessDeniedException("You must be logged in to execute bulk actions.");
+        }
+        Long userId = (Long) auth.getPrincipal();
+        var currentUser = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+
+        var response = urlService.executeBulkAction(request, currentUser);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/url/{hash}/qr")
     @Operation(summary = "Generate a QR code for a short url")
     public ResponseEntity<byte[]> getQrCode(

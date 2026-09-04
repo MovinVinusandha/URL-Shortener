@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Layers, Copy, Download, BarChart2, Check, QrCode, 
-  Edit2, Trash2, CornerDownRight, Trophy, Lock, MoreVertical, XCircle, SlidersHorizontal
+  Edit2, Trash2, CornerDownRight, Trophy, Lock, MoreVertical, XCircle,
+  Folder as FolderIcon, Tag, Clock, FolderInput, Tags, AlertTriangle, Loader2, Power, X
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -11,6 +13,19 @@ import ClickArrowIcon from './icons/ClickArrowIcon';
 import type { CampaignGroup } from '../utils/utmExtractor';
 import { extractUtmParams, formatChannelName } from '../utils/utmExtractor';
 import type { UrlEntry } from '../types';
+import axiosInstance from '../api/axiosInstance';
+
+interface Folder {
+  id: number;
+  name: string;
+  slug?: string;
+}
+
+interface TagItem {
+  id: number;
+  name: string;
+  color?: string;
+}
 
 interface DisplayProperties {
   destinationUrl?: boolean;
@@ -31,6 +46,9 @@ interface CampaignGroupCardProps {
   onEditUrl?: (url: UrlEntry) => void;
   onDeleteUrl?: (url: UrlEntry) => void;
   initialExpanded?: boolean;
+  folders?: Folder[];
+  tags?: TagItem[];
+  onRefresh?: () => void;
 }
 
 const extractHash = (shortUrl: string): string =>
@@ -45,12 +63,29 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
   onEditUrl,
   onDeleteUrl,
   initialExpanded = false,
+  folders = [],
+  tags = [],
+  onRefresh,
 }) => {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
   const [openItemMenuId, setOpenItemMenuId] = useState<string | null>(null);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
+
+  // Bulk Action Modals State
+  const [isMoveFolderModalOpen, setIsMoveFolderModalOpen] = useState(false);
+  const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
+
+  const [isAssignTagsModalOpen, setIsAssignTagsModalOpen] = useState(false);
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+
+  const [isSetExpirationModalOpen, setIsSetExpirationModalOpen] = useState(false);
+  const [expirationOption, setExpirationOption] = useState<'never' | '24h' | '7d' | '30d' | 'custom'>('never');
+  const [customExpirationDate, setCustomExpirationDate] = useState('');
+
+  const [isDeleteCampaignModalOpen, setIsDeleteCampaignModalOpen] = useState(false);
+  const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
 
   const isAnyMenuOpen = isHeaderMenuOpen || openItemMenuId !== null;
 
@@ -102,12 +137,34 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
     toast.success(`Exported CSV for "${campaign.campaignName}"`);
   };
 
+  const executeBulkAction = async (action: string, payload: any = {}) => {
+    setIsBulkSubmitting(true);
+    try {
+      const hashes = campaign.links.map(u => extractHash(u.shortUrl));
+      const res = await axiosInstance.post('/url/bulk-action', {
+        hashes,
+        action,
+        ...payload,
+      });
+      toast.success(res.data?.message || `Successfully executed ${action}`);
+      if (onRefresh) onRefresh();
+      setIsMoveFolderModalOpen(false);
+      setIsAssignTagsModalOpen(false);
+      setIsSetExpirationModalOpen(false);
+      setIsDeleteCampaignModalOpen(false);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || `Failed to perform ${action}`);
+    } finally {
+      setIsBulkSubmitting(false);
+    }
+  };
+
   return (
-    <div className={`bg-card/70 dark:bg-card/40 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xs overflow-visible transition-all hover:border-zinc-300 dark:hover:border-zinc-700 relative ${isAnyMenuOpen ? 'z-30' : 'z-10'}`}>
+    <div className={`bg-background border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xs overflow-visible transition-all hover:border-zinc-300 dark:hover:border-zinc-700 relative ${isAnyMenuOpen ? 'z-30' : 'z-10'}`}>
       {/* Campaign Overview Row - Clicking anywhere toggles expansion */}
       <div 
         onClick={() => setIsExpanded(prev => !prev)}
-        className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-3.5 cursor-pointer transition-colors select-none first:rounded-t-xl ${isExpanded ? 'rounded-t-xl bg-neutral-100/40 dark:bg-[#141417]/50 hover:bg-neutral-100/70 dark:hover:bg-[#18181c]/70' : 'rounded-xl bg-background/50 hover:bg-neutral-100/60 dark:hover:bg-[#151518]/60'}`}
+        className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-3.5 cursor-pointer transition-colors select-none first:rounded-t-xl ${isExpanded ? 'rounded-t-xl bg-neutral-100/50 dark:bg-[#141417] hover:bg-neutral-100/80 dark:hover:bg-[#18181c]' : 'rounded-xl bg-background hover:bg-neutral-100/60 dark:hover:bg-[#151518]'}`}
       >
         <div className="flex items-center gap-3 min-w-0">
           {/* Round icon with gray border in dark mode */}
@@ -228,6 +285,75 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
                         </div>
                       </button>
                     </div>
+
+                    {/* Bulk Campaign Actions Section */}
+                    <div className="py-0.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsHeaderMenuOpen(false);
+                          setSelectedFolderId(null);
+                          setIsMoveFolderModalOpen(true);
+                        }}
+                        className="w-full flex items-center px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary rounded-lg transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <FolderInput className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span>Move to Folder</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsHeaderMenuOpen(false);
+                          setSelectedTagIds([]);
+                          setIsAssignTagsModalOpen(true);
+                        }}
+                        className="w-full flex items-center px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary rounded-lg transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Tags className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span>Assign Tags</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsHeaderMenuOpen(false);
+                          setExpirationOption('never');
+                          setCustomExpirationDate('');
+                          setIsSetExpirationModalOpen(true);
+                        }}
+                        className="w-full flex items-center px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary rounded-lg transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span>Set Expiration</span>
+                        </div>
+                      </button>
+                    </div>
+
+                    <div className="py-0.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsHeaderMenuOpen(false);
+                          setIsDeleteCampaignModalOpen(true);
+                        }}
+                        className="w-full flex items-center px-2.5 py-1.5 text-xs font-medium text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                          <span>Delete Campaign</span>
+                        </div>
+                      </button>
+                    </div>
                   </motion.div>
                 </>
               )}
@@ -244,37 +370,8 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
-            className="border-t border-zinc-200 dark:border-zinc-800 overflow-visible bg-background/30 rounded-b-xl"
+            className="border-t border-zinc-200 dark:border-zinc-800 overflow-visible bg-background rounded-b-xl"
           >
-            {/* Channel Traffic Share Distribution Bar */}
-            {campaign.links.length > 1 && campaign.totalClicks > 0 && (
-              <div className="p-3 px-4 sm:px-6 bg-secondary/15 border-b border-zinc-200 dark:border-zinc-800">
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1.5">
-                  <span className="font-medium text-foreground flex items-center gap-1.5">
-                    <SlidersHorizontal className="w-3 h-3 text-primary" /> Channel ROI Distribution
-                  </span>
-                  <span className="font-mono">{campaign.totalClicks.toLocaleString()} total clicks</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-secondary overflow-hidden flex">
-                  {campaign.links.map((linkItem, idx) => {
-                    const utms = extractUtmParams(linkItem.longUrl);
-                    const chan = formatChannelName(utms.source, utms.medium);
-                    const clicks = linkItem.accessed_times || 0;
-                    const pct = Math.round((clicks / campaign.totalClicks) * 100);
-                    if (clicks === 0) return null;
-                    const color = ['#0099ff', '#38bdf8', '#818cf8', '#34d399', '#fbbf24', '#f43f5e'][idx % 6];
-                    return (
-                      <div
-                        key={linkItem.shortUrl}
-                        style={{ width: `${Math.max(pct, 2)}%`, backgroundColor: color }}
-                        className="h-full transition-all duration-300 hover:brightness-125 cursor-pointer"
-                        title={`${chan}: ${clicks} clicks (${pct}%)`}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            )}
             <div>
               {campaign.links.map(url => {
                 const hash = extractHash(url.shortUrl);
@@ -376,7 +473,7 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
                           
                           {/* Tooltip */}
                           {url.tags.length > 1 && (
-                            <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover/tag:flex items-center bg-background/95 backdrop-blur-md shadow-xl border border-border rounded-xl p-1.5 gap-1.5 z-[60] min-w-max">
+                            <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover/tag:flex items-center bg-popover text-popover-foreground shadow-xl border border-border rounded-xl p-1.5 gap-1.5 z-[60] min-w-max">
                               {url.tags.map(t => (
                                 <span 
                                   key={t.id} 
@@ -538,6 +635,378 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+      {/* ======================================================== */}
+      {/* Modals Portaled to Body to prevent stacking context clipping & blur issues */}
+      {/* ======================================================== */}
+      {typeof document !== 'undefined' && createPortal(
+        <>
+          {/* 1. Bulk Move to Folder Modal */}
+          <AnimatePresence>
+            {isMoveFolderModalOpen && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => !isBulkSubmitting && setIsMoveFolderModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              className="relative w-full max-w-md bg-popover border border-border rounded-xl shadow-2xl overflow-hidden p-6 z-10"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <FolderInput className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm text-foreground">Move Campaign to Folder</h3>
+                    <p className="text-xs text-muted-foreground">Move all {campaign.links.length} links in &quot;{campaign.campaignName}&quot;</p>
+                  </div>
+                </div>
+                <button 
+                  disabled={isBulkSubmitting}
+                  onClick={() => setIsMoveFolderModalOpen(false)} 
+                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="py-4 space-y-2 max-h-60 overflow-y-auto">
+                <button
+                  type="button"
+                  onClick={() => setSelectedFolderId(null)}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between border ${
+                    selectedFolderId === null 
+                      ? 'bg-primary/10 text-primary border-primary/40' 
+                      : 'border-border/60 text-foreground hover:bg-secondary/60'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <FolderIcon className="w-4 h-4 text-muted-foreground" />
+                    <span>Root / No Folder</span>
+                  </div>
+                  {selectedFolderId === null && <Check className="w-3.5 h-3.5 text-primary" />}
+                </button>
+
+                {folders.map(f => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setSelectedFolderId(f.id)}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between border ${
+                      selectedFolderId === f.id 
+                        ? 'bg-primary/10 text-primary border-primary/40' 
+                        : 'border-border/60 text-foreground hover:bg-secondary/60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <FolderIcon className="w-4 h-4 text-primary shrink-0" />
+                      <span className="truncate">{f.name}</span>
+                    </div>
+                    {selectedFolderId === f.id && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+                <button
+                  type="button"
+                  disabled={isBulkSubmitting}
+                  onClick={() => setIsMoveFolderModalOpen(false)}
+                  className="px-3 py-1.5 text-xs rounded-lg font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isBulkSubmitting}
+                  onClick={() => executeBulkAction('MOVE_FOLDER', { folderId: selectedFolderId })}
+                  className="px-4 py-1.5 text-xs rounded-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1.5"
+                >
+                  {isBulkSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Move {campaign.links.length} Links
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* 2. Bulk Assign Tags Modal */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {isAssignTagsModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => !isBulkSubmitting && setIsAssignTagsModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              className="relative w-full max-w-md bg-popover border border-border rounded-xl shadow-2xl overflow-hidden p-6 z-10"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                    <Tags className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm text-foreground">Assign Tags to Campaign</h3>
+                    <p className="text-xs text-muted-foreground">Select tags to apply across all {campaign.links.length} links</p>
+                  </div>
+                </div>
+                <button 
+                  disabled={isBulkSubmitting}
+                  onClick={() => setIsAssignTagsModalOpen(false)} 
+                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="py-4">
+                {tags.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-muted-foreground">
+                    No tags created yet. Create tags from the dashboard sidebar first.
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2 max-h-56 overflow-y-auto p-1">
+                    {tags.map(t => {
+                      const isSelected = selectedTagIds.includes(t.id);
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedTagIds(prev => 
+                              isSelected ? prev.filter(id => id !== t.id) : [...prev, t.id]
+                            );
+                          }}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                            isSelected 
+                              ? 'bg-primary text-primary-foreground border-primary shadow-xs' 
+                              : 'bg-secondary/60 text-foreground border-border hover:bg-secondary'
+                          }`}
+                        >
+                          <Tag className="w-3 h-3" />
+                          <span>{t.name}</span>
+                          {isSelected && <Check className="w-3 h-3 ml-0.5" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+                <button
+                  type="button"
+                  disabled={isBulkSubmitting}
+                  onClick={() => setIsAssignTagsModalOpen(false)}
+                  className="px-3 py-1.5 text-xs rounded-lg font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isBulkSubmitting}
+                  onClick={() => executeBulkAction('ADD_TAGS', { tagIds: selectedTagIds })}
+                  className="px-4 py-1.5 text-xs rounded-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1.5"
+                >
+                  {isBulkSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Apply Tags ({selectedTagIds.length})
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* 3. Bulk Set Expiration Modal */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {isSetExpirationModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => !isBulkSubmitting && setIsSetExpirationModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              className="relative w-full max-w-md bg-popover border border-border rounded-xl shadow-2xl overflow-hidden p-6 z-10"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm text-foreground">Set Campaign Expiration</h3>
+                    <p className="text-xs text-muted-foreground">Applies expiration timestamp to all {campaign.links.length} links</p>
+                  </div>
+                </div>
+                <button 
+                  disabled={isBulkSubmitting}
+                  onClick={() => setIsSetExpirationModalOpen(false)} 
+                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="py-4 space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'never', label: 'Never (Active)' },
+                    { id: '24h', label: 'In 24 Hours' },
+                    { id: '7d', label: 'In 7 Days' },
+                    { id: '30d', label: 'In 30 Days' },
+                    { id: 'custom', label: 'Custom Date' },
+                  ].map(opt => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setExpirationOption(opt.id as any)}
+                      className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-left border ${
+                        expirationOption === opt.id 
+                          ? 'bg-primary/10 text-primary border-primary/40 font-semibold' 
+                          : 'bg-secondary/40 text-foreground border-border hover:bg-secondary'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                {expirationOption === 'custom' && (
+                  <div className="pt-2">
+                    <label className="block text-xs font-medium text-foreground mb-1">Select Custom Date & Time</label>
+                    <input 
+                      type="datetime-local"
+                      value={customExpirationDate}
+                      onChange={e => setCustomExpirationDate(e.target.value)}
+                      className="w-full text-xs px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+                <button
+                  type="button"
+                  disabled={isBulkSubmitting}
+                  onClick={() => setIsSetExpirationModalOpen(false)}
+                  className="px-3 py-1.5 text-xs rounded-lg font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isBulkSubmitting}
+                  onClick={() => {
+                    let expiresAt: string | null = null;
+                    if (expirationOption === '24h') {
+                      expiresAt = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+                    } else if (expirationOption === '7d') {
+                      expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
+                    } else if (expirationOption === '30d') {
+                      expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+                    } else if (expirationOption === 'custom' && customExpirationDate) {
+                      expiresAt = new Date(customExpirationDate).toISOString();
+                    }
+                    executeBulkAction('SET_EXPIRATION', { expiresAt });
+                  }}
+                  className="px-4 py-1.5 text-xs rounded-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1.5"
+                >
+                  {isBulkSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Save Expiration
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* 4. Bulk Delete Campaign Modal */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {isDeleteCampaignModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => !isBulkSubmitting && setIsDeleteCampaignModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              className="relative w-full max-w-md bg-popover border border-border rounded-xl shadow-2xl overflow-hidden p-6 z-10"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 pb-4 border-b border-border">
+                <div className="w-10 h-10 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-foreground">Delete Entire Campaign?</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">This action cannot be undone.</p>
+                </div>
+              </div>
+
+              <div className="py-4 text-xs text-muted-foreground leading-relaxed">
+                You are about to permanently delete all <strong className="text-foreground">{campaign.links.length} links</strong> and their tracking analytics associated with <strong className="text-foreground">&quot;{campaign.campaignName}&quot;</strong>.
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+                <button
+                  type="button"
+                  disabled={isBulkSubmitting}
+                  onClick={() => setIsDeleteCampaignModalOpen(false)}
+                  className="px-3 py-1.5 text-xs rounded-lg font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isBulkSubmitting}
+                  onClick={() => executeBulkAction('DELETE')}
+                  className="px-4 py-1.5 text-xs rounded-lg font-semibold bg-rose-600 text-white hover:bg-rose-700 transition-colors flex items-center gap-1.5 shadow-sm"
+                >
+                  {isBulkSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Delete {campaign.links.length} Links
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+        </>,
+        document.body
+      )}
     </div>
   );
 };

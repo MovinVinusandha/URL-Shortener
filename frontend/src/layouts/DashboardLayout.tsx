@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, Link, useNavigate, useParams } from 'react-router-dom';
-import { Link as LinkIcon, BarChart2, Folder as FolderIcon, Tag as TagIcon, ChevronDown, FolderPlus, Search, HelpCircle, User, Settings, Gift, LogOut, ArrowLeft, Shield, Download, Sun, Moon, Monitor, SlidersHorizontal } from 'lucide-react';
+import { Link as LinkIcon, BarChart2, Folder as FolderIcon, Tag as TagIcon, ChevronDown, FolderPlus, Search, HelpCircle, User, Settings, Gift, LogOut, ArrowLeft, Shield, Download, Sun, Moon, Monitor, SlidersHorizontal, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -68,9 +68,8 @@ const DashboardLayout: React.FC = () => {
   const [isTagsLoading, setIsTagsLoading] = useState(true);
   const [isFoldersLoading, setIsFoldersLoading] = useState(true);
   
-  const [isFolderSwitcherOpen, setIsFolderSwitcherOpen] = useState(false);
-  const [folderSearch, setFolderSearch] = useState('');
-  const folderSwitcherRef = useRef<HTMLDivElement>(null);
+  const [isViewSwitcherOpen, setIsViewSwitcherOpen] = useState(false);
+  const viewSwitcherRef = useRef<HTMLDivElement>(null);
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -80,13 +79,13 @@ const DashboardLayout: React.FC = () => {
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
-    setIsFolderSwitcherOpen(false);
-  }, [location.pathname]);
+    setIsViewSwitcherOpen(false);
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (folderSwitcherRef.current && !folderSwitcherRef.current.contains(event.target as Node)) {
-        setIsFolderSwitcherOpen(false);
+      if (viewSwitcherRef.current && !viewSwitcherRef.current.contains(event.target as Node)) {
+        setIsViewSwitcherOpen(false);
       }
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
@@ -415,7 +414,7 @@ const DashboardLayout: React.FC = () => {
         
         {/* Top Header */}
         <header className="h-14 border-b border-border bg-background/95 backdrop-blur px-6 flex items-center justify-between shrink-0 relative z-30">
-          <div className="flex items-center gap-2 relative" ref={folderSwitcherRef}>
+          <div className="flex items-center gap-2 relative" ref={viewSwitcherRef}>
             {location.pathname.startsWith('/settings') ? (
               <div className="flex items-center gap-3">
                 <button 
@@ -430,104 +429,73 @@ const DashboardLayout: React.FC = () => {
               </div>
             ) : location.pathname.startsWith('/dashboard') ? (
               <>
-                <button 
-                  onClick={() => setIsFolderSwitcherOpen(!isFolderSwitcherOpen)}
-                  className="text-base font-semibold text-foreground tracking-tight flex items-center gap-1.5 cursor-pointer hover:bg-secondary px-2.5 py-1 rounded-lg transition-colors"
-                >
-                  {activeFolderName}
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                </button>
-                
-                <AnimatePresence>
-                {isFolderSwitcherOpen && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: -4, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -4, scale: 0.98 }}
-                    transition={{ duration: 0.1, ease: "easeOut" }}
-                    className="absolute top-full left-0 mt-1 w-64 bg-background border border-border shadow-lg rounded-xl p-2 z-[100] flex flex-col gap-1.5"
-                  >
-                    <div className="relative flex items-center px-2 border-b border-border pb-1">
-                      <Search className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 ml-1" />
-                      <input 
-                        type="text" 
-                        autoFocus={true}
-                        placeholder="Search folders..." 
-                        value={folderSearch}
-                        onChange={(e) => setFolderSearch(e.target.value)}
-                        className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1.5 px-2.5 text-foreground placeholder:text-muted-foreground"
-                      />
-                      <button
-                        onClick={() => {
-                          navigate('/folders');
-                          setIsFolderSwitcherOpen(false);
-                        }}
-                        className="text-xs font-medium text-muted-foreground hover:text-foreground flex-shrink-0 whitespace-nowrap"
-                      >
-                        View All
-                      </button>
-                    </div>
-                    
-                    <div className="max-h-56 overflow-y-auto flex flex-col gap-0.5 py-1">
-                      {/* All Links Option */}
-                      <button
-                        onClick={() => {
-                          setActiveFolderId(null);
-                          navigate('/dashboard');
-                          setIsFolderSwitcherOpen(false);
-                        }}
-                        className={`w-full text-left px-2.5 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-between ${!folderSlug && !activeFolderId ? 'bg-secondary text-foreground font-medium' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'}`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <LinkIcon className="w-3.5 h-3.5 text-primary" />
-                          <span>All Links</span>
-                        </div>
-                      </button>
+                {(() => {
+                  const searchParams = new URLSearchParams(location.search);
+                  const isCampaignsView = searchParams.get('view') === 'campaigns';
+                  const activeViewTitle = isCampaignsView ? 'Campaigns' : 'Links';
 
-                      {folders.filter(f => f.name.toLowerCase().includes(folderSearch.toLowerCase())).map(folder => {
-                        const isDefault = folder.name.toLowerCase() === 'links';
-                        const slug = folder.slug || encodeURIComponent(folder.name.toLowerCase().replace(/\s+/g, '-'));
-                        const isSelected = (folderSlug && ((folder.slug && folder.slug.toLowerCase() === folderSlug.toLowerCase()) || folder.name.toLowerCase() === folderSlug.toLowerCase() || folder.name.toLowerCase().replace(/\s+/g, '-') === folderSlug.toLowerCase())) || (!folderSlug && activeFolderId === folder.id);
+                  const handleSelectView = (mode: 'all' | 'campaigns') => {
+                    const currentParams = new URLSearchParams(location.search);
+                    if (mode === 'campaigns') {
+                      currentParams.set('view', 'campaigns');
+                    } else {
+                      currentParams.delete('view');
+                    }
+                    try {
+                      localStorage.setItem('trim_dashboard_view_mode', mode);
+                    } catch {}
+                    const base = folderSlug ? `/dashboard/f/${folderSlug}` : (activeFolderId ? `/dashboard?folderId=${activeFolderId}` : '/dashboard');
+                    const query = currentParams.toString();
+                    navigate(query ? `${base.split('?')[0]}?${query}` : base.split('?')[0]);
+                    setIsViewSwitcherOpen(false);
+                  };
 
-                        return (
-                          <motion.button
-                            layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}
-                            key={folder.id}
-                            onClick={() => {
-                              setActiveFolderId(folder.id);
-                              navigate(`/dashboard/f/${slug}`);
-                              setIsFolderSwitcherOpen(false);
-                            }}
-                            className={`w-full text-left px-2.5 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-between ${isSelected ? 'bg-secondary text-foreground font-medium' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'}`}
+                  return (
+                    <>
+                      <button 
+                        onClick={() => setIsViewSwitcherOpen(!isViewSwitcherOpen)}
+                        className="text-base font-semibold text-foreground tracking-tight flex items-center gap-1.5 cursor-pointer hover:bg-secondary px-2.5 py-1 rounded-lg transition-colors"
+                      >
+                        {activeViewTitle}
+                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      
+                      <AnimatePresence>
+                      {isViewSwitcherOpen && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                          transition={{ duration: 0.1, ease: "easeOut" }}
+                          className="absolute top-full left-0 mt-1 w-52 bg-background border border-border shadow-lg rounded-xl p-1.5 z-[100] flex flex-col gap-0.5"
+                        >
+                          <button
+                            onClick={() => handleSelectView('all')}
+                            className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between cursor-pointer ${!isCampaignsView ? 'bg-secondary text-foreground font-semibold' : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'}`}
                           >
                             <div className="flex items-center gap-2">
-                              <FolderIcon className={`w-3.5 h-3.5 ${isDefault ? 'text-primary' : 'text-emerald-500'}`} />
-                              <span>{folder.name}</span>
+                              <LinkIcon className="w-3.5 h-3.5 text-primary" />
+                              <span>Links</span>
                             </div>
-                            {isDefault && (
-                              <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold">
-                                Default
-                              </span>
-                            )}
-                          </motion.button>
-                        );
-                      })}
-                      {folders.length === 0 && <div className="px-2.5 py-2 text-xs text-muted-foreground">No folders found</div>}
-                    </div>
-                    
-                    <button
-                      onClick={() => {
-                        navigate('/folders?create=true');
-                        setIsFolderSwitcherOpen(false);
-                      }}
-                      className="w-full text-left px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground rounded-lg transition-colors flex items-center gap-2 font-medium border-t border-border pt-1.5"
-                    >
-                      <FolderPlus className="w-3.5 h-3.5 text-muted-foreground" />
-                      Create new folder
-                    </button>
-                  </motion.div>
-                )}
-                </AnimatePresence>
+                            {!isCampaignsView && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                          </button>
+
+                          <button
+                            onClick={() => handleSelectView('campaigns')}
+                            className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between cursor-pointer ${isCampaignsView ? 'bg-secondary text-foreground font-semibold' : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Layers className="w-3.5 h-3.5 text-indigo-500" />
+                              <span>Campaigns</span>
+                            </div>
+                            {isCampaignsView && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                          </button>
+                        </motion.div>
+                      )}
+                      </AnimatePresence>
+                    </>
+                  );
+                })()}
               </>
             ) : location.pathname.startsWith('/analytics') ? (
               <h1 className="text-base font-semibold text-foreground tracking-tight px-1">
