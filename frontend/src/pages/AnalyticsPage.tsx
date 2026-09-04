@@ -19,7 +19,8 @@ import type { UrlDto } from '../types';
 import { DateRangePicker } from '../components/DateRangePicker';
 import type { DateRangeValue } from '../components/DateRangePicker';
 import { format, parseISO } from 'date-fns';
-import { groupUrlsByCampaign } from '../utils/utmExtractor';
+import { groupUrlsByCampaign, formatChannelName, extractUtmParams } from '../utils/utmExtractor';
+import CampaignComparisonView from '../components/CampaignComparisonView';
 
 export interface UtmDataPoint {
   name: string;
@@ -233,6 +234,11 @@ const AnalyticsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRangeValue>({ type: 'preset', value: '30d' });
 
+  // Compare mode channel filter state
+  const compareFilterRef = useRef<HTMLDivElement>(null);
+  const [isCompareFilterOpen, setIsCompareFilterOpen] = useState(false);
+  const [compareChannel, setCompareChannel] = useState<string | null>(null);
+
   useEffect(() => {
     let isMounted = true;
     setIsUrlsLoading(true);
@@ -264,6 +270,9 @@ const AnalyticsPage: React.FC = () => {
       }
       if (campaignPillPopoverRef.current && !campaignPillPopoverRef.current.contains(event.target as Node)) {
         setIsCampaignPillPopoverOpen(false);
+      }
+      if (compareFilterRef.current && !compareFilterRef.current.contains(event.target as Node)) {
+        setIsCompareFilterOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -365,6 +374,46 @@ const AnalyticsPage: React.FC = () => {
   const { campaigns: availableCampaigns } = useMemo(() => {
     return groupUrlsByCampaign(availableUrls as any);
   }, [availableUrls]);
+
+  const compareParam = searchParams.get('compare');
+  const analyticsMode: 'overview' | 'compare' = compareParam !== null ? 'compare' : 'overview';
+
+  // Extract all traffic channels / sources across URLs belonging to currently compared campaigns
+  const availableCompareSources = useMemo(() => {
+    if (!compareParam) return [];
+    const activeCamps = compareParam.split(',').map(c => c.trim().toLowerCase());
+    const sourceSet = new Set<string>();
+    availableUrls.forEach((u) => {
+      const { campaign, source } = extractUtmParams(u.longUrl);
+      if (campaign && activeCamps.includes(campaign.trim().toLowerCase()) && source) {
+        sourceSet.add(source.trim());
+      }
+    });
+    return Array.from(sourceSet).sort((a, b) => a.localeCompare(b));
+  }, [compareParam, availableUrls]);
+
+  const handleSetAnalyticsMode = (mode: 'overview' | 'compare') => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (mode === 'compare') {
+        const initial = availableCampaigns.slice(0, 2).map(c => c.campaignName);
+        next.set('compare', initial.join(','));
+      } else {
+        next.delete('compare');
+      }
+      return next;
+    });
+  };
+
+  const handleComparedCampaignsChange = useCallback((camps: string[]) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (next.get('compare') !== null) {
+        next.set('compare', camps.join(','));
+      }
+      return next;
+    });
+  }, [setSearchParams]);
 
   const availableTags = useMemo(() => {
     let list = tags;
@@ -614,7 +663,8 @@ const AnalyticsPage: React.FC = () => {
         <div className="flex flex-col gap-4">
           {/* Action Bar with Filter Dropdown and Date Range Picker */}
           <div className="flex items-center gap-2">
-            <div className="relative" ref={filterRef}>
+            {analyticsMode !== 'compare' && (
+              <div className="relative" ref={filterRef}>
               <button 
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
                 className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-medium transition-all ${
@@ -925,12 +975,123 @@ const AnalyticsPage: React.FC = () => {
                 )}
               </AnimatePresence>
             </div>
+            )}
+            {analyticsMode === 'compare' && (
+              <div className="relative" ref={compareFilterRef}>
+                <button 
+                  onClick={() => setIsCompareFilterOpen(!isCompareFilterOpen)}
+                  className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    compareChannel 
+                      ? 'border-primary/40 bg-primary/10 text-primary shadow-xs hover:bg-primary/15' 
+                      : 'bg-background border-input text-foreground hover:bg-secondary'
+                  }`}
+                  title="Filter campaigns by channel / source"
+                >
+                  <Filter className={`w-3.5 h-3.5 ${compareChannel ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <span>{compareChannel ? formatChannelName(compareChannel) : 'Filter'}</span>
+                  {compareChannel && (
+                    <span className="bg-[#0099ff] text-white text-[10px] px-1.5 py-0.5 rounded-full leading-none font-semibold shadow-xs">
+                      1
+                    </span>
+                  )}
+                  <ChevronDown className={`w-3 h-3 opacity-70 transition-transform ${isCompareFilterOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                <AnimatePresence>
+                  {isCompareFilterOpen && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.1, ease: "easeOut" }}
+                      className="absolute left-0 top-full mt-1 w-64 rounded-xl shadow-lg bg-popover border border-border p-1.5 z-[60] text-xs"
+                    >
+                      <div className="px-2 py-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border mb-1">
+                        Filter by Channel / Source
+                      </div>
+                      <div className="max-h-56 overflow-y-auto space-y-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCompareChannel(null);
+                            setIsCompareFilterOpen(false);
+                          }}
+                          className={`w-full text-left px-2.5 py-1.5 rounded-lg transition-colors flex items-center justify-between cursor-pointer ${
+                            !compareChannel ? 'bg-primary/10 text-primary font-medium' : 'text-foreground hover:bg-secondary'
+                          }`}
+                        >
+                          <span>All Channels</span>
+                          {!compareChannel && <Check className="w-3.5 h-3.5 text-primary" />}
+                        </button>
+                        {availableCompareSources.map((source) => {
+                          const isSelected = compareChannel?.toLowerCase() === source.toLowerCase();
+                          return (
+                            <button
+                              key={source}
+                              type="button"
+                              onClick={() => {
+                                setCompareChannel(source);
+                                setIsCompareFilterOpen(false);
+                              }}
+                              className={`w-full text-left px-2.5 py-1.5 rounded-lg transition-colors flex items-center justify-between cursor-pointer ${
+                                isSelected ? 'bg-primary/10 text-primary font-medium' : 'text-foreground hover:bg-secondary'
+                              }`}
+                            >
+                              <span className="truncate">{formatChannelName(source)}</span>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
+                            </button>
+                          );
+                        })}
+                        {availableCompareSources.length === 0 && (
+                          <div className="px-2.5 py-2 text-muted-foreground text-center text-xs">
+                            No channels recorded
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
             
             <DateRangePicker value={dateRange} onChange={setDateRange} />
+
+            {/* Overview vs Compare Mode Switcher */}
+            <div className="relative flex items-center bg-secondary/50 dark:bg-[#121215] p-0.5 rounded-lg border border-border gap-0.5 ml-auto">
+              {(['overview', 'compare'] as const).map((mode) => {
+                const isActive = analyticsMode === mode;
+                const label = mode === 'overview' ? 'Overview' : 'Compare';
+                const Icon = mode === 'overview' ? BarChart2 : Layers;
+                const iconColor = mode === 'overview' ? 'text-[#0099ff]' : 'text-[#818cf8]';
+
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => handleSetAnalyticsMode(mode)}
+                    className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                      isActive
+                        ? 'text-foreground font-semibold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeAnalyticsModeSegment"
+                        className="absolute inset-0 bg-card rounded-md border border-border z-[-1] shadow-xs"
+                        transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                      />
+                    )}
+                    <Icon className={`w-3.5 h-3.5 ${iconColor}`} />
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Active Compound Filter Pills */}
-          {(hashParam || folderSlug || folderIdParam || activeTagIds.length > 0 || utmCampaignParam || activeUtmFilters.length > 0) && (
+          {analyticsMode !== 'compare' && (hashParam || folderSlug || folderIdParam || activeTagIds.length > 0 || utmCampaignParam || activeUtmFilters.length > 0) && (
             <div className="flex flex-wrap items-center gap-2 mb-2">
               {utmCampaignParam && (
                 <div className="relative inline-flex items-center" ref={campaignPillPopoverRef}>
@@ -1406,7 +1567,18 @@ const AnalyticsPage: React.FC = () => {
           )}
         </div>
 
-        {/* Unified Master Card */}
+        {analyticsMode === 'compare' ? (
+          <CampaignComparisonView
+            availableCampaigns={availableCampaigns}
+            dateRange={dateRange}
+            initialCampaigns={compareParam ? compareParam.split(',').filter(Boolean) : undefined}
+            onSelectedCampaignsChange={handleComparedCampaignsChange}
+            selectedChannel={compareChannel}
+            onSelectedChannelChange={setCompareChannel}
+          />
+        ) : (
+          <>
+            {/* Unified Master Card */}
         <div className={`bg-background border border-border rounded-xl overflow-hidden flex flex-col w-full transition-opacity duration-200 ${isFetching ? 'opacity-75' : 'opacity-100'}`}>
           {/* Integrated Metric Header Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border border-b border-border">
@@ -2062,6 +2234,8 @@ const AnalyticsPage: React.FC = () => {
           </div>
 
         </section>
+          </>
+        )}
       </motion.main>
   );
 };

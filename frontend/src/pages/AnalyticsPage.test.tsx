@@ -495,4 +495,15 @@ describe('AnalyticsPage', () => {
       expect(screen.getByText('summer_promo')).toBeInTheDocument();
     });
   });
+
+  it('allows switching to Campaign Comparison mode from top action bar', async () => {
+    render(<MemoryRouter><AnalyticsPage /></MemoryRouter>);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Compare/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Compare/i }));
+    expect(mockSetSearchParams).toHaveBeenCalled();
+  });
 });
