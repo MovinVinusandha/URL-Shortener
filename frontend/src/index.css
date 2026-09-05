@@ -70,6 +70,10 @@ html {
     background-attachment: fixed;
   }
 
+  code, kbd, samp, pre {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
   .dark body {
     background-image: radial-gradient(80% 30% at 50% -10%, rgba(0, 153, 255, 0.06), transparent);
     background-attachment: fixed;
