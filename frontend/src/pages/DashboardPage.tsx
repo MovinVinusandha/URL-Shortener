@@ -148,6 +148,22 @@ const DashboardPage: React.FC = () => {
     } else {
       setSelectedLinkType('all');
     }
+
+    // If no view param is present in URL, restore saved view preference from localStorage
+    if (!searchParams.has('view')) {
+      try {
+        const savedView = localStorage.getItem('trim_dashboard_view_mode');
+        if (savedView === 'campaigns') {
+          setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('view', 'campaigns');
+            return next;
+          }, { replace: true });
+        }
+      } catch {
+        // ignore
+      }
+    }
   }, [searchParams.toString(), tags]);
 
   useEffect(() => {
@@ -390,20 +406,25 @@ const DashboardPage: React.FC = () => {
     };
   }, [urls.length, syncClickCounts, saveToStorage]);
 
-  /** Called when ShortenForm successfully shortens or updates a URL */
-  const handleShortened = useCallback((newEntry: any) => {
-    const entry = newEntry.accessed_times !== undefined ? newEntry : mapDtoToEntry(newEntry);
+  /** Called when ShortenForm or batch campaign successfully shortens or updates URLs */
+  const handleShortened = useCallback((incoming: any) => {
+    if (!incoming) return;
+    const incomingEntries: UrlEntry[] = Array.isArray(incoming)
+      ? incoming.map((item: any) => (item.accessed_times !== undefined ? item : mapDtoToEntry(item)))
+      : [incoming.accessed_times !== undefined ? incoming : mapDtoToEntry(incoming)];
+
     setUrls((prev) => {
-      const hashToFind = extractHash(entry.shortUrl);
-      const existingIdx = prev.findIndex(u => extractHash(u.shortUrl) === hashToFind);
-      
-      let updatedList;
-      if (existingIdx !== -1) {
-        updatedList = prev.map((u, i) => (i === existingIdx ? entry : u));
-      } else {
-        updatedList = [entry, ...prev];
+      let updatedList = [...prev];
+      for (const entry of incomingEntries) {
+        const hashToFind = extractHash(entry.shortUrl);
+        const existingIdx = updatedList.findIndex(u => extractHash(u.shortUrl) === hashToFind);
+        if (existingIdx !== -1) {
+          updatedList[existingIdx] = entry;
+        } else {
+          updatedList = [entry, ...updatedList];
+        }
       }
-      
+
       saveToStorage(updatedList);
       return updatedList;
     });

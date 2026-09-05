@@ -412,4 +412,64 @@ describe('CreateLinkModal', () => {
     expect(screen.getByText('UTM Builder')).toBeInTheDocument();
     expect(screen.getByText('Source')).toBeInTheDocument();
   });
+
+  it('calls onSuccess with mapped UrlEntry array when batch multi-channel links are created', async () => {
+    const onSuccessMock = vi.fn();
+    (axiosInstance.get as any).mockResolvedValue({ data: [] });
+    (axiosInstance.post as any).mockResolvedValueOnce({
+      data: {
+        campaignName: 'Summer Launch',
+        totalCreated: 2,
+        items: [
+          {
+            channelName: 'Facebook',
+            shortUrl: 'http://localhost/fb123',
+            fullShortUrl: 'http://localhost/fb123',
+            longUrlWithUtm: 'https://example.com?utm_source=facebook',
+            utmSource: 'facebook',
+            utmMedium: 'social',
+          },
+          {
+            channelName: 'Twitter',
+            shortUrl: 'http://localhost/tw123',
+            fullShortUrl: 'http://localhost/tw123',
+            longUrlWithUtm: 'https://example.com?utm_source=twitter',
+            utmSource: 'twitter',
+            utmMedium: 'social',
+          },
+        ],
+      },
+    });
+
+    render(
+      <CreateLinkModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSuccess={onSuccessMock}
+        folders={[]}
+        tags={[]}
+        initialMode="multi"
+      />
+    );
+
+    const destInput = screen.getByPlaceholderText('https://yourbrand.com/launch');
+    fireEvent.change(destInput, { target: { value: 'https://example.com' } });
+
+    const campInput = screen.getByPlaceholderText('summer_sale_2026');
+    fireEvent.change(campInput, { target: { value: 'Summer Launch' } });
+
+    const createBtn = screen.getByRole('button', { name: /create \d+ campaign links/i });
+    fireEvent.click(createBtn);
+
+    await waitFor(() => {
+      expect(onSuccessMock).toHaveBeenCalledTimes(1);
+    });
+
+    const passedEntries = onSuccessMock.mock.calls[0][0];
+    expect(Array.isArray(passedEntries)).toBe(true);
+    expect(passedEntries).toHaveLength(2);
+    expect(passedEntries[0].shortUrl).toBe('http://localhost/fb123');
+    expect(passedEntries[1].shortUrl).toBe('http://localhost/tw123');
+  });
 });
+

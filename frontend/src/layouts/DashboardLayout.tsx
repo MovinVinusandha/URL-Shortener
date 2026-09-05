@@ -17,7 +17,7 @@ import Skeleton from 'react-loading-skeleton';
 import { getSavedUtmTemplates, fetchUtmTemplatesApi, type UtmTemplate } from '../utils/utmUtils';
 
 export type DashboardLayoutContext = {
-  triggerRefresh: UrlEntry | null;
+  triggerRefresh: UrlEntry | UrlEntry[] | null;
   tags: Tag[];
   folders: Folder[];
   templates: UtmTemplate[];
@@ -101,9 +101,9 @@ const DashboardLayout: React.FC = () => {
   const [navStats, setNavStats] = useState({ totalClicks: 0, linkCount: 0 });
   const [isStatsLoading, setIsStatsLoading] = useState(true);
 
-  const [latestNewEntry, setLatestNewEntry] = useState<UrlEntry | null>(null);
+  const [latestNewEntry, setLatestNewEntry] = useState<UrlEntry | UrlEntry[] | null>(null);
   
-  const triggerRefresh = (newEntry: UrlEntry) => {
+  const triggerRefresh = (newEntry: UrlEntry | UrlEntry[]) => {
     setLatestNewEntry(newEntry);
   };
 
@@ -276,11 +276,31 @@ const DashboardLayout: React.FC = () => {
     );
   };
 
+  const getSavedViewMode = (): 'all' | 'campaigns' => {
+    try {
+      const saved = localStorage.getItem('trim_dashboard_view_mode');
+      if (saved === 'campaigns') return 'campaigns';
+    } catch {}
+    return 'all';
+  };
+
+  const getLinksUrl = (preserveView = true) => {
+    const base = folderSlug ? `/dashboard/f/${folderSlug}` : (activeFolderId ? `/dashboard?folderId=${activeFolderId}` : '/dashboard');
+    if (!preserveView) return base;
+    const currentView = new URLSearchParams(location.search).get('view');
+    const effectiveView = currentView || getSavedViewMode();
+    if (effectiveView === 'campaigns') {
+      const separator = base.includes('?') ? '&' : '?';
+      return `${base}${separator}view=campaigns`;
+    }
+    return base;
+  };
+
   return (
     <div className="h-screen flex overflow-hidden bg-background text-foreground font-sans">
       {/* ── Sidebar ────────────────────────────────────────── */}
       <aside className="w-16 shrink-0 bg-background border-r border-border hidden sm:flex flex-col items-center py-4 z-30">
-        <div className="mb-8 flex items-center justify-center w-full px-2 cursor-pointer" onClick={() => navigate('/dashboard')}>
+        <div className="mb-8 flex items-center justify-center w-full px-2 cursor-pointer" onClick={() => navigate(getLinksUrl())}>
           <BrandLogo className="w-8 h-8 text-foreground" />
         </div>
         <nav className="flex-1 flex flex-col items-center gap-4">
@@ -414,7 +434,7 @@ const DashboardLayout: React.FC = () => {
             {location.pathname.startsWith('/settings') ? (
               <div className="flex items-center gap-3">
                 <button 
-                  onClick={() => navigate('/dashboard')}
+                  onClick={() => navigate(getLinksUrl())}
                   className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -541,7 +561,7 @@ const DashboardLayout: React.FC = () => {
             ) : (
               <>
                 <Link 
-                  to={folderSlug ? `/dashboard/f/${folderSlug}` : (activeFolderId ? `/dashboard?folderId=${activeFolderId}` : "/dashboard")} 
+                  to={getLinksUrl()} 
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-xs transition-colors ${location.pathname === '/dashboard' || location.pathname.startsWith('/dashboard/f/') ? 'bg-secondary text-foreground font-semibold' : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'}`}
                 >
                   <LinkIcon className="w-3.5 h-3.5" />

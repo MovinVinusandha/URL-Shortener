@@ -20,7 +20,7 @@ import {
   isSameMonth, isSameDay, isToday, eachDayOfInterval 
 } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Tag as TagType, Folder as FolderType } from '../types';
+import type { Tag as TagType, Folder as FolderType, UrlEntry } from '../types';
 
 export interface ChannelItem {
   id: string;
@@ -305,7 +305,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
     const fetchCustomChannels = async () => {
       try {
         const res = await axiosInstance.get('/custom-channels');
-        if (Array.isArray(res.data)) {
+        if (res && Array.isArray(res.data)) {
           const dbChannels: ChannelItem[] = res.data.map((cc: any) => ({
             id: `custom_${cc.id}`,
             dbId: cc.id,
@@ -789,7 +789,18 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
 
       setBatchResults(res.data.items || []);
       toast.success(`Successfully created ${res.data.items.length} campaign links!`);
-      if (onSuccess) onSuccess();
+      if (onSuccess) {
+        const createdEntries: UrlEntry[] = (res.data.items || []).map((item) => ({
+          longUrl: item.longUrlWithUtm || cleanedUrl,
+          shortUrl: item.fullShortUrl || item.shortUrl,
+          accessed_times: 0,
+          createdAt: new Date().toISOString(),
+          isActive: true,
+          folderId: typeof selectedFolderId === 'number' ? selectedFolderId : undefined,
+          tags: selectedTagIds.length > 0 ? tags.filter((t) => selectedTagIds.includes(t.id)) : undefined,
+        }));
+        onSuccess(createdEntries);
+      }
     } catch (err: any) {
       console.error('Failed to create batch campaign links', err);
       setError(err.response?.data?.message || 'Failed to create campaign links');
