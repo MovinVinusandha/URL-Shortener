@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Layers, Copy, Download, BarChart2, Check, QrCode, 
   Edit2, Trash2, CornerDownRight, Trophy, Lock, MoreVertical, XCircle,
-  Folder as FolderIcon, Tag, Clock, FolderInput, Tags, AlertTriangle, Loader2, X
+  Folder as FolderIcon, Tag, Clock, FolderInput, Tags, AlertTriangle, Loader2, X,
+  Calendar as CalendarIcon, ChevronDown, ChevronLeft
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
+import { 
+  formatDistanceToNow, format, parseISO,
+  startOfMonth, endOfMonth, startOfWeek, endOfWeek,
+  eachDayOfInterval, isSameMonth, isSameDay, isToday,
+  addMonths, subMonths
+} from 'date-fns';
 import { toast } from 'react-hot-toast';
 import ClickArrowIcon from './icons/ClickArrowIcon';
 import type { CampaignGroup } from '../utils/utmExtractor';
@@ -54,6 +60,34 @@ interface CampaignGroupCardProps {
 const extractHash = (shortUrl: string): string =>
   shortUrl.split('/').pop() ?? shortUrl;
 
+const safeParseISO = (dateStr: string | null | undefined) => {
+  if (!dateStr) return null;
+  try {
+    const d = parseISO(dateStr);
+    if (isNaN(d.getTime())) return null;
+    return d;
+  } catch {
+    return null;
+  }
+};
+
+function useClickOutside(ref: React.RefObject<any>, handler: () => void) {
+  useEffect(() => {
+    const listener = (event: MouseEvent | TouchEvent) => {
+      if (!ref.current || ref.current.contains(event.target)) {
+        return;
+      }
+      handler();
+    };
+    document.addEventListener('mousedown', listener);
+    document.addEventListener('touchstart', listener);
+    return () => {
+      document.removeEventListener('mousedown', listener);
+      document.removeEventListener('touchstart', listener);
+    };
+  }, [ref, handler]);
+}
+
 export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
   campaign,
   displayDomain,
@@ -83,6 +117,66 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
   const [isSetExpirationModalOpen, setIsSetExpirationModalOpen] = useState(false);
   const [expirationOption, setExpirationOption] = useState<'never' | '24h' | '7d' | '30d' | 'custom'>('never');
   const [customExpirationDate, setCustomExpirationDate] = useState('');
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [pickerMonth, setPickerMonth] = useState<Date>(new Date());
+  const datePickerRef = useRef<HTMLDivElement>(null);
+  useClickOutside(datePickerRef, () => setIsDatePickerOpen(false));
+
+  const getTimeValues = () => {
+    if (!customExpirationDate) {
+      const now = new Date();
+      let hours = now.getHours();
+      const minutes = Math.ceil(now.getMinutes() / 5) * 5 % 60;
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      return {
+        hour: hours.toString(),
+        minute: minutes.toString().padStart(2, '0'),
+        ampm
+      };
+    }
+    const d = safeParseISO(customExpirationDate.endsWith('Z') ? customExpirationDate : customExpirationDate + 'Z');
+    if (!d) {
+      return { hour: '12', minute: '00', ampm: 'PM' };
+    }
+    let hours = d.getHours();
+    const minutes = d.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return {
+      hour: hours.toString(),
+      minute: minutes.toString().padStart(2, '0'),
+      ampm
+    };
+  };
+
+  const updateCustomExpiration = (day: Date, hourStr: string, minuteStr: string, ampmStr: string) => {
+    let hours = parseInt(hourStr, 10);
+    const minutes = parseInt(minuteStr, 10);
+    if (ampmStr === 'PM' && hours < 12) hours += 12;
+    if (ampmStr === 'AM' && hours === 12) hours = 0;
+
+    const newDate = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hours, minutes);
+    setCustomExpirationDate(format(newDate, "yyyy-MM-dd'T'HH:mm"));
+  };
+
+  const handleSelectDay = (day: Date) => {
+    const { hour, minute, ampm } = getTimeValues();
+    updateCustomExpiration(day, hour, minute, ampm);
+  };
+
+  const handleTimeChange = (type: 'hour' | 'minute' | 'ampm', val: string) => {
+    const currentValues = getTimeValues();
+    const newHour = type === 'hour' ? val : currentValues.hour;
+    const newMinute = type === 'minute' ? val : currentValues.minute;
+    const newAmPm = type === 'ampm' ? val : currentValues.ampm;
+    const baseDay = customExpirationDate 
+      ? (safeParseISO(customExpirationDate.endsWith('Z') ? customExpirationDate : customExpirationDate + 'Z') || new Date()) 
+      : new Date();
+    updateCustomExpiration(baseDay, newHour, newMinute, newAmPm);
+  };
 
   const [isDeleteCampaignModalOpen, setIsDeleteCampaignModalOpen] = useState(false);
   const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
@@ -658,14 +752,13 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
               className="relative w-full max-w-md bg-popover border border-border rounded-xl shadow-2xl overflow-hidden p-6 z-10"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between pb-4 border-b border-border">
+              <div className="flex items-center justify-between pb-2">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                     <FolderInput className="w-4 h-4" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-sm text-foreground">Move Campaign to Folder</h3>
-                    <p className="text-xs text-muted-foreground">Move all {campaign.links.length} links in &quot;{campaign.campaignName}&quot;</p>
                   </div>
                 </div>
                 <button 
@@ -714,7 +807,7 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
                 ))}
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
                   disabled={isBulkSubmitting}
@@ -758,14 +851,13 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
               className="relative w-full max-w-md bg-popover border border-border rounded-xl shadow-2xl overflow-hidden p-6 z-10"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between pb-4 border-b border-border">
+              <div className="flex items-center justify-between pb-2">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
                     <Tags className="w-4 h-4" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-sm text-foreground">Assign Tags to Campaign</h3>
-                    <p className="text-xs text-muted-foreground">Select tags to apply across all {campaign.links.length} links</p>
                   </div>
                 </div>
                 <button 
@@ -811,7 +903,7 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
                 )}
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
                   disabled={isBulkSubmitting}
@@ -852,17 +944,16 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
               initial={{ opacity: 0, scale: 0.95, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 8 }}
-              className="relative w-full max-w-md bg-popover border border-border rounded-xl shadow-2xl overflow-hidden p-6 z-10"
+              className="relative w-full max-w-md bg-popover border border-border rounded-xl shadow-2xl p-6 z-10"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between pb-4 border-b border-border">
+              <div className="flex items-center justify-between pb-2">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
                     <Clock className="w-4 h-4" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-sm text-foreground">Set Campaign Expiration</h3>
-                    <p className="text-xs text-muted-foreground">Applies expiration timestamp to all {campaign.links.length} links</p>
                   </div>
                 </div>
                 <button 
@@ -886,7 +977,14 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
                     <button
                       key={opt.id}
                       type="button"
-                      onClick={() => setExpirationOption(opt.id as any)}
+                      onClick={() => {
+                        setExpirationOption(opt.id as any);
+                        if (opt.id === 'custom' && !customExpirationDate) {
+                          const defaultCustom = new Date(Date.now() + 24 * 3600 * 1000);
+                          setCustomExpirationDate(format(defaultCustom, "yyyy-MM-dd'T'HH:mm"));
+                          setPickerMonth(defaultCustom);
+                        }
+                      }}
                       className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-left border ${
                         expirationOption === opt.id 
                           ? 'bg-primary/10 text-primary border-primary/40 font-semibold' 
@@ -898,20 +996,153 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
                   ))}
                 </div>
 
-                {expirationOption === 'custom' && (
-                  <div className="pt-2">
-                    <label className="block text-xs font-medium text-foreground mb-1">Select Custom Date & Time</label>
-                    <input 
-                      type="datetime-local"
-                      value={customExpirationDate}
-                      onChange={e => setCustomExpirationDate(e.target.value)}
-                      className="w-full text-xs px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                )}
+                {expirationOption === 'custom' && (() => {
+                  const monthStart = startOfMonth(pickerMonth);
+                  const monthEnd = endOfMonth(monthStart);
+                  const startDate = startOfWeek(monthStart);
+                  const endDate = endOfWeek(monthEnd);
+                  const days = eachDayOfInterval({ start: startDate, end: endDate });
+
+                  const selectedDate = customExpirationDate 
+                    ? safeParseISO(customExpirationDate.endsWith('Z') ? customExpirationDate : customExpirationDate + 'Z') 
+                    : null;
+                  const timeValues = getTimeValues();
+
+                  return (
+                    <div className="pt-2">
+                      <label className="block text-xs font-medium text-foreground mb-1">Select Custom Date & Time</label>
+                      <div className="relative z-40" ref={datePickerRef}>
+                        <button 
+                          type="button" 
+                          onClick={() => setIsDatePickerOpen(!isDatePickerOpen)} 
+                          className="w-full flex items-center justify-between border border-border bg-background rounded-lg px-3 py-2 text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                            <span className="truncate">
+                              {selectedDate 
+                                ? format(selectedDate, 'PPpp') 
+                                : 'Select custom date and time...'}
+                            </span>
+                          </div>
+                          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0 ml-2" />
+                        </button>
+
+                        <AnimatePresence>
+                          {isDatePickerOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 4, scale: 0.98 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                              transition={{ duration: 0.1, ease: "easeOut" }}
+                              className="absolute top-full mt-1.5 left-0 w-full sm:w-[280px] bg-popover border border-border rounded-xl shadow-2xl p-3 z-50 flex flex-col gap-3"
+                            >
+                              <div className="flex items-center justify-between pb-2 border-b border-border">
+                                <span className="text-xs font-semibold text-foreground">
+                                  {format(pickerMonth, 'MMMM yyyy')}
+                                </span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => setPickerMonth(subMonths(pickerMonth, 1))}
+                                    className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                  >
+                                    <ChevronLeft className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setPickerMonth(addMonths(pickerMonth, 1))}
+                                    className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                  >
+                                    <ChevronDown className="w-3.5 h-3.5 -rotate-90" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-muted-foreground">
+                                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
+                                  <div key={d}>{d}</div>
+                                ))}
+                              </div>
+
+                              <div className="grid grid-cols-7 gap-1">
+                                {days.map((day, idx) => {
+                                  const isSelected = selectedDate && isSameDay(day, selectedDate);
+                                  const isCurrentMonth = isSameMonth(day, pickerMonth);
+                                  const isCurrentDay = isToday(day);
+
+                                  return (
+                                    <button
+                                      key={idx}
+                                      type="button"
+                                      onClick={() => handleSelectDay(day)}
+                                      className={`h-7 w-full rounded-md text-xs flex items-center justify-center transition-colors cursor-pointer ${
+                                        isSelected
+                                          ? 'bg-primary text-primary-foreground font-semibold'
+                                          : isCurrentDay
+                                          ? 'border border-primary text-primary font-medium'
+                                          : isCurrentMonth
+                                          ? 'text-foreground hover:bg-secondary'
+                                          : 'text-muted-foreground/40 hover:bg-secondary/50'
+                                      }`}
+                                    >
+                                      {format(day, 'd')}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Time Selection Section */}
+                              <div className="pt-2.5 border-t border-border flex items-center justify-between">
+                                <span className="text-xs font-medium text-muted-foreground">Time</span>
+                                <div className="flex items-center gap-1.5">
+                                  <select
+                                    value={timeValues.hour}
+                                    onChange={(e) => handleTimeChange('hour', e.target.value)}
+                                    className="bg-background border border-border rounded-md px-2 py-1 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                                  >
+                                    {Array.from({ length: 12 }, (_, i) => (i + 1).toString()).map((h) => (
+                                      <option key={h} value={h}>{h.padStart(2, '0')}</option>
+                                    ))}
+                                  </select>
+                                  <span className="text-muted-foreground text-xs font-bold">:</span>
+                                  <select
+                                    value={timeValues.minute}
+                                    onChange={(e) => handleTimeChange('minute', e.target.value)}
+                                    className="bg-background border border-border rounded-md px-2 py-1 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                                  >
+                                    {['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map((m) => (
+                                      <option key={m} value={m}>{m}</option>
+                                    ))}
+                                  </select>
+                                  <div className="flex bg-secondary p-0.5 rounded-md border border-border">
+                                    {['AM', 'PM'].map((period) => (
+                                      <button
+                                        key={period}
+                                        type="button"
+                                        onClick={() => handleTimeChange('ampm', period)}
+                                        className={`px-2 py-0.5 text-[10px] font-bold rounded transition-colors cursor-pointer ${
+                                          timeValues.ampm === period
+                                            ? 'bg-background text-foreground shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                        }`}
+                                      >
+                                        {period}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
                   disabled={isBulkSubmitting}
