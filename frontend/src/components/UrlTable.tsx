@@ -7,8 +7,6 @@ import {
   BarChart2,
   Copy,
   Check,
-  ChevronDown,
-  ChevronUp,
   Link2,
   AlertCircle,
   Activity,
@@ -77,7 +75,6 @@ const UrlTable: React.FC<Props> = ({ urls, onDeleted,  onOpenQr,
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
-  const [sortAsc, setSortAsc] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
   const copyToClipboard = async (url: string, index: number) => {
@@ -102,13 +99,7 @@ const UrlTable: React.FC<Props> = ({ urls, onDeleted,  onOpenQr,
     }
   };
 
-  const sortedWithIndex = [...urls]
-    .map((entry, i) => ({ entry, originalIndex: i }))
-    .sort((a, b) => {
-      const dateA = new Date(a.entry.createdAt.replace(' ', 'T') + 'Z').getTime();
-      const dateB = new Date(b.entry.createdAt.replace(' ', 'T') + 'Z').getTime();
-      return sortAsc ? dateA - dateB : dateB - dateA;
-    });
+  const sortedWithIndex = urls.map((entry, i) => ({ entry, originalIndex: i }));
 
   if (!urls || urls.length === 0) {
     return (

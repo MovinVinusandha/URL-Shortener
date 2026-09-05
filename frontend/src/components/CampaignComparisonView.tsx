@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axiosInstance from '../api/axiosInstance';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { 
   Trophy, TrendingUp, Layers, Plus, X,
-  Radio, Download, Activity, BarChart2,
-  Filter, ChevronDown, Check
+  Radio, Download, Activity, BarChart2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
@@ -312,18 +311,6 @@ export const CampaignComparisonView: React.FC<CampaignComparisonViewProps> = ({
         return { channel, rawSource: data.rawSource, campCounts: data.campCounts, total };
       })
       .sort((a, b) => b.total - a.total);
-  }, [selectedCampaigns, dataMap]);
-
-  // Unique list of raw UTM sources across selected campaigns
-  const availableSources = useMemo(() => {
-    const set = new Set<string>();
-    selectedCampaigns.forEach((campName) => {
-      const sources = dataMap[campName]?.clicksByUtmSource || [];
-      sources.forEach((s) => {
-        if (s.name) set.add(s.name);
-      });
-    });
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [selectedCampaigns, dataMap]);
 
   // Export CSV Report

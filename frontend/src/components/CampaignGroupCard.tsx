@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Layers, Copy, Download, BarChart2, Check, QrCode, 
   Edit2, Trash2, CornerDownRight, Trophy, Lock, MoreVertical, XCircle,
-  Folder as FolderIcon, Tag, Clock, FolderInput, Tags, AlertTriangle, Loader2, Power, X
+  Folder as FolderIcon, Tag, Clock, FolderInput, Tags, AlertTriangle, Loader2, X
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';

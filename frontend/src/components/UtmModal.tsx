@@ -22,7 +22,6 @@ import {
   type CustomParam,
   type UtmTemplate,
   POPULAR_UTM_PRESETS,
-  getSavedUtmTemplates,
   saveUtmTemplate,
   buildUrlWithUtms,
   fetchUtmTemplatesApi,
@@ -387,8 +386,13 @@ export const UtmModal: React.FC<UtmModalProps> = ({
                           key={preset.id}
                           type="button"
                           onClick={() => handleApplyPreset(preset.utms, preset.name)}
-                          className="px-2 py-1 rounded-md text-[11px] font-medium bg-secondary hover:bg-secondary/80 border border-border text-foreground transition-all cursor-pointer flex items-center gap-1"
+                          className={`px-2 py-1 rounded-md text-[11px] font-medium border transition-all cursor-pointer flex items-center gap-1 ${
+                            selectedTemplateId === preset.name
+                              ? 'bg-primary/10 border-primary text-primary'
+                              : 'bg-secondary hover:bg-secondary/80 border-border text-foreground'
+                          }`}
                         >
+                          {selectedTemplateId === preset.name && <Check className="w-3 h-3 text-primary" />}
                           <span>{preset.name}</span>
                         </button>
                       ))}
@@ -405,9 +409,14 @@ export const UtmModal: React.FC<UtmModalProps> = ({
                           <div
                             key={t.id}
                             onClick={() => handleApplyTemplate(t)}
-                            className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-secondary text-xs text-foreground cursor-pointer transition-colors"
+                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
+                              selectedTemplateId === t.id
+                                ? 'bg-primary/10 text-primary font-medium'
+                                : 'hover:bg-secondary text-foreground'
+                            }`}
                           >
                             <span className="truncate">{t.name}</span>
+                            {selectedTemplateId === t.id && <Check className="w-3.5 h-3.5 text-primary" />}
                           </div>
                         ))}
                       </div>

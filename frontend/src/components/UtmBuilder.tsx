@@ -21,7 +21,6 @@ import {
   getSavedUtmTemplates,
   fetchUtmTemplatesApi,
   saveUtmTemplate,
-  deleteUtmTemplate,
 } from '../utils/utmUtils';
 import toast from 'react-hot-toast';
 
@@ -138,16 +137,6 @@ export const UtmBuilder: React.FC<UtmBuilderProps> = ({
       onChange(t.utms, restoredCustom);
       toast.success(`Applied template "${t.name}"`);
     }
-  };
-
-  const handleDeleteTemplate = (templateId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const updated = deleteUtmTemplate(templateId);
-    setTemplates(updated);
-    if (selectedTemplateId === templateId) {
-      setSelectedTemplateId('');
-    }
-    toast.success('Template deleted');
   };
 
   return (

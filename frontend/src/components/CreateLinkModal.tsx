@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  ChevronRight, Globe, X, HelpCircle, Shuffle, 
+  Globe, X, HelpCircle, Shuffle, 
   Tag, FolderArchive, ChevronsUpDown, 
   Lock, CornerDownLeft, Pencil, Check, FolderPlus, Eye, EyeOff, ArrowRight, Folder,
-  Calendar as CalendarIcon, ChevronDown, ChevronLeft, Sparkles,
-  CornerDownRight, FlaskConical, Clock, MoreHorizontal,
-  Link2, Layers, Copy, ExternalLink, Download, Plus, Trash2,
-  Mail, MessageCircle, Video, Share2
+  Calendar as CalendarIcon, ChevronDown, ChevronLeft,
+  CornerDownRight,
+  Link2, Layers, Copy, ExternalLink, Download, Plus, Trash2
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import { QrCodeModal, type QrConfig } from './QrCodeModal';
 import { UtmModal } from './UtmModal';
 import { generateQrMatrix } from '../utils/qrMatrix';
@@ -123,7 +121,6 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
   const rootDomain = window.location.hostname.replace('app.', '');
   const displayDomain = rootDomain + (window.location.port && window.location.port !== '80' && window.location.port !== '443' ? ':' + window.location.port : '');
   const protocol = window.location.protocol;
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || `${protocol}//api.${rootDomain}`;
 
   // Mode state: 'single' or 'multi'
   const [mode, setMode] = useState<'single' | 'multi'>(initialMode);

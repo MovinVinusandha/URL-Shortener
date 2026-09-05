@@ -41,7 +41,7 @@ axiosInstance.interceptors.response.use(
       try {
         // Call the refresh endpoint. withCredentials ensures the HttpOnly cookie is sent!
         const refreshResponse = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/auth/refresh`,
+          `${BASE_URL}/auth/refresh`,
           {},
           { withCredentials: true }
         );

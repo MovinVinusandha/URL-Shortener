@@ -11,7 +11,7 @@ import {
   Link as LinkIcon, Activity,
   Share2, Folder as FolderIcon,
   Tag, X, Search, Filter, ChevronDown, ChevronLeft, Check,
-  BarChart2, Layers, Zap, Target, Radio, FileText, ExternalLink, SlidersHorizontal, Flag, Gift, Trophy
+  BarChart2, Layers, Zap, Target, Radio, FileText, SlidersHorizontal, Gift, Trophy
 } from 'lucide-react';
 import Skeleton from 'react-loading-skeleton';
 import { motion, AnimatePresence } from 'framer-motion';

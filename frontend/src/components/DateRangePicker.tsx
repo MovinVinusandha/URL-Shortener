@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   format, addMonths, subMonths, startOfMonth, endOfMonth, 
   startOfWeek, endOfWeek, isSameMonth, isSameDay, isToday, eachDayOfInterval, 
-  isWithinInterval, isBefore, isAfter, startOfDay, endOfDay
+  isWithinInterval, isBefore, startOfDay, endOfDay
 } from 'date-fns';
 
 export type DateRangeValue = 
@@ -105,18 +105,6 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChang
       onChange({ type: 'preset', value: preset.value });
     }
     setIsOpen(false);
-  };
-
-  const isInRange = (day: Date) => {
-    if (selectionStart && selectionEnd) {
-      return isWithinInterval(day, { start: startOfDay(selectionStart), end: endOfDay(selectionEnd) });
-    }
-    if (selectionStart && hoverDate) {
-      const start = isBefore(selectionStart, hoverDate) ? selectionStart : hoverDate;
-      const end = isBefore(selectionStart, hoverDate) ? hoverDate : selectionStart;
-      return isWithinInterval(day, { start: startOfDay(start), end: endOfDay(end) });
-    }
-    return false;
   };
 
   const renderMonth = (month: Date) => {
