@@ -370,11 +370,11 @@ describe('AnalyticsPage', () => {
     expect(screen.getByText('Traffic Velocity Timeline')).toBeInTheDocument();
   });
 
-  it('renders UTM Campaign Performance breakdown and allows tab switching', async () => {
+  it('renders UTM Attribution breakdown and allows tab switching', async () => {
     render(<MemoryRouter><AnalyticsPage /></MemoryRouter>);
 
     await waitFor(() => {
-      expect(screen.getByText('Campaign Performance')).toBeInTheDocument();
+      expect(screen.getByText('Attribution & UTM Parameters')).toBeInTheDocument();
       expect(screen.getByText('summer_promo')).toBeInTheDocument();
     });
 
@@ -471,16 +471,16 @@ describe('AnalyticsPage', () => {
     expect(mockSetSearchParams).toHaveBeenCalled();
   });
 
-  it('allows toggling between List and Comparison ROI Bar Chart views in Campaign Performance', async () => {
+  it('allows toggling between List and Visual Share Bar Chart views in Attribution & UTM Parameters', async () => {
     render(<MemoryRouter><AnalyticsPage /></MemoryRouter>);
 
     await waitFor(() => {
-      expect(screen.getByText('Campaign Performance')).toBeInTheDocument();
-      expect(screen.getByText('Comparison')).toBeInTheDocument();
+      expect(screen.getByText('Attribution & UTM Parameters')).toBeInTheDocument();
+      expect(screen.getByText('Visual Share')).toBeInTheDocument();
     });
 
-    // Switch to Comparison view
-    fireEvent.click(screen.getByText('Comparison'));
+    // Switch to Visual Share view
+    fireEvent.click(screen.getByText('Visual Share'));
 
     // Should render ROI summary cards and BarChart
     await waitFor(() => {
@@ -500,10 +500,10 @@ describe('AnalyticsPage', () => {
     render(<MemoryRouter><AnalyticsPage /></MemoryRouter>);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Compare/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Compare$/i })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Compare/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Compare$/i }));
     expect(mockSetSearchParams).toHaveBeenCalled();
   });
 });

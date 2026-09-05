@@ -1904,16 +1904,25 @@ const AnalyticsPage: React.FC = () => {
                   <SlidersHorizontal className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-xs text-foreground">Campaign Performance</h3>
+                  <h3 className="font-semibold text-xs text-foreground">Attribution & UTM Parameters</h3>
                 </div>
               </div>
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 flex-wrap">
                 {currentUtmList.length > 0 && (
                   <span className="text-[11px] text-muted-foreground font-medium font-mono hidden sm:inline">
                     {currentUtmList.reduce((acc, d) => acc + d.count, 0).toLocaleString()} total clicks
                   </span>
                 )}
-                {/* List / Comparison View Mode Switcher */}
+                <button
+                  type="button"
+                  onClick={() => handleSetAnalyticsMode('compare')}
+                  className="hidden md:inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 transition-colors mr-1 cursor-pointer"
+                  title="Compare campaigns side-by-side"
+                >
+                  <Layers className="w-3 h-3" />
+                  <span>Compare Campaigns &rarr;</span>
+                </button>
+                {/* List / Visual Share View Mode Switcher */}
                 <div className="flex items-center p-0.5 rounded-lg bg-secondary border border-border text-[11px]">
                   <button
                     type="button"
@@ -1936,10 +1945,10 @@ const AnalyticsPage: React.FC = () => {
                         ? 'bg-background text-foreground shadow-xs font-semibold'
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
-                    title="Channel ROI / Comparison Bar Chart"
+                    title="Visual Share & Performance distribution"
                   >
                     <BarChart2 className="w-3 h-3" />
-                    <span>Comparison</span>
+                    <span>Visual Share</span>
                   </button>
                 </div>
               </div>
