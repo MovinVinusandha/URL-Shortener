@@ -774,7 +774,7 @@ const DashboardPage: React.FC = () => {
                             Tag
                           </div>
                           {selectedFilterTags.length > 0 && (
-                            <span className="text-[10px] text-muted-foreground font-mono bg-secondary px-1.5 py-0.2 rounded-full">
+                            <span className="text-[10px] text-muted-foreground font-medium bg-secondary px-1.5 py-0.2 rounded-full">
                               {selectedFilterTags.length}
                             </span>
                           )}
@@ -874,7 +874,7 @@ const DashboardPage: React.FC = () => {
                                   />
                                   <span className="truncate font-medium">{t.name}</span>
                                 </div>
-                                <span className="text-[10px] text-muted-foreground font-mono ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50 group-hover:bg-secondary transition-colors">
+                                <span className="text-[10px] text-muted-foreground font-medium ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50 group-hover:bg-secondary transition-colors">
                                   {t.linkCount ?? 0}
                                 </span>
                               </label>
@@ -937,7 +937,7 @@ const DashboardPage: React.FC = () => {
                                   <span className="truncate font-medium">{c.name}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
-                                  <span className="text-[10px] text-muted-foreground font-mono px-1.5 py-0.5 rounded-full bg-secondary/50">
+                                  <span className="text-[10px] text-muted-foreground font-medium px-1.5 py-0.5 rounded-full bg-secondary/50">
                                     {c.count}
                                   </span>
                                   {isSelected && <Check className="w-3.5 h-3.5 text-primary stroke-[2.5]" />}
@@ -1314,7 +1314,7 @@ const DashboardPage: React.FC = () => {
                                   />
                                   <span className="truncate font-medium">{t.name}</span>
                                 </div>
-                                <span className="text-[10px] text-muted-foreground font-mono ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50 group-hover:bg-secondary transition-colors">
+                                <span className="text-[10px] text-muted-foreground font-medium ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50 group-hover:bg-secondary transition-colors">
                                   {t.linkCount ?? 0}
                                 </span>
                               </label>
@@ -1414,7 +1414,7 @@ const DashboardPage: React.FC = () => {
                                   <span className="truncate font-medium">{c.name}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
-                                  <span className="text-[10px] text-muted-foreground font-mono px-1.5 py-0.5 rounded-full bg-secondary/50">
+                                  <span className="text-[10px] text-muted-foreground font-medium px-1.5 py-0.5 rounded-full bg-secondary/50">
                                     {c.count}
                                   </span>
                                   {isSelected && <Check className="w-3.5 h-3.5 text-primary stroke-[2.5]" />}
@@ -1557,7 +1557,7 @@ const DashboardPage: React.FC = () => {
                   <div className="space-y-1">
                     <h3 className="text-sm font-semibold text-foreground">No Marketing Campaigns Found</h3>
                     <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                      Links created with a <code className="text-primary font-mono font-medium">utm_campaign</code> parameter or generated via the Multi-Channel batch generator will appear grouped here.
+                      Links created with a <code className="text-primary font-medium">utm_campaign</code> parameter or generated via the Multi-Channel batch generator will appear grouped here.
                     </p>
                   </div>
                   <button
@@ -1680,7 +1680,7 @@ const DashboardPage: React.FC = () => {
                             />
                             <span>{url.tags[0].name}</span>
                             {url.tags.length > 1 && (
-                              <span className="text-[10px] font-mono text-muted-foreground ml-0.5">
+                              <span className="text-[10px] font-medium text-muted-foreground ml-0.5">
                                 +{url.tags.length - 1}
                               </span>
                             )}

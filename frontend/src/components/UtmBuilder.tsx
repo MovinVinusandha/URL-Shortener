@@ -189,7 +189,7 @@ export const UtmBuilder: React.FC<UtmBuilderProps> = ({
             return (
               <span
                 key={key}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-secondary border border-border text-foreground"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-secondary border border-border text-foreground"
               >
                 <span className="text-muted-foreground">{key.replace('utm_', '')}:</span>
                 <span className="font-semibold text-primary">{val}</span>
@@ -201,7 +201,7 @@ export const UtmBuilder: React.FC<UtmBuilderProps> = ({
             return (
               <span
                 key={p.id}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-secondary border border-border text-foreground"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-secondary border border-border text-foreground"
               >
                 <span className="text-muted-foreground">{p.key}:</span>
                 <span className="font-semibold">{p.value}</span>
@@ -314,7 +314,7 @@ export const UtmBuilder: React.FC<UtmBuilderProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-medium text-foreground flex items-center gap-1">
                     <span>Referral / Source</span>
-                    <span className="text-[10px] text-muted-foreground font-mono">(utm_source)</span>
+                    <span className="text-[10px] text-muted-foreground">(utm_source)</span>
                   </label>
                   {utms.source && (
                     <button
@@ -340,7 +340,7 @@ export const UtmBuilder: React.FC<UtmBuilderProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-medium text-foreground flex items-center gap-1">
                     <span>Medium</span>
-                    <span className="text-[10px] text-muted-foreground font-mono">(utm_medium)</span>
+                    <span className="text-[10px] text-muted-foreground">(utm_medium)</span>
                   </label>
                   {utms.medium && (
                     <button
@@ -366,7 +366,7 @@ export const UtmBuilder: React.FC<UtmBuilderProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-medium text-foreground flex items-center gap-1">
                     <span>Campaign</span>
-                    <span className="text-[10px] text-muted-foreground font-mono">(utm_campaign)</span>
+                    <span className="text-[10px] text-muted-foreground">(utm_campaign)</span>
                   </label>
                   {utms.campaign && (
                     <button
@@ -392,7 +392,7 @@ export const UtmBuilder: React.FC<UtmBuilderProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-medium text-foreground flex items-center gap-1">
                     <span>Term / Keyword</span>
-                    <span className="text-[10px] text-muted-foreground font-mono">(utm_term)</span>
+                    <span className="text-[10px] text-muted-foreground">(utm_term)</span>
                   </label>
                   {utms.term && (
                     <button
@@ -418,7 +418,7 @@ export const UtmBuilder: React.FC<UtmBuilderProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-medium text-foreground flex items-center gap-1">
                     <span>Content / Variant</span>
-                    <span className="text-[10px] text-muted-foreground font-mono">(utm_content)</span>
+                    <span className="text-[10px] text-muted-foreground">(utm_content)</span>
                   </label>
                   {utms.content && (
                     <button
@@ -467,15 +467,15 @@ export const UtmBuilder: React.FC<UtmBuilderProps> = ({
                         placeholder="Key (e.g. ref)"
                         value={param.key}
                         onChange={(e) => handleCustomParamChange(param.id, 'key', e.target.value)}
-                        className="flex-1 text-xs bg-background border border-input rounded-md px-2.5 py-1.5 text-foreground font-mono placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+                        className="flex-1 text-xs bg-background border border-input rounded-md px-2.5 py-1.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
                       />
-                      <span className="text-muted-foreground font-mono text-xs">=</span>
+                      <span className="text-muted-foreground text-xs font-bold">=</span>
                       <input
                         type="text"
                         placeholder="Value"
                         value={param.value}
                         onChange={(e) => handleCustomParamChange(param.id, 'value', e.target.value)}
-                        className="flex-1 text-xs bg-background border border-input rounded-md px-2.5 py-1.5 text-foreground font-mono placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+                        className="flex-1 text-xs bg-background border border-input rounded-md px-2.5 py-1.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
                       />
                       <button
                         type="button"

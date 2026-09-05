@@ -239,11 +239,15 @@ export const CampaignComparisonView: React.FC<CampaignComparisonViewProps> = ({
       const topCountry = (data?.clicksByCountry || [])[0] || null;
       const topDevice = (data?.clicksByDevice || [])[0] || null;
 
+      const avail = availableCampaigns.find(c => c.campaignName === name);
+      const linkCount = avail?.links?.length || 0;
+
       return {
         name,
         color,
         totalClicks,
         avgClicks,
+        linkCount,
         peakDay,
         topSource,
         topMedium,
@@ -251,7 +255,7 @@ export const CampaignComparisonView: React.FC<CampaignComparisonViewProps> = ({
         topDevice,
       };
     });
-  }, [selectedCampaigns, dataMap]);
+  }, [selectedCampaigns, dataMap, availableCampaigns]);
 
   // Determine the leader in total clicks
   const maxClicks = useMemo(() => {
@@ -343,7 +347,7 @@ export const CampaignComparisonView: React.FC<CampaignComparisonViewProps> = ({
         <div className="space-y-1">
           <h3 className="text-sm font-semibold text-foreground">No Marketing Campaigns Available</h3>
           <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-            Create links with a <code className="text-primary font-mono font-medium">utm_campaign</code> tag or generate a multi-channel batch campaign to unlock side-by-side comparison.
+            Create links with a <code className="text-primary font-medium">utm_campaign</code> tag or generate a multi-channel batch campaign to unlock side-by-side comparison.
           </p>
         </div>
       </div>
@@ -466,7 +470,7 @@ export const CampaignComparisonView: React.FC<CampaignComparisonViewProps> = ({
             <div className="flex items-center px-2 h-full bg-background/50 text-muted-foreground font-medium">
               is
             </div>
-            <div className="flex items-center gap-1 px-2.5 h-full font-medium text-foreground font-mono">
+            <div className="flex items-center gap-1 px-2.5 h-full font-medium text-foreground">
               {formatChannelName(selectedChannel)}
             </div>
             <button
@@ -481,65 +485,91 @@ export const CampaignComparisonView: React.FC<CampaignComparisonViewProps> = ({
         </div>
       )}
 
-      {/* ── Head-to-Head KPI Matrix ─────────────────────────────── */}
-      <div className={`grid grid-cols-1 md:grid-cols-${Math.min(selectedCampaigns.length, 4)} gap-4`}>
-        {campaignSummaries.map((summary) => {
-          const isWinner = winnerCampaign?.name === summary.name;
+      {/* ── Summary Comparison Cards ────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {selectedCampaigns.map((campName, idx) => {
+          const summary = campaignSummaries.find(s => s.name === campName) || {
+            totalClicks: 0,
+            avgClicks: 0,
+            linkCount: 0,
+            topSource: null,
+            topCountry: null,
+            topDevice: null,
+          };
+          const color = CAMPAIGN_COLORS[idx % CAMPAIGN_COLORS.length];
+          const isWinner = winnerCampaign?.name === campName;
+
           return (
-            <div 
-              key={summary.name}
-              className={`bg-background border rounded-xl p-5 relative transition-all shadow-xs flex flex-col justify-between ${
-                isWinner ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border'
-              }`}
+            <motion.div
+              layout
+              key={campName}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="rounded-xl border border-border bg-card p-5 relative overflow-hidden shadow-xs hover:border-border/80 transition-all group"
             >
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: summary.color.hex }} />
-                    <h4 className="text-sm font-semibold text-foreground truncate" title={summary.name}>
-                      {summary.name}
-                    </h4>
+              {/* Colored Accent Top Border */}
+              <div
+                className="absolute top-0 left-0 right-0 h-1"
+                style={{ backgroundColor: color.hex }}
+              />
+
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: color.hex }}
+                    />
+                    <h3 className="font-semibold text-sm text-foreground truncate" title={campName}>
+                      {campName}
+                    </h3>
                   </div>
-                  {isWinner && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0">
-                      <Trophy className="w-3 h-3" />
-                      Leader
-                    </span>
-                  )}
+                  <span className="text-[11px] text-muted-foreground mt-0.5 block">
+                    {summary.linkCount} {summary.linkCount === 1 ? 'channel link' : 'channel links'}
+                  </span>
                 </div>
 
-                <div className="space-y-1 mb-4">
-                  <div className="text-xs text-muted-foreground">Total Clicks</div>
-                  {loading ? (
-                    <Skeleton width={100} height={28} />
-                  ) : (
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-bold tracking-tight text-foreground font-mono">
-                        {summary.totalClicks.toLocaleString()}
+                {isWinner && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+                    <Trophy className="w-3 h-3 text-amber-500" />
+                    Leader
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-1 mb-4">
+                <div className="text-xs text-muted-foreground">Total Clicks</div>
+                {loading ? (
+                  <Skeleton width={100} height={28} />
+                ) : (
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold tracking-tight text-foreground">
+                      {summary.totalClicks.toLocaleString()}
+                    </span>
+                    {winnerCampaign && !isWinner && winnerCampaign.totalClicks > 0 && (
+                      <span className="text-[11px] text-muted-foreground">
+                        ({Math.round((summary.totalClicks / winnerCampaign.totalClicks) * 100)}% of leader)
                       </span>
-                      {winnerCampaign && !isWinner && winnerCampaign.totalClicks > 0 && (
-                        <span className="text-[11px] text-muted-foreground">
-                          ({Math.round((summary.totalClicks / winnerCampaign.totalClicks) * 100)}% of leader)
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
-                {/* Micro Stats Grid */}
-                <div className="grid grid-cols-2 gap-2 pt-3 border-t border-dashed border-border text-xs">
-                  <div>
-                    <span className="text-muted-foreground text-[11px] block">Top Channel</span>
-                    <span className="font-medium text-foreground truncate block">
-                      {summary.topSource ? formatChannelName(summary.topSource.name) : '—'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground text-[11px] block">Avg / Day</span>
-                    <span className="font-medium text-foreground font-mono block">
-                      {summary.avgClicks}
-                    </span>
-                  </div>
+              {/* Micro Stats Grid */}
+              <div className="grid grid-cols-2 gap-2 pt-3 border-t border-dashed border-border text-xs">
+                <div>
+                  <span className="text-muted-foreground text-[11px] block">Top Channel</span>
+                  <span className="font-medium text-foreground truncate block">
+                    {summary.topSource ? formatChannelName(summary.topSource.name) : '—'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-[11px] block">Avg / Day</span>
+                  <span className="font-medium text-foreground block">
+                    {summary.avgClicks}
+                  </span>
+                </div>
                   <div>
                     <span className="text-muted-foreground text-[11px] block">Top Country</span>
                     <span className="font-medium text-foreground truncate block">
@@ -553,10 +583,9 @@ export const CampaignComparisonView: React.FC<CampaignComparisonViewProps> = ({
                     </span>
                   </div>
                 </div>
-              </div>
-            </div>
-          );
-        })}
+              </motion.div>
+            );
+          })}
       </div>
 
       {/* ── Multi-Series Comparative Chart ──────────────────────── */}
@@ -647,7 +676,7 @@ export const CampaignComparisonView: React.FC<CampaignComparisonViewProps> = ({
                                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
                                     <span className="text-muted-foreground">{entry.name}:</span>
                                   </div>
-                                  <span className="font-bold text-foreground font-mono">
+                                  <span className="font-bold text-foreground">
                                     {entry.value?.toLocaleString()}
                                   </span>
                                 </div>
@@ -716,7 +745,7 @@ export const CampaignComparisonView: React.FC<CampaignComparisonViewProps> = ({
                                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
                                     <span className="text-muted-foreground">{entry.name}:</span>
                                   </div>
-                                  <span className="font-bold text-foreground font-mono">
+                                  <span className="font-bold text-foreground">
                                     {entry.value?.toLocaleString()}
                                   </span>
                                 </div>
@@ -812,12 +841,12 @@ export const CampaignComparisonView: React.FC<CampaignComparisonViewProps> = ({
                       {selectedCampaigns.map((c) => {
                         const count = row.campCounts[c] || 0;
                         return (
-                          <td key={c} className="py-2.5 text-right font-mono text-foreground w-20 sm:w-24 px-2">
+                          <td key={c} className="py-2.5 text-right font-medium text-foreground w-20 sm:w-24 px-2">
                             {count > 0 ? count.toLocaleString() : <span className="text-muted-foreground/40">—</span>}
                           </td>
                         );
                       })}
-                      <td className="py-2.5 text-right font-mono font-semibold text-foreground w-20 pl-2">
+                      <td className="py-2.5 text-right font-semibold text-foreground w-20 pl-2">
                         {row.total.toLocaleString()}
                       </td>
                     </tr>

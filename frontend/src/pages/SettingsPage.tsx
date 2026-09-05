@@ -208,7 +208,7 @@ const SettingsPage: React.FC = () => {
               type="text"
               readOnly
               value={userIdDisplay}
-              className="flex-1 px-3.5 py-2 border border-input rounded-lg bg-background text-foreground font-mono text-sm cursor-not-allowed"
+              className="flex-1 px-3.5 py-2 border border-input rounded-lg bg-background text-foreground font-medium text-sm cursor-not-allowed"
             />
             <button
               onClick={copyToClipboard}

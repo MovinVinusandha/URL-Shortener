@@ -63,7 +63,7 @@ const EditModal: React.FC<Props> = ({ entry, onClose, onUpdated }) => {
               <h2 className="text-foreground font-semibold">Edit URL</h2>
               <p className="text-muted-foreground text-xs mt-0.5">
                 Hash:{' '}
-                <code className="text-primary font-mono">
+                <code className="text-primary font-medium">
                   {extractHash(entry.shortUrl)}
                 </code>
               </p>

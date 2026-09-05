@@ -297,7 +297,7 @@ export const UtmModal: React.FC<UtmModalProps> = ({
                   value={param.key}
                   onChange={(e) => handleCustomParamChange(param.id, 'key', e.target.value)}
                   placeholder="Key"
-                  className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none font-mono"
+                  className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
                 />
               </div>
               <input
@@ -305,7 +305,7 @@ export const UtmModal: React.FC<UtmModalProps> = ({
                 value={param.value}
                 onChange={(e) => handleCustomParamChange(param.id, 'value', e.target.value)}
                 placeholder="Value"
-                className="flex-1 px-3 py-2 text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none font-mono"
+                className="flex-1 px-3 py-2 text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none"
               />
               <button
                 type="button"
@@ -333,7 +333,7 @@ export const UtmModal: React.FC<UtmModalProps> = ({
           {/* URL Preview matching Dub.co */}
           <div className="pt-2 space-y-1.5">
             <label className="text-xs font-medium text-foreground">URL Preview</label>
-            <div className="rounded-lg border border-input bg-secondary/30 px-3 py-2.5 text-xs font-mono text-muted-foreground/90 break-all select-all leading-relaxed whitespace-normal max-h-32 overflow-y-auto">
+            <div className="rounded-lg border border-input bg-secondary/30 px-3 py-2.5 text-xs text-muted-foreground/90 break-all select-all leading-relaxed whitespace-normal max-h-32 overflow-y-auto">
               {previewUrl}
             </div>
           </div>

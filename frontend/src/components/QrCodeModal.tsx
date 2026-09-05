@@ -308,7 +308,7 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
           <div className="flex items-center justify-between px-5 pt-4 pb-1">
             <div>
               <h2 className="text-sm font-semibold text-foreground">QR Code</h2>
-              <p className="text-[11px] text-muted-foreground truncate max-w-[280px] font-mono mt-0.5">
+              <p className="text-[11px] text-muted-foreground truncate max-w-[280px] font-medium mt-0.5">
                 {shortUrl}
               </p>
             </div>
@@ -671,7 +671,7 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                     className="w-4 h-4 rounded border border-black/20 shrink-0"
                     style={{ backgroundColor: color }}
                   />
-                  <span className="text-xs font-mono font-medium text-foreground uppercase truncate">
+                  <span className="text-xs font-medium text-foreground uppercase truncate">
                     {color}
                   </span>
                 </button>
@@ -724,7 +724,7 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
                     className="w-4 h-4 rounded border border-black/20 shrink-0"
                     style={{ backgroundColor: bgColor }}
                   />
-                  <span className="text-xs font-mono font-medium text-foreground uppercase truncate">
+                  <span className="text-xs font-medium text-foreground uppercase truncate">
                     {bgColor}
                   </span>
                 </button>

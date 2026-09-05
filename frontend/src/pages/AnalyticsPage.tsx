@@ -125,14 +125,14 @@ const DeviceDonutWheel: React.FC<{
 
         {/* Centered Dynamic Hub */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center select-none">
-          <span className="text-xl font-bold font-mono tracking-tight text-foreground leading-none">
+          <span className="text-xl font-bold tracking-tight text-foreground leading-none">
             {activeCount.toLocaleString()}
           </span>
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mt-1 truncate max-w-[85px]">
             {activeLabel}
           </span>
           {activeItem && (
-            <span className="text-[11px] font-mono text-primary font-semibold leading-none mt-0.5">
+            <span className="text-[11px] text-primary font-semibold leading-none mt-0.5">
               {activePct}%
             </span>
           )}
@@ -164,7 +164,7 @@ const DeviceDonutWheel: React.FC<{
                 }} 
               />
               <span className="font-medium text-foreground">{device.device}</span>
-              <span className="text-muted-foreground font-mono text-[11px]">({pct}%)</span>
+              <span className="text-muted-foreground font-medium text-[11px]">({pct}%)</span>
             </button>
           );
         })}
@@ -549,7 +549,7 @@ const AnalyticsPage: React.FC = () => {
                 <span className="w-2 h-2 rounded-full bg-[#0099ff] shrink-0" />
                 <span>Clicks</span>
               </div>
-              <span className="font-semibold text-foreground font-mono">
+              <span className="font-semibold text-foreground">
                 {value?.toLocaleString()}
               </span>
             </div>
@@ -561,14 +561,14 @@ const AnalyticsPage: React.FC = () => {
                   <span className="w-2 h-2 rounded-full bg-[#38bdf8] shrink-0" />
                   <span>Volume</span>
                 </div>
-                <span className="font-semibold text-foreground font-mono">
+                <span className="font-semibold text-foreground">
                   {value?.toLocaleString()}
                 </span>
               </div>
               {totalClicks > 0 && (
                 <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/40">
                   <span>Share of Total</span>
-                  <span className="font-mono text-foreground font-medium">{Math.round((value / totalClicks) * 100)}%</span>
+                  <span className="text-foreground font-medium">{Math.round((value / totalClicks) * 100)}%</span>
                 </div>
               )}
             </div>
@@ -580,13 +580,13 @@ const AnalyticsPage: React.FC = () => {
                   <span className="w-2 h-2 rounded-full bg-[#818cf8] shrink-0" />
                   <span>Total Reach</span>
                 </div>
-                <span className="font-semibold text-foreground font-mono">
+                <span className="font-semibold text-foreground">
                   {(dataItem.cumulative ?? value)?.toLocaleString()}
                 </span>
               </div>
               <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/40">
                 <span>New in Period</span>
-                <span className="font-mono text-primary font-medium">+{dataItem.count?.toLocaleString() || 0}</span>
+                <span className="text-primary font-medium">+{dataItem.count?.toLocaleString() || 0}</span>
               </div>
             </div>
           )}
@@ -774,11 +774,11 @@ const AnalyticsPage: React.FC = () => {
                                 <div className="flex items-center gap-2 min-w-0">
                                   <LinkIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                                   <div className="flex flex-col min-w-0">
-                                    <span className="truncate font-mono text-xs font-medium">/{linkHash}</span>
+                                    <span className="truncate text-xs font-medium">/{linkHash}</span>
                                     <span className="truncate text-[10px] text-muted-foreground">{u.longUrl}</span>
                                   </div>
                                 </div>
-                                <span className="text-[10px] text-muted-foreground font-mono ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50">
+                                <span className="text-[10px] text-muted-foreground font-medium ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50">
                                   {u.accessed_times ?? 0} clicks
                                 </span>
                               </button>
@@ -852,7 +852,7 @@ const AnalyticsPage: React.FC = () => {
                                   />
                                   <span className="truncate font-medium">{t.name}</span>
                                 </div>
-                                <span className="text-[10px] text-muted-foreground font-mono ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50 group-hover:bg-secondary transition-colors">
+                                <span className="text-[10px] text-muted-foreground font-medium ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50 group-hover:bg-secondary transition-colors">
                                   {t.linkCount ?? 0}
                                 </span>
                               </label>
@@ -903,7 +903,7 @@ const AnalyticsPage: React.FC = () => {
                                   <span className="truncate">{folder.name}</span>
                                 </div>
                                 {folder.linkCount !== undefined && (
-                                  <span className="text-[10px] text-muted-foreground font-mono ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50">
+                                  <span className="text-[10px] text-muted-foreground font-medium ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50">
                                     {folder.linkCount}
                                   </span>
                                 )}
@@ -961,7 +961,7 @@ const AnalyticsPage: React.FC = () => {
                                     <span className="truncate text-[10px] text-muted-foreground">{c.links.length} {c.links.length === 1 ? 'channel' : 'channels'}</span>
                                   </div>
                                 </div>
-                                <span className="text-[10px] text-muted-foreground font-mono ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50">
+                                <span className="text-[10px] text-muted-foreground font-medium ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50">
                                   {c.totalClicks} clicks
                                 </span>
                               </button>
@@ -1178,7 +1178,7 @@ const AnalyticsPage: React.FC = () => {
                                     <span className="truncate text-[10px] text-muted-foreground">{c.links.length} {c.links.length === 1 ? 'channel' : 'channels'}</span>
                                   </div>
                                 </div>
-                                <span className="text-[10px] text-muted-foreground font-mono ml-2 shrink-0">
+                                <span className="text-[10px] text-muted-foreground font-medium ml-2 shrink-0">
                                   {c.totalClicks} clicks
                                 </span>
                               </button>
@@ -1274,11 +1274,11 @@ const AnalyticsPage: React.FC = () => {
                                 <div className="flex items-center gap-2 min-w-0">
                                   <LinkIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                                   <div className="flex flex-col min-w-0">
-                                    <span className="truncate font-mono text-xs font-medium">/{linkHash}</span>
+                                    <span className="truncate text-xs font-medium">/{linkHash}</span>
                                     <span className="truncate text-[10px] text-muted-foreground">{u.longUrl}</span>
                                   </div>
                                 </div>
-                                <span className="text-[10px] text-muted-foreground font-mono ml-2 shrink-0">
+                                <span className="text-[10px] text-muted-foreground font-medium ml-2 shrink-0">
                                   {u.accessed_times ?? 0} clicks
                                 </span>
                               </button>
@@ -1374,7 +1374,7 @@ const AnalyticsPage: React.FC = () => {
                                   <span className="truncate">{folder.name}</span>
                                 </div>
                                 {folder.linkCount !== undefined && (
-                                  <span className="text-[10px] text-muted-foreground font-mono ml-2 shrink-0">
+                                  <span className="text-[10px] text-muted-foreground font-medium ml-2 shrink-0">
                                     {folder.linkCount}
                                   </span>
                                 )}
@@ -1449,7 +1449,7 @@ const AnalyticsPage: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* Popover Dropdown */}
+                  {/* Tag Popover Dropdown */}
                   <AnimatePresence>
                     {isTagPillPopoverOpen && (
                       <motion.div 
@@ -1459,35 +1459,39 @@ const AnalyticsPage: React.FC = () => {
                         transition={{ duration: 0.1, ease: "easeOut" }}
                         className="absolute left-0 top-full mt-1 w-64 rounded-xl shadow-lg bg-popover border border-border divide-y divide-border focus:outline-none z-[70] overflow-hidden"
                       >
-                        <div className="p-1.5 border-b border-border/80 bg-background/80 flex items-center">
-                          <div className="relative flex-1 flex items-center bg-secondary/40 rounded-md px-2 py-0.5 border border-border/40 focus-within:border-primary/50 transition-all">
-                            <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+                        <div className="p-1 border-b border-border">
+                          <div className="relative flex items-center">
+                            <Search className="w-3 h-3 text-muted-foreground ml-2" />
                             <input 
                               type="text" 
                               autoFocus={true}
                               value={tagPillSearch}
                               onChange={e => setTagPillSearch(e.target.value)}
                               placeholder="Tag..." 
-                              className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1 px-2 text-foreground placeholder:text-muted-foreground"
+                              className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1.5 px-2.5 text-foreground placeholder:text-muted-foreground"
                             />
                           </div>
                         </div>
-                        <div className="py-1 p-1 max-h-48 overflow-y-auto">
+                        <div className="py-1 p-1 max-h-56 overflow-y-auto">
                           {availableTags.filter(t => t.name.toLowerCase().includes(tagPillSearch.toLowerCase())).map(t => {
-                            const activeIds = (tagIdParam || '').split(',').map(s => Number(s.trim())).filter(n => !isNaN(n));
-                            const isChecked = activeIds.includes(t.id);
+                            const isChecked = activeTagIds.includes(t.id);
                             return (
-                              <label key={t.id} className="flex items-center justify-between px-2.5 py-1.5 text-xs text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114] rounded-lg cursor-pointer group transition-colors">
-                                <div className="flex items-center gap-2.5 min-w-0">
+                              <label
+                                key={t.id}
+                                className={`w-full text-left px-2.5 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-between cursor-pointer group ${isChecked ? 'bg-primary/10 text-primary font-medium' : 'text-foreground hover:bg-secondary'}`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
                                   <div className="relative flex items-center justify-center">
-                                    <input 
-                                      type="checkbox" 
+                                    <input
+                                      type="checkbox"
                                       checked={isChecked}
                                       onChange={() => {
-                                        const updatedTagIds = isChecked 
-                                          ? activeIds.filter(id => id !== t.id)
-                                          : [...activeIds, t.id];
-                                        
+                                        let updatedTagIds: number[];
+                                        if (isChecked) {
+                                          updatedTagIds = activeTagIds.filter(id => id !== t.id);
+                                        } else {
+                                          updatedTagIds = [...activeTagIds, t.id];
+                                        }
                                         setSearchParams(prev => {
                                           const next = new URLSearchParams(prev);
                                           if (updatedTagIds.length > 0) {
@@ -1516,13 +1520,12 @@ const AnalyticsPage: React.FC = () => {
                                   />
                                   <span className="truncate font-medium">{t.name}</span>
                                 </div>
-                                <span className="text-[10px] text-muted-foreground font-mono ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50 group-hover:bg-secondary transition-colors">
+                                <span className="text-[10px] text-muted-foreground font-medium ml-2 shrink-0 px-1.5 py-0.5 rounded-full bg-secondary/50 group-hover:bg-secondary transition-colors">
                                   {t.linkCount ?? 0}
                                 </span>
                               </label>
                             );
                           })}
-                          {availableTags.length === 0 && <div className="px-2.5 py-2 text-xs text-muted-foreground">No tags found</div>}
                         </div>
                       </motion.div>
                     )}
@@ -1541,7 +1544,7 @@ const AnalyticsPage: React.FC = () => {
                       <div className="flex items-center px-2 h-full bg-background/80 text-muted-foreground font-medium">
                         is
                       </div>
-                      <div className="flex items-center gap-1 px-2.5 h-full font-medium text-foreground font-mono">
+                      <div className="flex items-center gap-1 px-2.5 h-full font-medium text-foreground">
                         {filter.value}
                       </div>
                       <button 
@@ -1819,7 +1822,7 @@ const AnalyticsPage: React.FC = () => {
                           <Globe className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span className="text-xs font-medium text-foreground truncate">{country.country}</span>
                         </div>
-                        <div className="flex items-center gap-2 z-10 shrink-0 font-mono text-xs">
+                        <div className="flex items-center gap-2 z-10 shrink-0 text-xs">
                           <span className="text-foreground font-semibold">{country.count.toLocaleString()}</span>
                           <span className="text-[11px] text-muted-foreground">({pct}%)</span>
                         </div>
@@ -1842,7 +1845,7 @@ const AnalyticsPage: React.FC = () => {
                   <h3 className="font-semibold text-xs text-foreground">Devices</h3>
                 </div>
                 {clicksByDevice.length > 0 && (
-                  <span className="text-[11px] text-muted-foreground font-medium font-mono">
+                  <span className="text-[11px] text-muted-foreground font-medium">
                     {clicksByDevice.reduce((acc, d) => acc + d.count, 0)} total
                   </span>
                 )}
@@ -1880,7 +1883,7 @@ const AnalyticsPage: React.FC = () => {
                           </div>
                           <span className="text-xs font-medium text-foreground truncate">{browser.browser}</span>
                         </div>
-                        <div className="flex items-center gap-2 z-10 shrink-0 font-mono text-xs">
+                        <div className="flex items-center gap-2 z-10 shrink-0 text-xs">
                           <span className="text-foreground font-semibold">{browser.count.toLocaleString()}</span>
                           <span className="text-[11px] text-muted-foreground">({pct}%)</span>
                         </div>
@@ -1909,7 +1912,7 @@ const AnalyticsPage: React.FC = () => {
               </div>
               <div className="flex items-center gap-2.5 flex-wrap">
                 {currentUtmList.length > 0 && (
-                  <span className="text-[11px] text-muted-foreground font-medium font-mono hidden sm:inline">
+                  <span className="text-[11px] text-muted-foreground font-medium hidden sm:inline">
                     {currentUtmList.reduce((acc, d) => acc + d.count, 0).toLocaleString()} total clicks
                   </span>
                 )}
@@ -1998,7 +2001,7 @@ const AnalyticsPage: React.FC = () => {
                         <div className="min-w-0">
                           <div className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">Top Performer</div>
                           <div className="text-xs font-semibold text-foreground truncate">{currentUtmList[0]?.name || 'N/A'}</div>
-                          <div className="text-[10px] text-muted-foreground font-mono">{currentUtmList[0]?.count.toLocaleString()} clicks ({Math.round((currentUtmList[0]?.count / currentUtmTotal) * 100)}%)</div>
+                          <div className="text-[10px] text-muted-foreground">{currentUtmList[0]?.count.toLocaleString()} clicks ({Math.round((currentUtmList[0]?.count / currentUtmTotal) * 100)}%)</div>
                         </div>
                       </div>
 
@@ -2034,7 +2037,7 @@ const AnalyticsPage: React.FC = () => {
                           <span className="font-medium text-foreground flex items-center gap-1.5">
                             <SlidersHorizontal className="w-3 h-3 text-primary" /> Traffic Share Distribution
                           </span>
-                          <span className="font-mono">{currentUtmTotal.toLocaleString()} total clicks</span>
+                          <span className="font-medium">{currentUtmTotal.toLocaleString()} total clicks</span>
                         </div>
                         <div className="h-2 w-full rounded-full bg-secondary overflow-hidden flex">
                           {currentUtmList.slice(0, 8).map((d, idx) => {
@@ -2088,7 +2091,7 @@ const AnalyticsPage: React.FC = () => {
                             axisLine={false}
                             tickLine={false}
                             tick={{ fontSize: 11, fill: 'currentColor' }}
-                            className="text-muted-foreground font-mono"
+                            className="text-muted-foreground"
                           />
                           <Tooltip
                             cursor={{ fill: 'rgba(255,255,255,0.04)' }}
@@ -2103,11 +2106,11 @@ const AnalyticsPage: React.FC = () => {
                                     </div>
                                     <div className="flex items-center justify-between text-muted-foreground">
                                       <span>Volume</span>
-                                      <span className="font-semibold text-foreground font-mono">{item.count.toLocaleString()} clicks</span>
+                                      <span className="font-semibold text-foreground">{item.count.toLocaleString()} clicks</span>
                                     </div>
                                     <div className="flex items-center justify-between text-muted-foreground mt-1">
                                       <span>Share of Total</span>
-                                      <span className="font-mono text-primary font-medium">{item.pct}%</span>
+                                      <span className="text-primary font-medium">{item.pct}%</span>
                                     </div>
                                     <div className="mt-2 pt-1.5 border-t border-border/40 text-[10px] text-muted-foreground flex items-center justify-between">
                                       <span>Click to filter</span>
@@ -2206,7 +2209,7 @@ const AnalyticsPage: React.FC = () => {
                           style={{ width: `${Math.min(100, Math.max(pct, 2))}%` }}
                         />
                         <div className="flex items-center gap-3 z-10 min-w-0 pr-2">
-                          <span className="text-[11px] font-mono text-muted-foreground w-5 text-right shrink-0">
+                          <span className="text-[11px] text-muted-foreground w-5 text-right shrink-0">
                             {idx + 1}
                           </span>
                           <div className="flex items-center gap-1.5 min-w-0">
@@ -2220,7 +2223,7 @@ const AnalyticsPage: React.FC = () => {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 z-10 shrink-0 font-mono text-xs">
+                        <div className="flex items-center gap-2 z-10 shrink-0 text-xs">
                           <span className={`font-semibold ${isFiltered ? 'text-primary' : 'text-foreground'}`}>{item.count.toLocaleString()}</span>
                           <span className="text-[11px] text-muted-foreground">({pct}%)</span>
                         </div>

@@ -1039,11 +1039,11 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                     }}
                     className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
                       mode === 'single'
-                        ? 'bg-zinc-800 text-white dark:bg-zinc-800 dark:text-zinc-100 shadow-xs font-semibold'
+                        ? 'bg-background text-foreground shadow-xs border border-border/50 font-semibold'
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    <Link2 className="w-3.5 h-3.5 text-zinc-400" />
+                    <Link2 className="w-3.5 h-3.5 text-primary" />
                     <span>Single Link</span>
                   </button>
                   <button
@@ -1054,11 +1054,11 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                     }}
                     className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
                       mode === 'multi'
-                        ? 'bg-zinc-800 text-white dark:bg-zinc-800 dark:text-zinc-100 shadow-xs font-semibold'
+                        ? 'bg-background text-foreground shadow-xs border border-border/50 font-semibold'
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    <Layers className="w-3.5 h-3.5 text-zinc-400" />
+                    <Layers className="w-3.5 h-3.5 text-primary" />
                     <span>Multi-Channel</span>
                   </button>
                 </div>
@@ -1107,7 +1107,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                             required 
                             value={longUrl}
                             onChange={(e) => handleLongUrlChange(e.target.value)}
-                            className="block w-full rounded-lg border border-input focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors px-3.5 py-2.5 sm:text-sm placeholder:text-muted-foreground bg-background text-foreground font-mono text-xs"
+                            className="block w-full rounded-lg border border-input focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors px-3.5 py-2.5 sm:text-sm placeholder:text-muted-foreground bg-background text-foreground text-xs"
                             placeholder="https://dub.co/help/article/dub-links" 
                           />
                         </div>
@@ -1358,7 +1358,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                         <span className="text-sm font-semibold text-foreground">
                           Generated Channel Links ({batchResults.length})
                         </span>
-                        <span className="text-xs text-muted-foreground font-mono">
+                        <span className="text-xs text-muted-foreground">
                           Campaign: <strong className="text-primary font-semibold">{batchCampaignName}</strong>
                         </span>
                       </div>
@@ -1376,11 +1376,11 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                                   <span className="font-semibold text-xs text-foreground">
                                     {item.channelName}
                                   </span>
-                                  <span className="text-[10px] font-mono text-muted-foreground px-1.5 py-0.5 rounded bg-secondary border border-border/50">
+                                  <span className="text-[10px] font-medium text-muted-foreground px-1.5 py-0.5 rounded bg-secondary border border-border/50">
                                     source={item.utmSource}
                                   </span>
                                 </div>
-                                <div className="text-xs font-mono text-primary truncate">
+                                <div className="text-xs font-medium text-primary truncate">
                                   {item.fullShortUrl}
                                 </div>
                               </div>
@@ -1430,11 +1430,11 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                         <div className="space-y-2 text-xs">
                           <div className="flex justify-between py-1 border-b border-border/50">
                             <span className="text-muted-foreground">Destination:</span>
-                            <span className="font-mono text-foreground truncate max-w-[180px]">{batchLongUrl}</span>
+                            <span className="font-medium text-foreground truncate max-w-[180px]">{batchLongUrl}</span>
                           </div>
                           <div className="flex justify-between py-1 border-b border-border/50">
                             <span className="text-muted-foreground">Campaign:</span>
-                            <span className="font-mono text-primary font-semibold">{batchCampaignName}</span>
+                            <span className="font-semibold text-primary">{batchCampaignName}</span>
                           </div>
                           <div className="flex justify-between py-1 border-b border-border/50">
                             <span className="text-muted-foreground">Links Created:</span>
@@ -1502,7 +1502,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                             value={batchLongUrl}
                             onChange={e => setBatchLongUrl(e.target.value)}
                             placeholder="https://yourbrand.com/launch"
-                            className="block w-full rounded-lg border border-input focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors px-3.5 py-2.5 sm:text-sm placeholder:text-muted-foreground bg-background text-foreground font-mono text-xs"
+                            className="block w-full rounded-lg border border-input focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors px-3.5 py-2.5 sm:text-sm placeholder:text-muted-foreground bg-background text-foreground text-xs"
                           />
                         </div>
 
@@ -1517,7 +1517,7 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                             value={batchCampaignName}
                             onChange={e => setBatchCampaignName(e.target.value)}
                             placeholder="summer_sale_2026"
-                            className="block w-full rounded-lg border border-input focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors px-3.5 py-2.5 sm:text-sm placeholder:text-muted-foreground bg-background text-foreground font-mono text-xs"
+                            className="block w-full rounded-lg border border-input focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors px-3.5 py-2.5 sm:text-sm placeholder:text-muted-foreground bg-background text-foreground text-xs"
                           />
                           <p className="text-xs text-muted-foreground">
                           </p>
@@ -1555,14 +1555,14 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                                   placeholder="utm_source (e.g. reddit)"
                                   value={customSource}
                                   onChange={e => setCustomSource(e.target.value)}
-                                  className="px-2.5 py-1.5 text-xs bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground font-mono"
+                                  className="px-2.5 py-1.5 text-xs bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground"
                                 />
                                 <input
                                   type="text"
                                   placeholder="utm_medium (e.g. social)"
                                   value={customMedium}
                                   onChange={e => setCustomMedium(e.target.value)}
-                                  className="px-2.5 py-1.5 text-xs bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground font-mono"
+                                  className="px-2.5 py-1.5 text-xs bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground"
                                 />
                               </div>
                               <div className="flex justify-end gap-2">
@@ -1691,13 +1691,13 @@ const CreateLinkModal: React.FC<CreateLinkModalProps> = ({
                         <div className="space-y-1.5">
                           <div className="flex items-center justify-between">
                             <label className="text-sm font-medium text-foreground">Campaign Preview</label>
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                               {batchChannels.filter(c => c.selected).length} Links Ready
                             </span>
                           </div>
 
                           <div className="border border-dashed border-border rounded-lg p-4 bg-secondary/30 flex flex-col gap-3 min-h-[140px]">
-                            <div className="p-3 bg-background border border-border rounded-md text-xs font-mono text-muted-foreground break-all leading-relaxed">
+                            <div className="p-3 bg-background border border-border rounded-md text-xs text-muted-foreground break-all leading-relaxed">
                               {batchLongUrl ? (
                                 <>
                                   <span className="text-foreground">{batchLongUrl.replace(/\?.*$/, '')}</span>

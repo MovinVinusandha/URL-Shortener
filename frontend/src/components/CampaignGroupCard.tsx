@@ -559,7 +559,7 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
                             />
                             <span>{url.tags[0].name}</span>
                             {url.tags.length > 1 && (
-                              <span className="text-[10px] font-mono text-muted-foreground ml-0.5">
+                              <span className="text-[10px] font-medium text-muted-foreground ml-0.5">
                                 +{url.tags.length - 1}
                               </span>
                             )}
@@ -1198,7 +1198,7 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
               className="relative w-full max-w-md bg-popover border border-border rounded-xl shadow-2xl overflow-hidden p-6 z-10"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center gap-3 pb-4 border-b border-border">
+              <div className="flex items-center gap-3 pb-2">
                 <div className="w-10 h-10 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
                   <AlertTriangle className="w-5 h-5" />
                 </div>
@@ -1212,7 +1212,7 @@ export const CampaignGroupCard: React.FC<CampaignGroupCardProps> = ({
                 You are about to permanently delete all <strong className="text-foreground">{campaign.links.length} links</strong> and their tracking analytics associated with <strong className="text-foreground">&quot;{campaign.campaignName}&quot;</strong>.
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
                   disabled={isBulkSubmitting}

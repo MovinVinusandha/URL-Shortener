@@ -294,7 +294,7 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
                       value={param.key}
                       onChange={(e) => handleCustomParamChange(param.id, 'key', e.target.value)}
                       placeholder="Key"
-                      className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none font-mono"
+                      className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
                     />
                   </div>
                   <input
@@ -302,7 +302,7 @@ export const UtmTemplateModal: React.FC<UtmTemplateModalProps> = ({
                     value={param.value}
                     onChange={(e) => handleCustomParamChange(param.id, 'value', e.target.value)}
                     placeholder="Value"
-                    className="flex-1 px-3 py-1.5 text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none font-mono"
+                    className="flex-1 px-3 py-1.5 text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none"
                   />
                   <button
                     type="button"
