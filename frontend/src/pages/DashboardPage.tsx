@@ -66,7 +66,7 @@ const DashboardPage: React.FC = () => {
   const [isQrLoading, setIsQrLoading] = useState(false);
   const [activeQrHash, setActiveQrHash] = useState<string | null>(null);
 
-  const { triggerRefresh, tags = [], folders = [], activeFolderId, setActiveFolderId } = useOutletContext<DashboardLayoutContext>() || {};
+  const { triggerRefresh, tags = [], folders = [], activeFolderId, setActiveFolderId, openCreateModal } = useOutletContext<DashboardLayoutContext>() || {};
 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1581,14 +1581,30 @@ const DashboardPage: React.FC = () => {
                       Links created with a <code className="text-primary font-medium">utm_campaign</code> parameter or generated via the Multi-Channel batch generator will appear grouped here.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="mt-2 px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <Layers className="w-3.5 h-3.5" />
-                    Create Campaign Links
-                  </button>
+                  <div className="flex items-center gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSetViewMode('all')}
+                      className="px-3.5 py-1.5 rounded-lg border border-border bg-background text-foreground text-xs font-semibold hover:bg-secondary transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <LinkIcon className="w-3.5 h-3.5" />
+                      View All Links
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (openCreateModal) {
+                          openCreateModal('multi');
+                        } else {
+                          setIsCreateModalOpen(true);
+                        }
+                      }}
+                      className="px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <Layers className="w-3.5 h-3.5" />
+                      Create Campaign Links
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1624,7 +1640,61 @@ const DashboardPage: React.FC = () => {
                   className="bg-background border border-border rounded-xl overflow-visible flex flex-col gap-0"
                 >
               {displayedUrls.length === 0 ? (
-                <div className="p-12 text-center text-muted-foreground text-sm">No links found.</div>
+                <div className="p-12 text-center flex flex-col items-center justify-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-secondary/80 border border-border flex items-center justify-center text-muted-foreground shadow-xs">
+                    <LinkIcon className="w-6 h-6 text-muted-foreground/60" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      {searchQuery || validFilterTags.length > 0 || selectedCampaign || selectedLinkType !== 'all' || (currentFolder && currentFolder.name.toLowerCase() !== 'links')
+                        ? 'No links match your filter criteria'
+                        : 'No short links yet'}
+                    </h3>
+                    <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                      {searchQuery || validFilterTags.length > 0 || selectedCampaign || selectedLinkType !== 'all' || (currentFolder && currentFolder.name.toLowerCase() !== 'links')
+                        ? 'Try clearing active filters or adjusting your search term to see other links.'
+                        : 'Get started by creating your first shortened URL or batch campaign.'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    {(searchQuery || validFilterTags.length > 0 || selectedCampaign || selectedLinkType !== 'all') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery('');
+                          setSelectedFilterTags([]);
+                          setSelectedCampaign(null);
+                          setSelectedLinkType('all');
+                          setSearchParams(prev => {
+                            const next = new URLSearchParams(prev);
+                            next.delete('tagId');
+                            next.delete('campaign');
+                            next.delete('linkType');
+                            return next;
+                          });
+                        }}
+                        className="px-3.5 py-1.5 rounded-lg border border-border bg-background text-foreground text-xs font-semibold hover:bg-secondary transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Clear Filters
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (openCreateModal) {
+                          openCreateModal('single');
+                        } else {
+                          setIsCreateModalOpen(true);
+                        }
+                      }}
+                      className="px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <LinkIcon className="w-3.5 h-3.5" />
+                      Create New Link
+                    </button>
+                  </div>
+                </div>
               ) : (
                 displayedUrls.map((url) => (
                   <motion.div layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} key={url.shortUrl} className="group relative flex items-center p-4 border-b border-dashed border-border last:border-b-0 hover:border-solid hover:bg-neutral-100/70 dark:hover:bg-[#111114] transition-all first:rounded-t-xl last:rounded-b-xl">

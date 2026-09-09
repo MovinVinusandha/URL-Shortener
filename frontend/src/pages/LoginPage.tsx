@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -13,7 +13,7 @@ const LoginPage: React.FC = () => {
   const location = useLocation();
   const { login, token } = useAuth();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -21,23 +21,39 @@ const LoginPage: React.FC = () => {
 
   const from = location.state?.from?.pathname || '/dashboard';
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const oauthError = params.get('oauth_error');
+    if (oauthError) {
+      setError(decodeURIComponent(oauthError));
+      toast.error(decodeURIComponent(oauthError));
+    }
+  }, [location.search]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const { data } = await axiosInstance.post<JwtResponse>('/auth/login', {
-        email,
-        password,
-      });
+      const trimmed = identifier.trim();
+      const payload = trimmed.includes('@')
+        ? { email: trimmed, password }
+        : { identifier: trimmed, password };
+
+      const { data } = await axiosInstance.post<JwtResponse>('/auth/login', payload);
       await login(data.token);
       navigate(from, { replace: true });
     } catch (err: unknown) {
-      const backendMessage = extractBackendError(err, 'Invalid email or password. Please try again.');
+      const backendMessage = extractBackendError(err, 'Invalid email/username or password. Please try again.');
       setError(backendMessage);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOAuthLogin = (provider: 'google' | 'github') => {
+    const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+    window.location.href = `${apiBase}/auth/oauth/${provider}`;
   };
 
   return (
@@ -103,19 +119,27 @@ const LoginPage: React.FC = () => {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-foreground text-left">Work email</label>
+                <label className="block text-xs font-medium text-foreground text-left">Email or username</label>
                 <input 
-                  type="email" 
+                  type="text" 
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="janedoe@email.com" 
                   className="w-full px-3.5 py-2 border rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-foreground bg-background border-input placeholder:text-muted-foreground transition-colors text-sm"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-foreground text-left">Password</label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-medium text-foreground text-left">Password</label>
+                  <Link 
+                    to="/forgot-password" 
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <div className="relative">
                   <input 
                     type={showPassword ? 'text' : 'password'}
@@ -162,7 +186,7 @@ const LoginPage: React.FC = () => {
             <div className="space-y-2.5">
               <button 
                 type="button"
-                onClick={() => toast('Social login is coming soon!', { icon: '🚧' })}
+                onClick={() => handleOAuthLogin('google')}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-border rounded-lg bg-background text-sm font-medium text-foreground hover:bg-secondary transition-colors"
               >
                 <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24">
@@ -175,7 +199,7 @@ const LoginPage: React.FC = () => {
               </button>
               <button 
                 type="button"
-                onClick={() => toast('Social login is coming soon!', { icon: '🚧' })}
+                onClick={() => handleOAuthLogin('github')}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-border rounded-lg bg-background text-sm font-medium text-foreground hover:bg-secondary transition-colors"
               >
                 <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">

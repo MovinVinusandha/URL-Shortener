@@ -22,15 +22,15 @@ describe('RegisterPage', () => {
   it('Inputs accept user typing', () => {
     render(<MemoryRouter><RegisterPage /></MemoryRouter>);
     
-    const nameInput = screen.getByPlaceholderText('Jane Doe');
+    const usernameInput = screen.getByPlaceholderText('janedoe');
     const emailInput = screen.getByPlaceholderText('janedoe@email.com');
     const passwordInput = screen.getByPlaceholderText('At least 8 characters');
     
-    fireEvent.change(nameInput, { target: { value: 'John Doe' } });
+    fireEvent.change(usernameInput, { target: { value: 'johndoe' } });
     fireEvent.change(emailInput, { target: { value: 'test@test.com' } });
     fireEvent.change(passwordInput, { target: { value: 'password123' } });
     
-    expect((nameInput as HTMLInputElement).value).toBe('John Doe');
+    expect((usernameInput as HTMLInputElement).value).toBe('johndoe');
     expect((emailInput as HTMLInputElement).value).toBe('test@test.com');
     expect((passwordInput as HTMLInputElement).value).toBe('password123');
   });
@@ -57,7 +57,6 @@ describe('RegisterPage', () => {
     expect(screen.getByText('Please fill in all fields')).toBeInTheDocument();
 
     // Fill in short password
-    fireEvent.change(screen.getByPlaceholderText('Jane Doe'), { target: { value: 'John' } });
     fireEvent.change(screen.getByPlaceholderText('janedoe@email.com'), { target: { value: 'test@test.com' } });
     fireEvent.change(screen.getByPlaceholderText('At least 8 characters'), { target: { value: 'short' } });
     
@@ -68,7 +67,6 @@ describe('RegisterPage', () => {
   it('allows navigating back to step 1 via Change info button', async () => {
     render(<MemoryRouter><RegisterPage /></MemoryRouter>);
     
-    fireEvent.change(screen.getByPlaceholderText('Jane Doe'), { target: { value: 'John' } });
     fireEvent.change(screen.getByPlaceholderText('janedoe@email.com'), { target: { value: 'test@test.com' } });
     fireEvent.change(screen.getByPlaceholderText('At least 8 characters'), { target: { value: 'password123' } });
     
@@ -82,14 +80,13 @@ describe('RegisterPage', () => {
     // Click back to step 1
     fireEvent.click(screen.getByText('Change info'));
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Jane Doe')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('janedoe@email.com')).toBeInTheDocument();
     });
   });
 
   it('displays error when confirm password does not match', async () => {
     render(<MemoryRouter><RegisterPage /></MemoryRouter>);
     
-    fireEvent.change(screen.getByPlaceholderText('Jane Doe'), { target: { value: 'John' } });
     fireEvent.change(screen.getByPlaceholderText('janedoe@email.com'), { target: { value: 'test@test.com' } });
     fireEvent.change(screen.getByPlaceholderText('At least 8 characters'), { target: { value: 'password123' } });
     
@@ -113,7 +110,7 @@ describe('RegisterPage', () => {
     
     render(<MemoryRouter><RegisterPage /></MemoryRouter>);
     
-    fireEvent.change(screen.getByPlaceholderText('Jane Doe'), { target: { value: 'John' } });
+    fireEvent.change(screen.getByPlaceholderText('janedoe'), { target: { value: 'johndoe' } });
     fireEvent.change(screen.getByPlaceholderText('janedoe@email.com'), { target: { value: 'test@test.com' } });
     fireEvent.change(screen.getByPlaceholderText('At least 8 characters'), { target: { value: 'password123' } });
     
@@ -130,7 +127,7 @@ describe('RegisterPage', () => {
     
     await waitFor(() => {
       expect(axiosInstance.post).toHaveBeenCalledWith('/user', {
-        name: 'John',
+        username: 'johndoe',
         email: 'test@test.com',
         password: 'password123',
       });
@@ -144,7 +141,6 @@ describe('RegisterPage', () => {
     
     render(<MemoryRouter><RegisterPage /></MemoryRouter>);
     
-    fireEvent.change(screen.getByPlaceholderText('Jane Doe'), { target: { value: 'John' } });
     fireEvent.change(screen.getByPlaceholderText('janedoe@email.com'), { target: { value: 'test@test.com' } });
     fireEvent.change(screen.getByPlaceholderText('At least 8 characters'), { target: { value: 'password123' } });
     

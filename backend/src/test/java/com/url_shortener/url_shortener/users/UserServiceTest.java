@@ -1,6 +1,10 @@
 package com.url_shortener.url_shortener.users;
 
 import com.url_shortener.url_shortener.analytics.ClickEventRepository;
+import com.url_shortener.url_shortener.auth.EmailVerificationToken;
+import com.url_shortener.url_shortener.auth.EmailVerificationTokenRepository;
+import com.url_shortener.url_shortener.auth.OAuthService;
+import com.url_shortener.url_shortener.common.EmailService;
 import com.url_shortener.url_shortener.urls.Folder;
 import com.url_shortener.url_shortener.urls.FolderRepository;
 import com.url_shortener.url_shortener.urls.Tag;
@@ -45,6 +49,12 @@ class UserServiceTest {
     private TagRepository tagRepository;
     @Mock
     private FolderRepository folderRepository;
+    @Mock
+    private EmailVerificationTokenRepository emailVerificationTokenRepository;
+    @Mock
+    private EmailService emailService;
+    @Mock
+    private OAuthService oauthService;
 
     @InjectMocks
     private UserService userService;
@@ -54,7 +64,7 @@ class UserServiceTest {
 
     @BeforeEach
     void setUp() {
-        user = User.builder().id(USER_ID).name("John").email("john@example.com").password("encoded").role(Role.USER).publicId("user_1234567890").build();
+        user = User.builder().id(USER_ID).username("john").email("john@example.com").password("encoded").role(Role.USER).publicId("user_1234567890").build();
         SecurityContextHolder.getContext().setAuthentication(
             new UsernamePasswordAuthenticationToken(USER_ID, null, Collections.emptyList())
         );
@@ -67,14 +77,24 @@ class UserServiceTest {
 
     @Test
     void registerUser_Success() {
-        UserRegister register = new UserRegister("John", "new@example.com", "pass123");
+        UserRegister register = new UserRegister("johnny", "new@example.com", "pass123");
         User newUser = new User();
         newUser.setEmail("new@example.com");
 
-        when(userRepository.existsUserByEmail("new@example.com")).thenReturn(false);
+        when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
+        when(userRepository.existsByUsername("johnny")).thenReturn(false);
         when(userMapper.toEntity(register)).thenReturn(newUser);
         when(passwordEncoder.encode("pass123")).thenReturn("encodedPass");
-        UserDto dto = new UserDto("user_111", "John", "new@example.com", "USER", LocalDateTime.now());
+        UserDto dto = UserDto.builder()
+                .publicId("user_111")
+                .username("johnny")
+                .email("new@example.com")
+                .role("USER")
+                .emailVerified(false)
+                .hasPassword(true)
+                .connectedOAuthProviders(Collections.emptyList())
+                .createdAt(LocalDateTime.now())
+                .build();
         when(userMapper.toDto(newUser)).thenReturn(dto);
 
         UserDto result = userService.registerUser(register);
@@ -82,17 +102,32 @@ class UserServiceTest {
         assertThat(result).isEqualTo(dto);
         assertThat(newUser.getRole()).isEqualTo(Role.USER);
         assertThat(newUser.getPassword()).isEqualTo("encodedPass");
+        assertThat(newUser.getUsername()).isEqualTo("johnny");
+        assertThat(newUser.isEmailVerified()).isFalse();
         verify(userRepository).save(newUser);
         verify(folderRepository).save(any(Folder.class));
+        verify(emailVerificationTokenRepository).save(any(EmailVerificationToken.class));
+        verify(emailService).sendVerificationEmail(eq(newUser), anyString());
     }
 
     @Test
-    void registerUser_AlreadyExists() {
-        UserRegister register = new UserRegister("John", "existing@example.com", "pass123");
-        when(userRepository.existsUserByEmail("existing@example.com")).thenReturn(true);
+    void registerUser_AlreadyExistsEmail() {
+        UserRegister register = new UserRegister("johnny", "existing@example.com", "pass123");
+        when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
 
         assertThatThrownBy(() -> userService.registerUser(register))
                 .isInstanceOf(UserAlreadyExist.class);
+    }
+
+    @Test
+    void registerUser_AlreadyExistsUsername() {
+        UserRegister register = new UserRegister("taken_username", "new@example.com", "pass123");
+        when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
+        when(userRepository.existsByUsername("taken_username")).thenReturn(true);
+
+        assertThatThrownBy(() -> userService.registerUser(register))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("already taken");
     }
 
     @Test
@@ -121,7 +156,6 @@ class UserServiceTest {
     void updateUser_Success() {
         UpdateUserRequest req = new UpdateUserRequest("New Name", "john@example.com");
         when(userRepository.findByPublicId("user_1234567890")).thenReturn(Optional.of(user));
-        when(userRepository.existsUserByEmail("john@example.com")).thenReturn(false);
 
         User result = userService.updateUser("user_1234567890", req);
 
@@ -151,9 +185,9 @@ class UserServiceTest {
 
     @Test
     void updateUser_EmailConflict_ThrowsException() {
-        UpdateUserRequest req = new UpdateUserRequest("Name", "conflict@test.com");
+        UpdateUserRequest req = new UpdateUserRequest("conflict@test.com");
         when(userRepository.findByPublicId("user_1234567890")).thenReturn(Optional.of(user));
-        when(userRepository.existsUserByEmail("conflict@test.com")).thenReturn(true);
+        when(userRepository.existsByEmail("conflict@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> userService.updateUser("user_1234567890", req))
                 .isInstanceOf(UserAlreadyExist.class);
@@ -170,22 +204,23 @@ class UserServiceTest {
 
     @Test
     void updateMe_Success() {
-        UserUpdateRequestDto request = new UserUpdateRequestDto("John Doe", "johndoe@example.com");
+        UserUpdateRequestDto request = new UserUpdateRequestDto("johndoe", "johndoe@example.com");
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-        when(userRepository.existsUserByEmail(request.getEmail())).thenReturn(false);
+        when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
+        when(userRepository.existsByUsername("johndoe")).thenReturn(false);
 
         User updatedUser = userService.updateMe(request);
 
-        assertThat(updatedUser.getName()).isEqualTo("John Doe");
+        assertThat(updatedUser.getUsername()).isEqualTo("johndoe");
         assertThat(updatedUser.getEmail()).isEqualTo("johndoe@example.com");
         verify(userRepository).save(user);
     }
 
     @Test
     void updateMe_Conflict() {
-        UserUpdateRequestDto request = new UserUpdateRequestDto("John Doe", "existing@example.com");
+        UserUpdateRequestDto request = new UserUpdateRequestDto("existing@example.com");
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-        when(userRepository.existsUserByEmail(request.getEmail())).thenReturn(true);
+        when(userRepository.existsByEmail(request.getEmail())).thenReturn(true);
 
         assertThatThrownBy(() -> userService.updateMe(request))
                 .isInstanceOf(UserAlreadyExist.class);
@@ -216,6 +251,27 @@ class UserServiceTest {
     }
 
     @Test
+    void setInitialPassword_Success() {
+        User oauthUser = User.builder().id(USER_ID).username("oauth_user").email("oauth@test.com").password(null).build();
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(oauthUser));
+        when(passwordEncoder.encode("brandNewPassword")).thenReturn("hashedNewPassword");
+
+        userService.setInitialPassword(new PasswordSetRequestDto("brandNewPassword"));
+
+        assertThat(oauthUser.getPassword()).isEqualTo("hashedNewPassword");
+        verify(userRepository).save(oauthUser);
+    }
+
+    @Test
+    void setInitialPassword_AlreadyHasPassword_ThrowsException() {
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user)); // user has password "encoded"
+
+        assertThatThrownBy(() -> userService.setInitialPassword(new PasswordSetRequestDto("newPass")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("already has a password");
+    }
+
+    @Test
     void deleteMe_CascadeDeletions() {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
         Tag tag = Tag.builder().id(10L).user(user).build();
@@ -233,7 +289,7 @@ class UserServiceTest {
 
     @Test
     void testPublicIdGeneration_User() {
-        User newUser = User.builder().name("Test").role(Role.USER).build();
+        User newUser = User.builder().username("testuser").role(Role.USER).build();
         newUser.onCreate();
         assertThat(newUser.getPublicId()).startsWith("user_");
         assertThat(newUser.getPublicId()).hasSize("user_".length() + 10);
@@ -241,7 +297,7 @@ class UserServiceTest {
 
     @Test
     void testPublicIdGeneration_Root() {
-        User rootUser = User.builder().name("Root").role(Role.ROOT).build();
+        User rootUser = User.builder().username("root").role(Role.ROOT).build();
         rootUser.onCreate();
         assertThat(rootUser.getPublicId()).startsWith("root_");
         assertThat(rootUser.getPublicId()).hasSize("root_".length() + 10);

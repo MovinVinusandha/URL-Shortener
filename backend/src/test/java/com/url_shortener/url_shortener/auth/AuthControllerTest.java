@@ -1,12 +1,16 @@
 package com.url_shortener.url_shortener.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.url_shortener.url_shortener.common.EmailService;
+import com.url_shortener.url_shortener.common.RateLimiterService;
 import com.url_shortener.url_shortener.users.User;
 import com.url_shortener.url_shortener.users.UserDto;
 import com.url_shortener.url_shortener.users.UserMapper;
 import com.url_shortener.url_shortener.users.UserRepository;
+import com.url_shortener.url_shortener.users.UserService;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -18,6 +22,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
@@ -25,8 +30,8 @@ import java.util.Collections;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -51,6 +56,27 @@ class AuthControllerTest {
     private UserRepository userRepository;
     @MockBean
     private UserMapper userMapper;
+    @MockBean
+    private UserService userService;
+    @MockBean
+    private EmailService emailService;
+    @MockBean
+    private RateLimiterService rateLimiterService;
+    @MockBean
+    private OAuthService oauthService;
+    @MockBean
+    private PasswordEncoder passwordEncoder;
+    @MockBean
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+    @MockBean
+    private EmailVerificationTokenRepository emailVerificationTokenRepository;
+
+    @BeforeEach
+    void setUp() {
+        when(rateLimiterService.checkLoginAttempts(any(), any())).thenReturn(true);
+        when(rateLimiterService.checkForgotPassword(any(), any())).thenReturn(true);
+        when(rateLimiterService.checkResendVerification(any())).thenReturn(true);
+    }
 
     @AfterEach
     void tearDown() {
@@ -61,11 +87,12 @@ class AuthControllerTest {
     void login_Success() throws Exception {
         LoginRequest loginRequest = new LoginRequest("test@test.com", "password123");
 
-        User user = User.builder().id(1L).email("test@test.com").build();
+        User user = User.builder().id(1L).username("testuser").email("test@test.com").build();
 
         when(authenticationManager.authenticate(any(Authentication.class)))
                 .thenReturn(new UsernamePasswordAuthenticationToken("test@test.com", "password123"));
-        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCaseOrUsernameIgnoreCase("test@test.com", "test@test.com"))
+                .thenReturn(Optional.of(user));
 
         Jwt mockAccessJwt = mock(Jwt.class);
         when(mockAccessJwt.toString()).thenReturn("access_token_123");
@@ -86,6 +113,34 @@ class AuthControllerTest {
                 .andExpect(cookie().httpOnly("refreshToken", true))
                 .andExpect(cookie().secure("refreshToken", true))
                 .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("SameSite=None")));
+    }
+
+    @Test
+    void login_WithUsername_Success() throws Exception {
+        LoginRequest loginRequest = new LoginRequest("testuser", "password123");
+
+        User user = User.builder().id(1L).username("testuser").email("test@test.com").build();
+
+        when(authenticationManager.authenticate(any(Authentication.class)))
+                .thenReturn(new UsernamePasswordAuthenticationToken("testuser", "password123"));
+        when(userRepository.findByEmailIgnoreCaseOrUsernameIgnoreCase("testuser", "testuser"))
+                .thenReturn(Optional.of(user));
+
+        Jwt mockAccessJwt = mock(Jwt.class);
+        when(mockAccessJwt.toString()).thenReturn("access_token_456");
+        when(jwtService.generateAccessToken(user)).thenReturn(mockAccessJwt);
+
+        Jwt mockRefreshJwt = mock(Jwt.class);
+        when(mockRefreshJwt.toString()).thenReturn("refresh_token_456");
+        when(jwtService.generateRefreshToken(user)).thenReturn(mockRefreshJwt);
+
+        when(jwtConfig.getRefreshTokenExpiration()).thenReturn(86400);
+
+        mockMvc.perform(post("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("access_token_456"));
     }
 
     @Test
@@ -142,20 +197,144 @@ class AuthControllerTest {
     }
 
     @Test
+    void forgotPassword_Success() throws Exception {
+        ForgotPasswordRequest request = new ForgotPasswordRequest("user@example.com");
+        User user = User.builder().id(1L).email("user@example.com").username("testuser").build();
+
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+
+        mockMvc.perform(post("/auth/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("password reset link")));
+
+        verify(emailService, times(1)).sendPasswordResetEmail(eq(user), anyString());
+    }
+
+    @Test
+    void resetPassword_Success() throws Exception {
+        ResetPasswordRequest request = new ResetPasswordRequest("valid_token", "newPassword123");
+        User user = User.builder().id(1L).email("user@example.com").build();
+
+        PasswordResetToken token = PasswordResetToken.builder()
+                .id(1L)
+                .user(user)
+                .tokenHash(AuthTokenUtil.hashToken("valid_token"))
+                .expiresAt(LocalDateTime.now().plusHours(1))
+                .build();
+
+        when(passwordResetTokenRepository.findByTokenHash(AuthTokenUtil.hashToken("valid_token")))
+                .thenReturn(Optional.of(token));
+        when(passwordEncoder.encode("newPassword123")).thenReturn("encodedPassword");
+
+        mockMvc.perform(post("/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Password has been successfully updated")));
+
+        verify(userRepository, times(1)).save(user);
+    }
+
+    @Test
+    void resetPassword_InvalidToken_Returns400() throws Exception {
+        ResetPasswordRequest request = new ResetPasswordRequest("bad_token", "newPassword123");
+
+        when(passwordResetTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.empty());
+
+        mockMvc.perform(post("/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void verifyEmail_Success() throws Exception {
+        VerifyEmailRequest request = new VerifyEmailRequest("verify_123");
+        User user = User.builder().id(1L).email("user@example.com").emailVerified(false).build();
+
+        EmailVerificationToken token = EmailVerificationToken.builder()
+                .id(1L)
+                .user(user)
+                .tokenHash(AuthTokenUtil.hashToken("verify_123"))
+                .expiresAt(LocalDateTime.now().plusHours(24))
+                .build();
+
+        when(emailVerificationTokenRepository.findByTokenHash(AuthTokenUtil.hashToken("verify_123")))
+                .thenReturn(Optional.of(token));
+
+        mockMvc.perform(post("/auth/verify-email")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Email verified successfully")));
+
+        verify(userRepository, times(1)).save(user);
+    }
+
+    @Test
+    void verifyEmail_ExpiredToken_Returns400() throws Exception {
+        VerifyEmailRequest request = new VerifyEmailRequest("expired_123");
+        User user = User.builder().id(1L).email("user@example.com").build();
+
+        EmailVerificationToken token = EmailVerificationToken.builder()
+                .id(1L)
+                .user(user)
+                .tokenHash(AuthTokenUtil.hashToken("expired_123"))
+                .expiresAt(LocalDateTime.now().minusHours(1)) // expired
+                .build();
+
+        when(emailVerificationTokenRepository.findByTokenHash(AuthTokenUtil.hashToken("expired_123")))
+                .thenReturn(Optional.of(token));
+
+        mockMvc.perform(post("/auth/verify-email")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void resendVerification_Success() throws Exception {
+        ResendVerificationRequest request = new ResendVerificationRequest("user@example.com");
+        User user = User.builder().id(1L).email("user@example.com").emailVerified(false).build();
+
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+
+        mockMvc.perform(post("/auth/resend-verification")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        verify(userService, times(1)).sendNewVerificationEmail(user);
+    }
+
+    @Test
+    void getOAuthProviders_Success() throws Exception {
+        when(oauthService.isProviderConfigured("google")).thenReturn(true);
+        when(oauthService.isProviderConfigured("github")).thenReturn(false);
+
+        mockMvc.perform(get("/auth/oauth/providers"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.google").value(true))
+                .andExpect(jsonPath("$.github").value(false));
+    }
+
+    @Test
     void me_Success() throws Exception {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(1L, null, Collections.emptyList())
         );
 
-        User user = User.builder().id(1L).name("Test User").email("test@test.com").build();
+        User user = User.builder().id(1L).username("testuser").email("test@test.com").build();
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-        UserDto userDto = new UserDto("uuid-123", "Test User", "test@test.com", "USER", LocalDateTime.now());
+        UserDto userDto = new UserDto("uuid-123", "testuser", "test@test.com", "USER", LocalDateTime.now());
         when(userMapper.toDto(user)).thenReturn(userDto);
 
         mockMvc.perform(get("/auth/me"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Test User"))
+                .andExpect(jsonPath("$.username").value("testuser"))
                 .andExpect(jsonPath("$.email").value("test@test.com"));
     }
 

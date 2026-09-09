@@ -26,7 +26,7 @@ describe('DashboardLayout', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (useAuth as any).mockReturnValue({
-      user: { id: 1, name: 'Alex Johnson', email: 'alex@example.com', role: 'USER' },
+      user: { id: 1, username: 'alex', email: 'alex@example.com', role: 'USER' },
       logout: mockLogout,
     });
     (useTheme as any).mockReturnValue({
@@ -110,7 +110,7 @@ describe('DashboardLayout', () => {
     const userAvatarBtn = screen.getByText('A');
     fireEvent.click(userAvatarBtn);
 
-    expect(screen.getByText('Alex Johnson')).toBeInTheDocument();
+    expect(screen.getByText('alex')).toBeInTheDocument();
     expect(screen.getByText('alex@example.com')).toBeInTheDocument();
 
     // Profile button

@@ -36,6 +36,7 @@ export type DashboardLayoutContext = {
   isTagsLoading: boolean;
   isFoldersLoading: boolean;
   navStats: { totalClicks: number; linkCount: number };
+  openCreateModal: (mode?: 'single' | 'multi') => void;
 };
 
 const DashboardLayout: React.FC = () => {
@@ -47,9 +48,15 @@ const DashboardLayout: React.FC = () => {
   const folderSlug = params.folderSlug || (match ? match[1] : undefined);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createModalInitialMode, setCreateModalInitialMode] = useState<'single' | 'multi'>('single');
   const [isCreateTagModalOpen, setIsCreateTagModalOpen] = useState(false);
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
   const [isCreateUtmTemplateModalOpen, setIsCreateUtmTemplateModalOpen] = useState(false);
+
+  const openCreateModal = (mode: 'single' | 'multi' = 'single') => {
+    setCreateModalInitialMode(mode);
+    setIsCreateModalOpen(true);
+  };
   
   const [folderToEdit, setFolderToEdit] = useState<any | null>(null);
   const [tagToEdit, setTagToEdit] = useState<any | null>(null);
@@ -360,7 +367,7 @@ const DashboardLayout: React.FC = () => {
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               className="w-8 h-8 rounded-full bg-secondary text-foreground flex items-center justify-center text-xs font-semibold uppercase border border-border cursor-pointer hover:border-primary/40 transition-colors"
             >
-              {user?.name ? user.name.charAt(0) : user?.email ? user.email.charAt(0) : 'U'}
+              {user?.username ? user.username.charAt(0).toUpperCase() : user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
             </button>
 
             <AnimatePresence>
@@ -373,7 +380,7 @@ const DashboardLayout: React.FC = () => {
                 className="absolute bottom-full left-0 mb-2 w-60 bg-background border border-border rounded-xl shadow-lg z-50 p-1.5"
               >
                 <div className="px-3 py-2 border-b border-border mb-1">
-                  <div className="font-medium text-sm text-foreground truncate">{user?.name || 'User'}</div>
+                  <div className="font-medium text-sm text-foreground truncate">{user?.username || user?.email || 'User'}</div>
                   <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
                 </div>
                 
@@ -645,7 +652,8 @@ const DashboardLayout: React.FC = () => {
                 setUtmTemplateToDuplicate,
                 isTagsLoading,
                 isFoldersLoading,
-                navStats
+                navStats,
+                openCreateModal
               } satisfies DashboardLayoutContext} />
             </AnimatePresence>
           </div>
@@ -657,6 +665,7 @@ const DashboardLayout: React.FC = () => {
       <CreateLinkModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        initialMode={createModalInitialMode}
         onSuccess={(newEntry) => {
           if (newEntry) triggerRefresh(newEntry);
         }}

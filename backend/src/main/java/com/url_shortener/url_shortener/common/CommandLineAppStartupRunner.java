@@ -32,7 +32,7 @@ public class CommandLineAppStartupRunner implements CommandLineRunner {
             rootAdmin = userRepository.findByEmail(rootUserEmail).orElse(null);
         } else {
             rootAdmin = new User();
-            rootAdmin.setName("Root");
+            rootAdmin.setUsername("root");
             rootAdmin.setEmail(rootUserEmail);
             rootAdmin.setPublicId("root_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16));
             rootAdmin.setPassword(passwordEncoder.encode(rootUserPassword));

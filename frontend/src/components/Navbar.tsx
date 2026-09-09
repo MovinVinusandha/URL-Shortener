@@ -37,10 +37,10 @@ const Navbar: React.FC = () => {
                 {user && (
                   <div className="hidden sm:flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-secondary border border-border flex items-center justify-center text-foreground text-xs font-bold flex-shrink-0">
-                      {user.name.charAt(0).toUpperCase()}
+                      {(user.username || user.email).charAt(0).toUpperCase()}
                     </div>
                     <div className="flex flex-col leading-tight">
-                      <span className="text-foreground text-sm font-medium">{user.name}</span>
+                      <span className="text-foreground text-sm font-medium">{user.username || user.email}</span>
                       <span className="text-muted-foreground text-xs">{user.email}</span>
                     </div>
                   </div>

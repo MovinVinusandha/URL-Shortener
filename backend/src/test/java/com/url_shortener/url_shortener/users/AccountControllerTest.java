@@ -9,6 +9,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,9 +38,9 @@ class AccountControllerTest {
 
     @Test
     void updateMe_Success() throws Exception {
-        UserUpdateRequestDto request = new UserUpdateRequestDto("Alice", "alice@example.com");
-        User user = User.builder().id(1L).name("Alice").email("alice@example.com").build();
-        UserDto dto = new UserDto("public_id_123", "Alice", "alice@example.com", "USER", null);
+        UserUpdateRequestDto request = new UserUpdateRequestDto("alice", "alice@example.com");
+        User user = User.builder().id(1L).username("alice").email("alice@example.com").build();
+        UserDto dto = new UserDto("public_id_123", "alice", "alice@example.com", "USER", null);
 
         when(userService.updateMe(any(UserUpdateRequestDto.class))).thenReturn(user);
         when(userMapper.toDto(user)).thenReturn(dto);
@@ -46,7 +49,7 @@ class AccountControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Alice"));
+                .andExpect(jsonPath("$.username").value("alice"));
     }
 
     @Test
@@ -59,6 +62,42 @@ class AccountControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(userService).changePassword(any(PasswordChangeRequestDto.class));
+    }
+
+    @Test
+    void setInitialPassword_Success() throws Exception {
+        PasswordSetRequestDto request = new PasswordSetRequestDto("NewPassword123!");
+
+        mockMvc.perform(post("/users/me/password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNoContent());
+
+        verify(userService).setInitialPassword(any(PasswordSetRequestDto.class));
+    }
+
+    @Test
+    void getOAuthAccounts_Success() throws Exception {
+        OAuthAccountDto dto = OAuthAccountDto.builder()
+                .provider("GOOGLE")
+                .providerEmail("user@gmail.com")
+                .connectedAt(LocalDateTime.now())
+                .build();
+
+        when(userService.getConnectedOAuthAccounts()).thenReturn(List.of(dto));
+
+        mockMvc.perform(get("/users/me/oauth-accounts"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].provider").value("GOOGLE"))
+                .andExpect(jsonPath("$[0].providerEmail").value("user@gmail.com"));
+    }
+
+    @Test
+    void unlinkOAuthAccount_Success() throws Exception {
+        mockMvc.perform(delete("/users/me/oauth-accounts/GOOGLE"))
+                .andExpect(status().isNoContent());
+
+        verify(userService).unlinkOAuthAccount("GOOGLE");
     }
 
     @Test

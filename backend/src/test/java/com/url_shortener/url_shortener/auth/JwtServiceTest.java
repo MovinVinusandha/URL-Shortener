@@ -33,7 +33,7 @@ class JwtServiceTest {
     @Test
     void generateAccessToken_Success() {
         when(jwtConfig.getAccessTokenExpiration()).thenReturn(3600);
-        User user = User.builder().id(1L).email("test@test.com").name("Test").role(Role.USER).build();
+        User user = User.builder().id(1L).email("test@test.com").username("testuser").role(Role.USER).build();
 
         Jwt jwt = jwtService.generateAccessToken(user);
 
@@ -44,7 +44,7 @@ class JwtServiceTest {
     @Test
     void parseToken_Success() {
         when(jwtConfig.getAccessTokenExpiration()).thenReturn(3600);
-        User user = User.builder().id(1L).email("test@test.com").name("Test").role(Role.USER).build();
+        User user = User.builder().id(1L).email("test@test.com").username("testuser").role(Role.USER).build();
         Jwt generated = jwtService.generateAccessToken(user);
 
         Jwt parsed = jwtService.parseToken(generated.toString());

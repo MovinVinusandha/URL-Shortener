@@ -1616,7 +1616,7 @@ const AnalyticsPage: React.FC = () => {
                 <Share2 className="w-3.5 h-3.5 text-primary" /> Top Source
               </div>
               <div className="text-2xl sm:text-3xl font-bold text-foreground mt-1 truncate">
-                {clicksByBrowser.length > 0 ? clicksByBrowser[0].browser : 'Direct / Organic'}
+                {totalClicks > 0 && clicksByBrowser.length > 0 ? clicksByBrowser[0].browser : (totalClicks === 0 ? 'None yet' : 'Direct / Organic')}
               </div>
             </div>
           </div>
@@ -1789,8 +1789,14 @@ const AnalyticsPage: React.FC = () => {
                   </ResponsiveContainer>
                 </motion.div>
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground border border-dashed border-border rounded-xl text-xs">
-                  No data available for the selected period
+                <div className="w-full h-full min-h-[220px] flex flex-col items-center justify-center text-center p-8 border border-dashed border-border rounded-xl">
+                  <div className="w-10 h-10 rounded-xl bg-secondary/80 border border-border flex items-center justify-center text-muted-foreground mb-3">
+                    <Activity className="w-5 h-5 text-muted-foreground/60" />
+                  </div>
+                  <h4 className="text-xs font-semibold text-foreground">No click traffic recorded</h4>
+                  <p className="text-[11px] text-muted-foreground max-w-xs mt-1">
+                    There are no clicks recorded for the selected time range or filters. When visitors click your short links, traffic timeline charts will appear here.
+                  </p>
                 </div>
               )}
             </div>
@@ -1830,7 +1836,11 @@ const AnalyticsPage: React.FC = () => {
                     )
                   })
                 ) : (
-                  <div className="flex items-center justify-center p-8 text-xs text-muted-foreground">No country data</div>
+                  <div className="flex flex-col items-center justify-center p-8 text-center my-auto min-h-[160px]">
+                    <Globe className="w-6 h-6 text-muted-foreground/40 mb-2" />
+                    <span className="text-xs font-medium text-foreground">No country data yet</span>
+                    <span className="text-[11px] text-muted-foreground mt-0.5">Visitor geolocation breakdown will appear here</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -1854,9 +1864,10 @@ const AnalyticsPage: React.FC = () => {
                 {clicksByDevice.length > 0 ? (
                   <DeviceDonutWheel data={clicksByDevice} totalClicks={totalClicks} />
                 ) : (
-                  <div className="flex flex-col items-center justify-center p-8 text-center">
+                  <div className="flex flex-col items-center justify-center p-8 text-center my-auto">
                     <Monitor className="w-6 h-6 text-muted-foreground/40 mb-2" />
-                    <span className="text-xs text-muted-foreground">No device data available</span>
+                    <span className="text-xs font-medium text-foreground">No device data yet</span>
+                    <span className="text-[11px] text-muted-foreground mt-0.5">Desktop, mobile, and tablet breakdown will display here</span>
                   </div>
                 )}
               </div>
@@ -1891,7 +1902,11 @@ const AnalyticsPage: React.FC = () => {
                     )
                   })
                 ) : (
-                  <div className="flex items-center justify-center p-8 text-xs text-muted-foreground">No browser data</div>
+                  <div className="flex flex-col items-center justify-center p-8 text-center my-auto min-h-[160px]">
+                    <Activity className="w-6 h-6 text-muted-foreground/40 mb-2" />
+                    <span className="text-xs font-medium text-foreground">No browser data yet</span>
+                    <span className="text-[11px] text-muted-foreground mt-0.5">Top browsers used by your visitors will appear here</span>
+                  </div>
                 )}
               </div>
             </div>

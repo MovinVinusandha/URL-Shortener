@@ -1,12 +1,13 @@
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export interface LoginPayload {
-  email: string;
+  identifier?: string;
+  email?: string;
   password: string;
 }
 
 export interface RegisterPayload {
-  name: string;
+  username?: string;
   email: string;
   password: string;
 }
@@ -17,10 +18,25 @@ export interface JwtResponse {
 
 export interface User {
   id: number;
-  name: string;
+  publicId?: string;
+  username?: string;
   email: string;
   role?: string;
+  emailVerified?: boolean;
+  hasPassword?: boolean;
+  connectedOAuthProviders?: string[];
   createdAt: string;
+}
+
+export interface OAuthAccount {
+  provider: string;
+  providerEmail?: string;
+  connectedAt: string;
+}
+
+export interface OAuthProvidersAvailability {
+  google: boolean;
+  github: boolean;
 }
 
 // ─── Folders ──────────────────────────────────────────────────────────────────

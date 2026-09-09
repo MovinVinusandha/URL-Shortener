@@ -7,6 +7,26 @@ spring:
     refreshTokenExpiration: 604800  # 7d
   profiles:
     active: dev
+  mail:
+    host: ${SPRING_MAIL_HOST:}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SPRING_MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:true}
+            required: ${SPRING_MAIL_SMTP_STARTTLS_REQUIRED:true}
+
+oauth:
+  google:
+    client-id: ${OAUTH_GOOGLE_CLIENT_ID:${GOOGLE_CLIENT_ID:}}
+    client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET:${GOOGLE_CLIENT_SECRET:}}
+  github:
+    client-id: ${OAUTH_GITHUB_CLIENT_ID:${GITHUB_CLIENT_ID:}}
+    client-secret: ${OAUTH_GITHUB_CLIENT_SECRET:${GITHUB_CLIENT_SECRET:}}
 
 server:
   forward-headers-strategy: framework

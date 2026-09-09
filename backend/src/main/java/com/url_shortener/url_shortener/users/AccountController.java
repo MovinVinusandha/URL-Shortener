@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/users/me")
 @AllArgsConstructor
@@ -22,6 +24,23 @@ public class AccountController {
     @PutMapping("/password")
     public ResponseEntity<Void> changePassword(@Valid @RequestBody PasswordChangeRequestDto request) {
         userService.changePassword(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/password")
+    public ResponseEntity<Void> setInitialPassword(@Valid @RequestBody PasswordSetRequestDto request) {
+        userService.setInitialPassword(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/oauth-accounts")
+    public ResponseEntity<List<OAuthAccountDto>> getOAuthAccounts() {
+        return ResponseEntity.ok(userService.getConnectedOAuthAccounts());
+    }
+
+    @DeleteMapping("/oauth-accounts/{provider}")
+    public ResponseEntity<Void> unlinkOAuthAccount(@PathVariable("provider") String provider) {
+        userService.unlinkOAuthAccount(provider);
         return ResponseEntity.noContent().build();
     }
 

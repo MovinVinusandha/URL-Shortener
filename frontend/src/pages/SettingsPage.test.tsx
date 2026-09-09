@@ -23,7 +23,7 @@ describe('SettingsPage', () => {
       },
     });
     (useAuth as any).mockReturnValue({
-      user: { id: 1, name: 'John Doe', email: 'john@example.com', publicId: 'USR-123' },
+      user: { id: 1, username: 'johndoe', email: 'john@example.com', publicId: 'USR-123' },
       logout: vi.fn(),
       loading: false,
     });
@@ -38,31 +38,6 @@ describe('SettingsPage', () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('USR-123');
   });
 
-  it('updating name form submission success and error handling', async () => {
-    (axiosInstance.put as any).mockResolvedValueOnce({ data: {} });
-    render(<MemoryRouter><SettingsPage /></MemoryRouter>);
-    
-    const nameInput = screen.getByDisplayValue('John Doe');
-    fireEvent.change(nameInput, { target: { value: 'Jane Doe' } });
-    
-    const saveButtons = screen.getAllByText('Save Changes');
-    fireEvent.click(saveButtons[0]);
-    
-    await waitFor(() => {
-      expect(axiosInstance.put).toHaveBeenCalledWith('/users/me', { name: 'Jane Doe', email: 'john@example.com' });
-      expect(screen.getByText('Name updated successfully.')).toBeInTheDocument();
-    });
-
-    // Test error case
-    (axiosInstance.put as any).mockRejectedValueOnce({
-      response: { data: { message: 'Invalid name provided' } },
-    });
-    fireEvent.click(saveButtons[0]);
-    await waitFor(() => {
-      expect(screen.getByText('Invalid name provided')).toBeInTheDocument();
-    });
-  });
-
   it('updating email form submission success and conflict handling', async () => {
     (axiosInstance.put as any).mockResolvedValueOnce({ data: {} });
     render(<MemoryRouter><SettingsPage /></MemoryRouter>);
@@ -71,10 +46,10 @@ describe('SettingsPage', () => {
     fireEvent.change(emailInput, { target: { value: 'jane@example.com' } });
     
     const saveButtons = screen.getAllByText('Save Changes');
-    fireEvent.click(saveButtons[1]);
+    fireEvent.click(saveButtons[0]);
     
     await waitFor(() => {
-      expect(axiosInstance.put).toHaveBeenCalledWith('/users/me', { name: 'John Doe', email: 'jane@example.com' });
+      expect(axiosInstance.put).toHaveBeenCalledWith('/users/me', { email: 'jane@example.com', username: 'johndoe' });
       expect(screen.getByText('Email updated successfully.')).toBeInTheDocument();
     });
 
@@ -82,9 +57,34 @@ describe('SettingsPage', () => {
     (axiosInstance.put as any).mockRejectedValueOnce({
       response: { status: 409 },
     });
-    fireEvent.click(saveButtons[1]);
+    fireEvent.click(saveButtons[0]);
     await waitFor(() => {
       expect(screen.getByText('This email is already taken.')).toBeInTheDocument();
+    });
+  });
+
+  it('updating username form submission success and error handling', async () => {
+    (axiosInstance.put as any).mockResolvedValueOnce({ data: {} });
+    render(<MemoryRouter><SettingsPage /></MemoryRouter>);
+    
+    const usernameInput = screen.getByDisplayValue('johndoe');
+    fireEvent.change(usernameInput, { target: { value: 'janedoe' } });
+    
+    const saveButtons = screen.getAllByText('Save Changes');
+    fireEvent.click(saveButtons[1]);
+    
+    await waitFor(() => {
+      expect(axiosInstance.put).toHaveBeenCalledWith('/users/me', { username: 'janedoe', email: 'john@example.com' });
+      expect(screen.getByText('Username updated successfully.')).toBeInTheDocument();
+    });
+
+    // Test error case
+    (axiosInstance.put as any).mockRejectedValueOnce({
+      response: { data: { message: 'Username is already taken' } },
+    });
+    fireEvent.click(saveButtons[1]);
+    await waitFor(() => {
+      expect(screen.getByText('Username is already taken')).toBeInTheDocument();
     });
   });
 
@@ -92,7 +92,7 @@ describe('SettingsPage', () => {
     (axiosInstance.delete as any).mockResolvedValue({ data: {} });
     const logoutMock = vi.fn();
     (useAuth as any).mockReturnValue({
-      user: { id: 1, name: 'John Doe', email: 'john@example.com', publicId: 'USR-123' },
+      user: { id: 1, username: 'johndoe', email: 'john@example.com', publicId: 'USR-123' },
       logout: logoutMock,
       loading: false,
     });

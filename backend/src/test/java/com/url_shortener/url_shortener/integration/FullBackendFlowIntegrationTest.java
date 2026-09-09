@@ -35,7 +35,7 @@ class FullBackendFlowIntegrationTest {
     @Test
     void fullUserLifecycleTest() throws Exception {
         // 1. Register new user
-        UserRegister userRegister = new UserRegister("Integration User", "integration@example.com", "Password123!");
+        UserRegister userRegister = new UserRegister("integration_user", "integration@example.com", "Password123!");
         
         mockMvc.perform(post("/user")
                 .contentType(MediaType.APPLICATION_JSON)

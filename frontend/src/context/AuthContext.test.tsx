@@ -35,7 +35,7 @@ describe('AuthContext', () => {
   });
 
   it('login(token) updates state and saves to localStorage', async () => {
-    (axiosInstance.get as any).mockResolvedValue({ data: { id: 1, name: 'User' } });
+    (axiosInstance.get as any).mockResolvedValue({ data: { id: 1, username: 'testuser' } });
     render(<AuthProvider><TestComponent /></AuthProvider>);
     
     await waitFor(() => {
@@ -54,7 +54,7 @@ describe('AuthContext', () => {
 
   it('logout() clears state and removes token from localStorage', async () => {
     localStorage.setItem('token', 'existing-token');
-    (axiosInstance.get as any).mockResolvedValue({ data: { id: 1, name: 'User' } });
+    (axiosInstance.get as any).mockResolvedValue({ data: { id: 1, username: 'testuser' } });
     
     render(<AuthProvider><TestComponent /></AuthProvider>);
     
