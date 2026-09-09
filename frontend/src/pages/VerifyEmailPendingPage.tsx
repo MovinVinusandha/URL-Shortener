@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Mail, ArrowRight, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import axiosInstance, { extractBackendError } from '../api/axiosInstance';
@@ -9,6 +9,7 @@ import { toast } from 'react-hot-toast';
 
 const VerifyEmailPendingPage: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
 
   const passedEmail = (location.state as { email?: string })?.email || user?.email || '';
@@ -37,6 +38,11 @@ const VerifyEmailPendingPage: React.FC = () => {
     }
   };
 
+  const handleBackToLogin = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <div className="antialiased min-h-screen flex flex-col bg-background text-foreground font-sans relative">
       <div 
@@ -52,7 +58,7 @@ const VerifyEmailPendingPage: React.FC = () => {
           <button 
             type="button" 
             onClick={() => logout()}
-            className="btn-ghost text-xs text-muted-foreground hover:text-foreground"
+            className="btn-ghost text-xs text-muted-foreground hover:text-foreground cursor-pointer"
           >
             Sign out
           </button>
@@ -126,20 +132,21 @@ const VerifyEmailPendingPage: React.FC = () => {
                   type="button"
                   onClick={() => handleResend()}
                   disabled={resending}
-                  className="w-full btn-ghost border border-border py-2 text-center flex items-center justify-center gap-1.5 text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50"
+                  className="w-full btn-ghost border border-border py-2 text-center flex items-center justify-center gap-1.5 text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 cursor-pointer"
                 >
                   {resending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                   <span>{resending ? 'Sending...' : 'Resend Verification Email'}</span>
                 </button>
               )}
 
-              <Link
-                to="/login"
-                className="w-full btn-ghost py-2 text-center flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              <button
+                type="button"
+                onClick={handleBackToLogin}
+                className="w-full btn-ghost py-2 text-center flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
               >
                 <span>Back to Log in</span>
                 <ArrowRight className="w-3 h-3" />
-              </Link>
+              </button>
             </div>
           </div>
         </motion.div>

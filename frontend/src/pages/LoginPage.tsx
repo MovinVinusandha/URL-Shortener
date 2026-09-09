@@ -11,8 +11,8 @@ import { toast } from 'react-hot-toast';
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, token } = useAuth();
-
+  const { login, token, user } = useAuth();
+  
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,12 +22,12 @@ const LoginPage: React.FC = () => {
 
   const from = location.state?.from?.pathname || '/dashboard';
 
-  // If already authenticated, redirect away from login
+  // If already authenticated with a verified email, redirect away from login
   useEffect(() => {
-    if (token) {
+    if (token && (!user || user.emailVerified !== false)) {
       navigate('/dashboard', { replace: true });
     }
-  }, [token, navigate]);
+  }, [token, user, navigate]);
 
   // Reset oauth loading on mount, browser bfcache restore (back navigation), or window focus
   useEffect(() => {

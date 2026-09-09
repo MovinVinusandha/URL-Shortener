@@ -82,4 +82,11 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest().body(errors);
     }
+
+    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
+    public ResponseEntity<Map<String, String>> handleIllegalArgument(RuntimeException exception) {
+        return ResponseEntity.badRequest().body(
+                Map.of("message", exception.getMessage())
+        );
+    }
 }

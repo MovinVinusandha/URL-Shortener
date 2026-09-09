@@ -17,6 +17,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.url_shortener.url_shortener.auth.PasswordResetTokenRepository;
+import com.url_shortener.url_shortener.common.EmailDomainValidator;
+import com.url_shortener.url_shortener.urls.CustomChannelRepository;
+import com.url_shortener.url_shortener.urls.UtmTemplateRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -32,12 +36,17 @@ public class UserService {
     private final TagRepository tagRepository;
     private final FolderRepository folderRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final UtmTemplateRepository utmTemplateRepository;
+    private final CustomChannelRepository customChannelRepository;
     private final EmailService emailService;
     private final OAuthService oauthService;
+    private final EmailDomainValidator emailDomainValidator;
 
     @Transactional
     public UserDto registerUser(UserRegister userRegister) {
         String email = userRegister.getEmail().trim().toLowerCase();
+        emailDomainValidator.validateEmailDomain(email);
         if (userRepository.existsByEmail(email)) {
             throw new UserAlreadyExist();
         }
@@ -162,11 +171,13 @@ public class UserService {
         var userId = getUserId();
         var user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
-        if (request.getEmail() != null && !user.getEmail().equalsIgnoreCase(request.getEmail())) {
-            if (userRepository.existsByEmail(request.getEmail())) {
+        if (request.getEmail() != null && !user.getEmail().equalsIgnoreCase(request.getEmail().trim())) {
+            String cleanEmail = request.getEmail().trim().toLowerCase();
+            emailDomainValidator.validateEmailDomain(cleanEmail);
+            if (userRepository.existsByEmail(cleanEmail)) {
                 throw new UserAlreadyExist();
             }
-            user.setEmail(request.getEmail());
+            user.setEmail(cleanEmail);
             user.setEmailVerified(false);
             user.setEmailVerifiedAt(null);
             sendNewVerificationEmail(user);
@@ -238,17 +249,36 @@ public class UserService {
         var userId = getUserId();
         var user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
+        // 1. Delete all tokens
         emailVerificationTokenRepository.deleteByUser(user);
+        passwordResetTokenRepository.deleteByUser(user);
+
+        // 2. Delete all UTM templates and Custom Channels
+        utmTemplateRepository.deleteAll(utmTemplateRepository.findByUserOrderByCreatedAtDesc(user));
+        customChannelRepository.deleteAll(customChannelRepository.findAllByUserIdOrderByIdAsc(userId));
+
+        // 3. Delete all Click Events for the user's URLs
         clickEventRepository.deleteByUserId(userId);
-        urlRepository.deleteAll(urlRepository.findByUserId(userId));
-        
+
+        // 4. Delete all tags and tag associations
         var tags = tagRepository.findByUser(user);
         for (var tag : tags) {
             tagRepository.deleteTagAssociations(tag.getId());
         }
         tagRepository.deleteAll(tags);
-        
+
+        // 5. Delete all URLs (cascades statistics)
+        var urls = urlRepository.findByUserId(userId);
+        for (var url : urls) {
+            url.getTags().clear();
+        }
+        urlRepository.saveAll(urls);
+        urlRepository.deleteAll(urls);
+
+        // 6. Delete all folders
         folderRepository.deleteAll(folderRepository.findByUserId(userId));
+
+        // 7. Delete user (cascades oauth accounts)
         userRepository.delete(user);
     }
 

@@ -52,9 +52,17 @@ class UserServiceTest {
     @Mock
     private EmailVerificationTokenRepository emailVerificationTokenRepository;
     @Mock
+    private com.url_shortener.url_shortener.auth.PasswordResetTokenRepository passwordResetTokenRepository;
+    @Mock
+    private com.url_shortener.url_shortener.urls.UtmTemplateRepository utmTemplateRepository;
+    @Mock
+    private com.url_shortener.url_shortener.urls.CustomChannelRepository customChannelRepository;
+    @Mock
     private EmailService emailService;
     @Mock
     private OAuthService oauthService;
+    @Mock
+    private com.url_shortener.url_shortener.common.EmailDomainValidator emailDomainValidator;
 
     @InjectMocks
     private UserService userService;
@@ -279,6 +287,10 @@ class UserServiceTest {
 
         userService.deleteMe();
 
+        verify(emailVerificationTokenRepository).deleteByUser(user);
+        verify(passwordResetTokenRepository).deleteByUser(user);
+        verify(utmTemplateRepository).deleteAll(any());
+        verify(customChannelRepository).deleteAll(any());
         verify(clickEventRepository).deleteByUserId(USER_ID);
         verify(urlRepository).deleteAll(any());
         verify(tagRepository).deleteTagAssociations(10L);

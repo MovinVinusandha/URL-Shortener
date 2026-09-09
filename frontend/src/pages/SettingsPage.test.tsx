@@ -7,7 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 
 vi.mock('../api/axiosInstance', () => ({
-  default: { put: vi.fn(), delete: vi.fn() },
+  default: { put: vi.fn(), delete: vi.fn(), get: vi.fn().mockResolvedValue({ data: { available: true } }) },
+  extractBackendError: vi.fn((err: any, fallback: string) => err?.response?.data?.message || fallback),
 }));
 
 vi.mock('../context/AuthContext', () => ({
@@ -45,19 +46,25 @@ describe('SettingsPage', () => {
     const emailInput = screen.getByDisplayValue('john@example.com');
     fireEvent.change(emailInput, { target: { value: 'jane@example.com' } });
     
-    const saveButtons = screen.getAllByText('Save Changes');
-    fireEvent.click(saveButtons[0]);
+    const updateEmailBtn = screen.getByRole('button', { name: 'Update Email' });
+    fireEvent.click(updateEmailBtn);
+
+    // Modal opens
+    const confirmBtn = screen.getByRole('button', { name: /Confirm & Send Link/i });
+    fireEvent.click(confirmBtn);
     
     await waitFor(() => {
       expect(axiosInstance.put).toHaveBeenCalledWith('/users/me', { email: 'jane@example.com', username: 'johndoe' });
-      expect(screen.getByText('Email updated successfully.')).toBeInTheDocument();
     });
 
-    // Test 409 conflict
+    // Test error/conflict
     (axiosInstance.put as any).mockRejectedValueOnce({
-      response: { status: 409 },
+      response: { data: { message: 'This email is already taken.' }, status: 409 },
     });
-    fireEvent.click(saveButtons[0]);
+    fireEvent.click(updateEmailBtn);
+    const confirmBtnAgain = screen.getByRole('button', { name: /Confirm & Send Link/i });
+    fireEvent.click(confirmBtnAgain);
+
     await waitFor(() => {
       expect(screen.getByText('This email is already taken.')).toBeInTheDocument();
     });
@@ -70,8 +77,12 @@ describe('SettingsPage', () => {
     const usernameInput = screen.getByDisplayValue('johndoe');
     fireEvent.change(usernameInput, { target: { value: 'janedoe' } });
     
-    const saveButtons = screen.getAllByText('Save Changes');
-    fireEvent.click(saveButtons[1]);
+    const updateUsernameBtn = screen.getByRole('button', { name: 'Update Username' });
+    fireEvent.click(updateUsernameBtn);
+
+    // Modal opens
+    const confirmBtn = screen.getByRole('button', { name: /Confirm Change/i });
+    fireEvent.click(confirmBtn);
     
     await waitFor(() => {
       expect(axiosInstance.put).toHaveBeenCalledWith('/users/me', { username: 'janedoe', email: 'john@example.com' });
@@ -82,7 +93,10 @@ describe('SettingsPage', () => {
     (axiosInstance.put as any).mockRejectedValueOnce({
       response: { data: { message: 'Username is already taken' } },
     });
-    fireEvent.click(saveButtons[1]);
+    fireEvent.click(updateUsernameBtn);
+    const confirmBtnAgain = screen.getByRole('button', { name: /Confirm Change/i });
+    fireEvent.click(confirmBtnAgain);
+
     await waitFor(() => {
       expect(screen.getByText('Username is already taken')).toBeInTheDocument();
     });
