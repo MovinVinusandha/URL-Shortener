@@ -3,7 +3,7 @@ spring:
     name: url-shortener
   jwt:
     secret: ${JWT_SECRET}
-    accessTokenExpiration: ${JWT_ACCESS_TOKEN_EXPIRATION:86400}  # 24h (default)
+    accessTokenExpiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900}  # 15m (short-lived)
     refreshTokenExpiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800}  # 7d
   profiles:
     active: dev

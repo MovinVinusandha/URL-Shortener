@@ -63,6 +63,8 @@ class UserServiceTest {
     private OAuthService oauthService;
     @Mock
     private com.url_shortener.url_shortener.common.EmailDomainValidator emailDomainValidator;
+    @Mock
+    private com.url_shortener.url_shortener.auth.TokenRevocationService tokenRevocationService;
 
     @InjectMocks
     private UserService userService;
@@ -245,6 +247,7 @@ class UserServiceTest {
 
         assertThat(user.getPassword()).isEqualTo("newencoded");
         verify(userRepository).save(user);
+        verify(tokenRevocationService).revokeAllUserTokens(USER_ID);
         verify(emailService).sendPasswordChangedAlert(user);
     }
 
@@ -318,6 +321,7 @@ class UserServiceTest {
         verify(tagRepository).deleteTagAssociations(10L);
         verify(tagRepository).deleteAll(any());
         verify(folderRepository).deleteAll(any());
+        verify(tokenRevocationService).revokeAllUserTokens(USER_ID);
         verify(userRepository).delete(user);
     }
 

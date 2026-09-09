@@ -43,6 +43,7 @@ public class UserService {
     private final EmailService emailService;
     private final OAuthService oauthService;
     private final EmailDomainValidator emailDomainValidator;
+    private final com.url_shortener.url_shortener.auth.TokenRevocationService tokenRevocationService;
 
     @Transactional
     public UserDto registerUser(UserRegister userRegister) {
@@ -212,6 +213,9 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
+        // Globally revoke all previous sessions/tokens for this user
+        tokenRevocationService.revokeAllUserTokens(userId);
+
         // Send security alert notice
         emailService.sendPasswordChangedAlert(user);
     }
@@ -306,7 +310,10 @@ public class UserService {
         // 6. Delete all folders
         folderRepository.deleteAll(folderRepository.findByUserId(userId));
 
-        // 7. Delete user (cascades oauth accounts)
+        // 7. Globally revoke tokens
+        tokenRevocationService.revokeAllUserTokens(userId);
+
+        // 8. Delete user (cascades oauth accounts)
         userRepository.delete(user);
     }
 

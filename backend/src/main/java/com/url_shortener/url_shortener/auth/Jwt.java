@@ -28,6 +28,14 @@ public class Jwt {
         return Role.valueOf(claims.get("role", String.class));
     }
 
+    public Date getIssuedAt() {
+        return claims.getIssuedAt();
+    }
+
+    public Date getExpiration() {
+        return claims.getExpiration();
+    }
+
     public String toString() {
         return Jwts.builder().claims(claims).signWith(secretKey).compact();
     }

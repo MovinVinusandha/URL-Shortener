@@ -40,6 +40,7 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final TokenRevocationService tokenRevocationService;
 
     @Value("${app.dashboard.url:http://localhost:5173}")
     private String dashboardUrl;
@@ -55,7 +56,8 @@ public class AuthController {
                           OAuthService oauthService,
                           PasswordEncoder passwordEncoder,
                           PasswordResetTokenRepository passwordResetTokenRepository,
-                          EmailVerificationTokenRepository emailVerificationTokenRepository) {
+                          EmailVerificationTokenRepository emailVerificationTokenRepository,
+                          TokenRevocationService tokenRevocationService) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.jwtConfig = jwtConfig;
@@ -68,6 +70,7 @@ public class AuthController {
         this.passwordEncoder = passwordEncoder;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.emailVerificationTokenRepository = emailVerificationTokenRepository;
+        this.tokenRevocationService = tokenRevocationService;
     }
 
     @GetMapping("/check-username")
@@ -150,7 +153,17 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletResponse response) {
+    public ResponseEntity<Void> logout(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            HttpServletResponse response
+    ) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            var jwt = jwtService.parseToken(token);
+            if (jwt != null) {
+                tokenRevocationService.revokeToken(token, jwt.getExpiration());
+            }
+        }
         clearRefreshTokenCookie(response);
         return ResponseEntity.ok().build();
     }
@@ -163,6 +176,11 @@ public class AuthController {
 
         var jwt = jwtService.parseToken(refreshToken);
         if (jwt == null || jwt.isExpired()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        // Check if user has been globally revoked
+        if (tokenRevocationService.isIssuedBeforeRevocation(jwt.getUserId(), jwt.getIssuedAt())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
@@ -226,6 +244,9 @@ public class AuthController {
 
         token.setUsedAt(LocalDateTime.now());
         passwordResetTokenRepository.save(token);
+
+        // Globally revoke all previous sessions/tokens for this user
+        tokenRevocationService.revokeAllUserTokens(user.getId());
 
         return ResponseEntity.ok(Map.of("message", "Password has been successfully updated. You can now log in."));
     }

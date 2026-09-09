@@ -20,6 +20,7 @@ import java.util.List;
 @AllArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
+    private final TokenRevocationService tokenRevocationService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -33,6 +34,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             var token = authHeader.replace("Bearer ", "");
             var jwt = jwtService.parseToken(token);
             if (jwt == null || jwt.isExpired()) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // Check if individual token is blacklisted in Redis
+            if (tokenRevocationService.isTokenRevoked(token)) {
+                log.warn("Rejected blacklisted JWT token");
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // Check if token was issued prior to a user-wide revocation event (e.g. password change)
+            if (tokenRevocationService.isIssuedBeforeRevocation(jwt.getUserId(), jwt.getIssuedAt())) {
+                log.warn("Rejected JWT token issued prior to user revocation timestamp for user id {}", jwt.getUserId());
                 filterChain.doFilter(request, response);
                 return;
             }

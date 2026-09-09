@@ -23,6 +23,18 @@ axiosInstance.interceptors.request.use(
 );
 
 // ── Response interceptor: handle token expiry ────────────────────────────────
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+const subscribeTokenRefresh = (cb: (token: string) => void) => {
+  refreshSubscribers.push(cb);
+};
+
+const onRefreshed = (token: string) => {
+  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers = [];
+};
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -38,6 +50,18 @@ axiosInstance.interceptors.response.use(
     ) {
       originalRequest._retry = true; // Mark as retrying to prevent infinite loops
 
+      if (isRefreshing) {
+        // Queue this request until the current refresh completes
+        return new Promise((resolve) => {
+          subscribeTokenRefresh((newToken: string) => {
+            originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+            resolve(axiosInstance(originalRequest));
+          });
+        });
+      }
+
+      isRefreshing = true;
+
       try {
         // Call the refresh endpoint. withCredentials ensures the HttpOnly cookie is sent!
         const refreshResponse = await axios.post(
@@ -52,11 +76,17 @@ axiosInstance.interceptors.response.use(
         localStorage.setItem('token', newToken);
         window.dispatchEvent(new Event('auth-token-changed'));
 
+        isRefreshing = false;
+        onRefreshed(newToken);
+
         // Update the failed request's header and retry it
         originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
         return axiosInstance(originalRequest);
         
       } catch (refreshError) {
+        isRefreshing = false;
+        refreshSubscribers = [];
+
         // If the refresh token is expired or invalid, clear token
         localStorage.removeItem('token');
         window.dispatchEvent(new Event('auth-token-changed'));

@@ -70,6 +70,8 @@ class AuthControllerTest {
     private PasswordResetTokenRepository passwordResetTokenRepository;
     @MockBean
     private EmailVerificationTokenRepository emailVerificationTokenRepository;
+    @MockBean
+    private TokenRevocationService tokenRevocationService;
 
     @BeforeEach
     void setUp() {
@@ -287,6 +289,21 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Password has been successfully updated")));
 
         verify(userRepository, times(1)).save(user);
+        verify(tokenRevocationService, times(1)).revokeAllUserTokens(user.getId());
+    }
+
+    @Test
+    void logout_WithBearerToken_RevokesToken() throws Exception {
+        Jwt mockJwt = mock(Jwt.class);
+        when(jwtService.parseToken("valid_access_token")).thenReturn(mockJwt);
+        java.util.Date expDate = new java.util.Date(System.currentTimeMillis() + 60000);
+        when(mockJwt.getExpiration()).thenReturn(expDate);
+
+        mockMvc.perform(post("/auth/logout")
+                .header("Authorization", "Bearer valid_access_token"))
+                .andExpect(status().isOk());
+
+        verify(tokenRevocationService, times(1)).revokeToken("valid_access_token", expDate);
     }
 
     @Test
