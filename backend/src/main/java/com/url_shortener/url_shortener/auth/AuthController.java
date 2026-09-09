@@ -308,6 +308,7 @@ public class AuthController {
     }
 
     @GetMapping("/me")
+    @Transactional(readOnly = true)
     public ResponseEntity<UserDto> me() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !(authentication.getPrincipal() instanceof Long)) {

@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserUpdateRequestDto {
-    @Pattern(regexp = "^[a-zA-Z0-9_]{3,30}$", message = "Username must be 3-30 characters containing only letters, numbers, and underscores")
+    @Pattern(regexp = "^(|[a-zA-Z0-9_]{3,30})$", message = "Username must be 3-30 characters containing only letters, numbers, and underscores")
     private String username;
 
     @NotBlank(message = "Email cannot be empty")

@@ -14,7 +14,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class UserRegister {
-    @Pattern(regexp = "^[a-zA-Z0-9_]{3,30}$", message = "Username must be 3-30 characters containing only letters, numbers, and underscores")
+    @Pattern(regexp = "^(|[a-zA-Z0-9_]{3,30})$", message = "Username must be 3-30 characters containing only letters, numbers, and underscores")
     private String username;
 
     @NotBlank(message = "Email is required")

@@ -37,7 +37,8 @@ public class UserService {
 
     @Transactional
     public UserDto registerUser(UserRegister userRegister) {
-        if (userRepository.existsByEmail(userRegister.getEmail())) {
+        String email = userRegister.getEmail().trim().toLowerCase();
+        if (userRepository.existsByEmail(email)) {
             throw new UserAlreadyExist();
         }
 
@@ -47,6 +48,7 @@ public class UserService {
         }
 
         var user = userMapper.toEntity(userRegister);
+        user.setEmail(email);
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(userRegister.getPassword()));
         user.setRole(Role.USER);

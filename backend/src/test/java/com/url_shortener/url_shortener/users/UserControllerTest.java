@@ -24,11 +24,17 @@ class UserControllerTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private com.url_shortener.url_shortener.common.RateLimiterService rateLimiterService;
+
+    @Mock
+    private jakarta.servlet.http.HttpServletRequest httpServletRequest;
+
     private UserController userController;
 
     @BeforeEach
     void setUp() {
-        userController = new UserController(userMapper, userService);
+        userController = new UserController(userMapper, userService, rateLimiterService);
     }
 
     @Test
@@ -36,9 +42,11 @@ class UserControllerTest {
         UserRegister register = new UserRegister("Test", "test@user.com", "Password123!");
         UserDto dto = new UserDto("public-id", "Test", "test@user.com", "USER", LocalDateTime.now());
 
+        when(httpServletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(rateLimiterService.checkRegistration("127.0.0.1")).thenReturn(true);
         when(userService.registerUser(register)).thenReturn(dto);
 
-        ResponseEntity<UserDto> response = userController.registerUser(register);
+        ResponseEntity<?> response = userController.registerUser(register, httpServletRequest);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(dto);

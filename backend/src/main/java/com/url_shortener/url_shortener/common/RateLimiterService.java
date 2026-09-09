@@ -38,6 +38,12 @@ public class RateLimiterService {
         return tryAcquire(key, 2);
     }
 
+    public boolean checkRegistration(String ip) {
+        String key = "register:" + ip;
+        // Allow up to 10 registrations per IP per 15-minute window
+        return tryAcquire(key, 10);
+    }
+
     public void resetLoginAttempts(String ip, String identifier) {
         requestCounts.invalidate("login:" + ip + ":" + identifier.toLowerCase());
     }
