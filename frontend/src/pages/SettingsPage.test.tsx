@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 
 vi.mock('../api/axiosInstance', () => ({
-  default: { put: vi.fn(), delete: vi.fn(), get: vi.fn().mockResolvedValue({ data: { available: true } }) },
+  default: { put: vi.fn(), post: vi.fn(), delete: vi.fn(), get: vi.fn().mockResolvedValue({ data: { available: true } }) },
   extractBackendError: vi.fn((err: any, fallback: string) => err?.response?.data?.message || fallback),
 }));
 

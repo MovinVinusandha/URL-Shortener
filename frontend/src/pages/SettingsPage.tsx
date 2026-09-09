@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Copy, Check, AlertCircle, AlertTriangle, ShieldCheck, Mail, Globe, Link2, Unlink, Loader2, User as UserIcon } from 'lucide-react';
+import { Copy, Check, AlertCircle, AlertTriangle, ShieldCheck, Mail, Globe, Link2, Unlink, Loader2, User as UserIcon, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance, { extractBackendError } from '../api/axiosInstance';
 import Skeleton from 'react-loading-skeleton';
@@ -35,6 +35,8 @@ const SettingsPage: React.FC = () => {
   const [confirmationText, setConfirmationText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+
 
   // Sync state if user loads after mount
   useEffect(() => {
@@ -461,6 +463,8 @@ const SettingsPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+
 
       {/* Connected Accounts Card */}
       <div className="bg-background border border-border rounded-xl overflow-hidden">

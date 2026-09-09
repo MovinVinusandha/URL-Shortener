@@ -6,7 +6,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 
 vi.mock('../api/axiosInstance', () => ({
-  default: { put: vi.fn() },
+  default: { put: vi.fn(), post: vi.fn() },
+  extractBackendError: vi.fn((err: any, fallback: string) => err?.response?.data?.message || fallback),
+}));
+
+vi.mock('../context/AuthContext', () => ({
+  useAuth: vi.fn(() => ({
+    user: { id: 1, email: 'user@example.com', hasPassword: true },
+    updateUser: vi.fn(),
+  })),
 }));
 
 describe('SecurityPage', () => {
@@ -25,7 +33,7 @@ describe('SecurityPage', () => {
     fireEvent.change(newInput, { target: { value: 'newpass123' } });
     fireEvent.change(confirmInput, { target: { value: 'different' } });
     
-    const submitBtn = screen.getByText('Save Changes');
+    const submitBtn = screen.getByText('Update Password');
     expect(submitBtn).toBeDisabled();
   });
 
@@ -41,7 +49,7 @@ describe('SecurityPage', () => {
     fireEvent.change(newInput, { target: { value: 'newpass123' } });
     fireEvent.change(confirmInput, { target: { value: 'newpass123' } });
     
-    const submitBtn = screen.getByText('Save Changes');
+    const submitBtn = screen.getByText('Update Password');
     expect(submitBtn).not.toBeDisabled();
     
     fireEvent.click(submitBtn);
@@ -69,7 +77,7 @@ describe('SecurityPage', () => {
     fireEvent.change(newInput, { target: { value: 'newpassword123' } });
     fireEvent.change(confirmInput, { target: { value: 'newpassword123' } });
 
-    fireEvent.click(screen.getByText('Save Changes'));
+    fireEvent.click(screen.getByText('Update Password'));
 
     await waitFor(() => {
       expect(screen.getByText('Current password is incorrect')).toBeInTheDocument();
