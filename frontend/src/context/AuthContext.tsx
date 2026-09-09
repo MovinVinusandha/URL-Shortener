@@ -41,15 +41,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  /** On mount: if there's a stored token, validate it by fetching /auth/me */
+  /** On mount: if there's a stored token, validate it; otherwise attempt silent refresh via HttpOnly cookie */
   useEffect(() => {
     const stored = localStorage.getItem('token');
     if (stored) {
       setToken(stored);
       fetchMe().finally(() => setLoading(false));
     } else {
-      setLoading(false);
+      // Attempt silent session restoration (e.g. cross-subdomain or reopened tab with HttpOnly refreshToken)
+      const refreshPromise = axiosInstance.post?.<{ token: string }>('/auth/refresh');
+      if (refreshPromise && typeof refreshPromise.then === 'function') {
+        refreshPromise
+          .then(async (res) => {
+            if (res?.data?.token) {
+              localStorage.setItem('token', res.data.token);
+              setToken(res.data.token);
+              await fetchMe();
+            }
+          })
+          .catch(() => {
+            // No active session or refresh token expired
+            setToken(null);
+            setUser(null);
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      } else {
+        setLoading(false);
+      }
     }
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'token') {
+        setToken(e.newValue);
+        if (e.newValue) {
+          fetchMe();
+        } else {
+          setUser(null);
+        }
+      }
+    };
+
+    const handleTokenChange = () => {
+      const currentToken = localStorage.getItem('token');
+      setToken(currentToken);
+      if (currentToken) {
+        fetchMe();
+      } else {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('auth-token-changed', handleTokenChange);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('auth-token-changed', handleTokenChange);
+    };
   }, [fetchMe]);
 
   /** Called after a successful POST /auth/login */
@@ -69,7 +118,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   /** Called when the user clicks Logout */
   const logout = useCallback(() => {
+    try {
+      const logoutPromise = axiosInstance.post?.('/auth/logout');
+      if (logoutPromise && typeof logoutPromise.catch === 'function') {
+        logoutPromise.catch(() => {});
+      }
+    } catch {
+      // ignore
+    }
     localStorage.removeItem('token');
+    window.dispatchEvent(new Event('auth-token-changed'));
     setToken(null);
     setUser(null);
   }, []);

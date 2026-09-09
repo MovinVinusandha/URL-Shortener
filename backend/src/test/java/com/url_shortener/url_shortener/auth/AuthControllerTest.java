@@ -87,7 +87,7 @@ class AuthControllerTest {
     void login_Success() throws Exception {
         LoginRequest loginRequest = new LoginRequest("test@test.com", "password123");
 
-        User user = User.builder().id(1L).username("testuser").email("test@test.com").build();
+        User user = User.builder().id(1L).username("testuser").email("test@test.com").emailVerified(true).build();
 
         when(authenticationManager.authenticate(any(Authentication.class)))
                 .thenReturn(new UsernamePasswordAuthenticationToken("test@test.com", "password123"));
@@ -111,15 +111,33 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.token").value("access_token_123"))
                 .andExpect(cookie().exists("refreshToken"))
                 .andExpect(cookie().httpOnly("refreshToken", true))
-                .andExpect(cookie().secure("refreshToken", true))
-                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("SameSite=None")));
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("SameSite=Lax")));
+    }
+
+    @Test
+    void login_UnverifiedEmail_ReturnsForbidden() throws Exception {
+        LoginRequest loginRequest = new LoginRequest("unverified@test.com", "password123");
+
+        User user = User.builder().id(2L).username("unverified").email("unverified@test.com").emailVerified(false).build();
+
+        when(authenticationManager.authenticate(any(Authentication.class)))
+                .thenReturn(new UsernamePasswordAuthenticationToken("unverified@test.com", "password123"));
+        when(userRepository.findByEmailIgnoreCaseOrUsernameIgnoreCase("unverified@test.com", "unverified@test.com"))
+                .thenReturn(Optional.of(user));
+
+        mockMvc.perform(post("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("EMAIL_NOT_VERIFIED"))
+                .andExpect(jsonPath("$.email").value("unverified@test.com"));
     }
 
     @Test
     void login_WithUsername_Success() throws Exception {
         LoginRequest loginRequest = new LoginRequest("testuser", "password123");
 
-        User user = User.builder().id(1L).username("testuser").email("test@test.com").build();
+        User user = User.builder().id(1L).username("testuser").email("test@test.com").emailVerified(true).build();
 
         when(authenticationManager.authenticate(any(Authentication.class)))
                 .thenReturn(new UsernamePasswordAuthenticationToken("testuser", "password123"));
@@ -141,6 +159,40 @@ class AuthControllerTest {
                 .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("access_token_456"));
+    }
+
+    @Test
+    void checkUsername_Available_ReturnsTrue() throws Exception {
+        when(userRepository.existsByUsername("newuser")).thenReturn(false);
+
+        mockMvc.perform(get("/auth/check-username").param("username", "newuser"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(true));
+    }
+
+    @Test
+    void checkUsername_Taken_ReturnsFalse() throws Exception {
+        when(userRepository.existsByUsername("existinguser")).thenReturn(true);
+
+        mockMvc.perform(get("/auth/check-username").param("username", "existinguser"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(false))
+                .andExpect(jsonPath("$.message").value("Username 'existinguser' is already taken."));
+    }
+
+    @Test
+    void checkUsername_InvalidFormat_ReturnsFalse() throws Exception {
+        mockMvc.perform(get("/auth/check-username").param("username", "ab"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(false));
+    }
+
+    @Test
+    void logout_Success_ClearsCookie() throws Exception {
+        mockMvc.perform(post("/auth/logout"))
+                .andExpect(status().isOk())
+                .andExpect(cookie().exists("refreshToken"))
+                .andExpect(cookie().maxAge("refreshToken", 0));
     }
 
     @Test

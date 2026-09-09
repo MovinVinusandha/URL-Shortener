@@ -439,7 +439,7 @@ describe('DashboardPage', () => {
     render(<MemoryRouter><DashboardPage /></MemoryRouter>);
 
     await waitFor(() => {
-      expect(screen.getByText('No links found.')).toBeInTheDocument();
+      expect(screen.getByText('No short links yet')).toBeInTheDocument();
     });
   });
 

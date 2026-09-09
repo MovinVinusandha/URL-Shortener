@@ -67,6 +67,7 @@ class OAuthServiceTest {
         assertThat(url).contains("https://accounts.google.com/o/oauth2/v2/auth");
         assertThat(url).contains("client_id=google-client-id");
         assertThat(url).contains("state=");
+        assertThat(url).contains("prompt=select_account");
         assertThat(url).contains("redirect_uri=http://localhost:8080/auth/oauth/google/callback");
     }
 

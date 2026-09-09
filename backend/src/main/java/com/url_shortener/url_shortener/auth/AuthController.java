@@ -70,6 +70,37 @@ public class AuthController {
         this.emailVerificationTokenRepository = emailVerificationTokenRepository;
     }
 
+    @GetMapping("/check-username")
+    public ResponseEntity<Map<String, Object>> checkUsername(@RequestParam(value = "username", required = false) String username) {
+        if (username == null || username.trim().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "available", false,
+                    "message", "Username parameter is required"
+            ));
+        }
+
+        String trimmed = username.trim();
+        if (!trimmed.matches("^[a-zA-Z0-9_]{3,30}$")) {
+            return ResponseEntity.ok(Map.of(
+                    "available", false,
+                    "message", "Username must be 3-30 characters containing only letters, numbers, and underscores."
+            ));
+        }
+
+        boolean exists = userRepository.existsByUsername(trimmed.toLowerCase());
+        if (exists) {
+            return ResponseEntity.ok(Map.of(
+                    "available", false,
+                    "message", "Username '" + trimmed + "' is already taken."
+            ));
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "available", true,
+                "message", "Username is available."
+        ));
+    }
+
     @PostMapping("/login")
     public ResponseEntity<?> login(
             @Valid @RequestBody LoginRequest loginRequest,
@@ -101,12 +132,27 @@ public class AuthController {
                 loginRequest.getIdentifier(), loginRequest.getIdentifier()
         ).orElseThrow();
 
+        if (!user.isEmailVerified()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                            "error", "EMAIL_NOT_VERIFIED",
+                            "message", "Your email address is not verified yet. Please check your inbox or request a new verification link.",
+                            "email", user.getEmail()
+                    ));
+        }
+
         var accessToken = jwtService.generateAccessToken(user);
         var refreshToken = jwtService.generateRefreshToken(user);
 
         setRefreshTokenCookie(response, refreshToken.toString());
 
         return ResponseEntity.ok(new JwtResponse(accessToken.toString()));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletResponse response) {
+        clearRefreshTokenCookie(response);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/refresh")
@@ -281,10 +327,19 @@ public class AuthController {
     private void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                 .httpOnly(true)
-                .secure(true)
-                .path("/auth/refresh")
+                .path("/auth")
                 .maxAge(jwtConfig.getRefreshTokenExpiration())
-                .sameSite("None")
+                .sameSite("Lax")
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    private void clearRefreshTokenCookie(HttpServletResponse response) {
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .path("/auth")
+                .maxAge(0)
+                .sameSite("Lax")
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }

@@ -97,6 +97,7 @@ public class OAuthService {
                     .queryParam("scope", "openid profile email")
                     .queryParam("state", state)
                     .queryParam("access_type", "online")
+                    .queryParam("prompt", "select_account")
                     .build()
                     .encode()
                     .toUriString();

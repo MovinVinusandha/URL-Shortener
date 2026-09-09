@@ -8,6 +8,7 @@ import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import VerifyEmailPendingPage from './pages/VerifyEmailPendingPage';
 import OAuthCallbackPage from './pages/OAuthCallbackPage';
 import DashboardPage from './pages/DashboardPage';
 import AnalyticsPage from './pages/AnalyticsPage';
@@ -35,6 +36,7 @@ function AnimatedRoutes() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/verify-email-pending" element={<VerifyEmailPendingPage />} />
             <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
             <Route path="/expired" element={<ExpiredPage />} />
             <Route path="/not-found" element={<NotFoundPage />} />

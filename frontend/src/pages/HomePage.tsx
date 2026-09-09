@@ -105,6 +105,7 @@ interface PricingCardProps {
   description: string;
   features: string[];
   cta: string;
+  ctaLink?: string;
   highlighted?: boolean;
   onCtaClick?: (e: React.MouseEvent) => void;
 }
@@ -114,6 +115,7 @@ const PricingCard: React.FC<PricingCardProps> = ({
   description,
   features,
   cta,
+  ctaLink = '/register',
   highlighted,
   onCtaClick,
 }) => (
@@ -162,7 +164,7 @@ const PricingCard: React.FC<PricingCardProps> = ({
       </button>
     ) : (
       <Link
-        to="/register"
+        to={ctaLink}
         className={`w-full text-center px-6 py-2.5 rounded-lg font-semibold text-xs transition-colors ${
           highlighted ? 'btn-solid' : 'btn-secondary'
         }`}
@@ -741,7 +743,8 @@ const HomePage: React.FC = () => {
                 'Deep Analytics & Tracking',
                 'Permanent, non-expiring links',
               ]}
-              cta="Create free account"
+              cta={token ? 'Go to Dashboard' : 'Create free account'}
+              ctaLink={token ? '/dashboard' : '/register'}
               highlighted
             />
           </div>
@@ -832,10 +835,10 @@ const HomePage: React.FC = () => {
             Join thousands of teams and developers who organize, secure, and track their links with Trim.
           </p>
           <Link
-            to="/register"
+            to={token ? '/dashboard' : '/register'}
             className="group btn-solid px-8 py-3 text-xs font-semibold shadow-lg mt-2 inline-flex items-center gap-2"
           >
-            <span>Get Started</span>
+            <span>{token ? 'Go to Dashboard' : 'Get Started'}</span>
             <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 ease-out group-hover:translate-x-1" />
           </Link>
         </div>

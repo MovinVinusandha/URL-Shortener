@@ -50,6 +50,7 @@ axiosInstance.interceptors.response.use(
         
         // Save the new token
         localStorage.setItem('token', newToken);
+        window.dispatchEvent(new Event('auth-token-changed'));
 
         // Update the failed request's header and retry it
         originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
@@ -58,6 +59,7 @@ axiosInstance.interceptors.response.use(
       } catch (refreshError) {
         // If the refresh token is expired or invalid, clear token
         localStorage.removeItem('token');
+        window.dispatchEvent(new Event('auth-token-changed'));
         
         // Prevent redirect loop if anonymous user is on landing page or public routes
         const currentPath = window.location.pathname;

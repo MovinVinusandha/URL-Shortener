@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, MailCheck, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, MailCheck, ArrowLeft, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axiosInstance, { extractBackendError } from '../api/axiosInstance';
 import { useAuth } from '../context/AuthContext';
@@ -48,6 +48,47 @@ const RegisterPage: React.FC = () => {
     };
   }, []);
 
+  const [usernameStatus, setUsernameStatus] = useState<{
+    state: 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
+    message?: string;
+  }>({ state: 'idle' });
+
+  // Debounced username format and availability check
+  useEffect(() => {
+    const uname = (form.username || '').trim();
+    if (!uname) {
+      setUsernameStatus({ state: 'idle' });
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(uname)) {
+      setUsernameStatus({
+        state: 'invalid',
+        message: 'Must be 3-30 letters, numbers, or underscores',
+      });
+      return;
+    }
+
+    setUsernameStatus({ state: 'checking', message: 'Checking availability...' });
+
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await axiosInstance.get<{ available: boolean; message: string }>(
+          `/auth/check-username?username=${encodeURIComponent(uname)}`
+        );
+        if (data.available) {
+          setUsernameStatus({ state: 'available', message: 'Username is available' });
+        } else {
+          setUsernameStatus({ state: 'taken', message: data.message || 'Username is already taken' });
+        }
+      } catch {
+        setUsernameStatus({ state: 'idle' });
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [form.username]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -61,9 +102,15 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
-    if (form.username && !/^[a-zA-Z0-9_]{3,30}$/.test(form.username.trim())) {
-      setError('Username must be 3 to 30 letters, numbers, or underscores');
-      return;
+    if (form.username) {
+      if (!/^[a-zA-Z0-9_]{3,30}$/.test(form.username.trim())) {
+        setError('Username must be 3 to 30 letters, numbers, or underscores');
+        return;
+      }
+      if (usernameStatus.state === 'taken') {
+        setError('This username is already taken. Please choose another.');
+        return;
+      }
     }
 
     if (form.password.length < 8) {
@@ -208,7 +255,7 @@ const RegisterPage: React.FC = () => {
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <label className="block text-xs font-medium text-foreground text-left">Username</label>
-                        <span className="text-[10px] text-muted-foreground">Unique handle (optional)</span>
+                        <span className="text-[10px] text-muted-foreground font-normal">(optional)</span>
                       </div>
                       <input 
                         type="text"
@@ -217,8 +264,34 @@ const RegisterPage: React.FC = () => {
                         value={form.username || ''}
                         onChange={handleChange}
                         placeholder="janedoe" 
-                        className="w-full px-3.5 py-2 border rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-foreground bg-background border-input placeholder:text-muted-foreground disabled:opacity-50 disabled:bg-secondary transition-all duration-200 text-sm"
+                        className={`w-full px-3.5 py-2 border rounded-lg focus:outline-none focus:ring-1 text-foreground bg-background placeholder:text-muted-foreground disabled:opacity-50 disabled:bg-secondary transition-all duration-200 text-sm ${
+                          usernameStatus.state === 'available'
+                            ? 'border-emerald-500/50 focus:border-emerald-500 focus:ring-emerald-500/20'
+                            : usernameStatus.state === 'taken' || usernameStatus.state === 'invalid'
+                            ? 'border-rose-500/50 focus:border-rose-500 focus:ring-rose-500/20'
+                            : 'border-input focus:border-primary focus:ring-primary/20'
+                        }`}
                       />
+                      {usernameStatus.state !== 'idle' && (
+                        <div className={`flex items-center gap-1.5 text-xs mt-1 transition-all ${
+                          usernameStatus.state === 'available'
+                            ? 'text-emerald-500 dark:text-emerald-400'
+                            : usernameStatus.state === 'checking'
+                            ? 'text-muted-foreground'
+                            : 'text-rose-500 dark:text-rose-400'
+                        }`}>
+                          {usernameStatus.state === 'checking' && (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+                          )}
+                          {usernameStatus.state === 'available' && (
+                            <Check className="w-3.5 h-3.5 flex-shrink-0" />
+                          )}
+                          {(usernameStatus.state === 'taken' || usernameStatus.state === 'invalid') && (
+                            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                          )}
+                          <span>{usernameStatus.message}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Work email */}

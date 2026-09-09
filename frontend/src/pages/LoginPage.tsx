@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import axiosInstance, { extractBackendError } from '../api/axiosInstance';
 import { useAuth } from '../context/AuthContext';
@@ -53,9 +53,13 @@ const LoginPage: React.FC = () => {
     }
   }, [location.search]);
 
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setUnverifiedEmail(null);
     setLoading(true);
     try {
       const trimmed = identifier.trim();
@@ -66,11 +70,30 @@ const LoginPage: React.FC = () => {
       const { data } = await axiosInstance.post<JwtResponse>('/auth/login', payload);
       await login(data.token);
       navigate(from, { replace: true });
-    } catch (err: unknown) {
-      const backendMessage = extractBackendError(err, 'Invalid email/username or password. Please try again.');
-      setError(backendMessage);
+    } catch (err: any) {
+      if (err.response?.data?.error === 'EMAIL_NOT_VERIFIED') {
+        setUnverifiedEmail(err.response.data.email || identifier.trim());
+        setError(err.response.data.message || 'Please verify your email before logging in.');
+      } else {
+        const backendMessage = extractBackendError(err, 'Invalid email/username or password. Please try again.');
+        setError(backendMessage);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!unverifiedEmail) return;
+    setIsResending(true);
+    try {
+      await axiosInstance.post('/auth/resend-verification', { email: unverifiedEmail });
+      toast.success('Verification link resent! Check your inbox.');
+    } catch (err: unknown) {
+      const msg = extractBackendError(err, 'Failed to resend verification email.');
+      toast.error(msg);
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -183,11 +206,32 @@ const LoginPage: React.FC = () => {
                 </div>
               </div>
 
-              {error && (
+              {unverifiedEmail ? (
+                <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-left space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-amber-700 dark:text-amber-400">
+                      <p className="font-semibold">Email verification required</p>
+                      <p className="mt-0.5 text-muted-foreground">{error}</p>
+                    </div>
+                  </div>
+                  <div className="pt-1 flex items-center justify-between border-t border-amber-500/15">
+                    <span className="text-[11px] text-muted-foreground font-mono truncate max-w-[180px]">{unverifiedEmail}</span>
+                    <button
+                      type="button"
+                      disabled={isResending}
+                      onClick={handleResendVerification}
+                      className="text-xs text-primary font-medium hover:underline disabled:opacity-50"
+                    >
+                      {isResending ? 'Sending...' : 'Resend link'}
+                    </button>
+                  </div>
+                </div>
+              ) : error ? (
                 <div className="text-rose-500 text-xs text-center font-medium pt-1">
                   {error}
                 </div>
-              )}
+              ) : null}
 
               <button 
                 type="submit"

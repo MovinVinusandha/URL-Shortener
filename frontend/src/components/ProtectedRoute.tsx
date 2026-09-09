@@ -9,7 +9,7 @@ import BrandLogo from './BrandLogo';
  * Shows a modern Arcane/Framer loading screen while AuthContext validates the stored token.
  */
 const ProtectedRoute: React.FC = () => {
-  const { token, loading } = useAuth();
+  const { token, user, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -55,7 +55,15 @@ const ProtectedRoute: React.FC = () => {
     );
   }
 
-  return token ? <Outlet /> : <Navigate to="/login" state={{ from: location }} replace />;
+  if (!token) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (user && user.emailVerified === false) {
+    return <Navigate to="/verify-email-pending" state={{ email: user.email }} replace />;
+  }
+
+  return <Outlet />;
 };
 
 export default ProtectedRoute;
