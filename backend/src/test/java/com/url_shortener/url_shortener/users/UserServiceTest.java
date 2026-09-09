@@ -245,6 +245,7 @@ class UserServiceTest {
 
         assertThat(user.getPassword()).isEqualTo("newencoded");
         verify(userRepository).save(user);
+        verify(emailService).sendPasswordChangedAlert(user);
     }
 
     @Test
@@ -256,6 +257,27 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.changePassword(request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Incorrect current password");
+    }
+
+    @Test
+    void requestInitialPasswordSetup_Success() {
+        User oauthUser = User.builder().id(USER_ID).username("oauth_user").email("oauth@test.com").password(null).build();
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(oauthUser));
+
+        userService.requestInitialPasswordSetup();
+
+        verify(passwordResetTokenRepository).deleteByUser(oauthUser);
+        verify(passwordResetTokenRepository).save(any(PasswordResetToken.class));
+        verify(emailService).sendSetInitialPasswordEmail(eq(oauthUser), anyString());
+    }
+
+    @Test
+    void requestInitialPasswordSetup_AlreadyHasPassword_ThrowsException() {
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userService.requestInitialPasswordSetup())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("already has a password set");
     }
 
     @Test

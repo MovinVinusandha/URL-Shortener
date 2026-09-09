@@ -33,6 +33,12 @@ public class AccountController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/password/request-setup")
+    public ResponseEntity<Void> requestInitialPasswordSetup() {
+        userService.requestInitialPasswordSetup();
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/oauth-accounts")
     public ResponseEntity<List<OAuthAccountDto>> getOAuthAccounts() {
         return ResponseEntity.ok(userService.getConnectedOAuthAccounts());

@@ -100,4 +100,27 @@ describe('SecurityPage', () => {
 
     expect(screen.getByText('New passwords do not match.')).toBeInTheDocument();
   });
+
+  it('renders OAuth password setup request card when user has no password', async () => {
+    const { useAuth } = await import('../context/AuthContext');
+    (useAuth as any).mockReturnValue({
+      user: { id: 2, email: 'oauthuser@example.com', hasPassword: false },
+      updateUser: vi.fn(),
+    });
+
+    (axiosInstance.post as any).mockResolvedValue({ data: {} });
+
+    render(<MemoryRouter><SecurityPage /></MemoryRouter>);
+
+    expect(screen.getByText('Set Account Password')).toBeInTheDocument();
+    expect(screen.getByText(/Social Login \(No password set\)/i)).toBeInTheDocument();
+    expect(screen.getByText('Send Password Setup Link')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Send Password Setup Link'));
+
+    await waitFor(() => {
+      expect(axiosInstance.post).toHaveBeenCalledWith('/users/me/password/request-setup');
+      expect(screen.getByText(/A secure link to set your password has been sent to oauthuser@example.com/i)).toBeInTheDocument();
+    });
+  });
 });

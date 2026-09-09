@@ -82,6 +82,61 @@ public class EmailService {
         sendEmail(user.getEmail(), subject, htmlContent, "Password Reset Link", resetUrl);
     }
 
+    @Async
+    public void sendSetInitialPasswordEmail(User user, String rawToken) {
+        String setPasswordUrl = dashboardUrl + "/reset-password?token=" + rawToken;
+        String subject = "Set a password for your Trim account";
+        String htmlContent = """
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <h2 style="color: #0f172a; margin-bottom: 16px;">Set Your Password</h2>
+                    <p style="color: #475569; font-size: 15px; line-height: 1.6;">
+                        Hello %s, we received a request to set a password for your Trim account. Setting a password allows you to log in with your email or username directly. Click the button below to create your password:
+                    </p>
+                    <div style="margin: 28px 0;">
+                        <a href="%s" style="background-color: #0284c7; color: #ffffff; padding: 12px 24px; font-weight: 600; text-decoration: none; border-radius: 6px; display: inline-block;">
+                            Set Password
+                        </a>
+                    </div>
+                    <p style="color: #64748b; font-size: 13px;">
+                        Or copy and paste this link in your browser:<br/>
+                        <a href="%s" style="color: #0284c7;">%s</a>
+                    </p>
+                    <p style="color: #94a3b8; font-size: 12px; margin-top: 32px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+                        This link will expire in 30 minutes. If you did not request this, please ignore this email.
+                    </p>
+                </div>
+                """.formatted(user.getUsername(), setPasswordUrl, setPasswordUrl, setPasswordUrl);
+
+        sendEmail(user.getEmail(), subject, htmlContent, "Set Password Link", setPasswordUrl);
+    }
+
+    @Async
+    public void sendPasswordChangedAlert(User user) {
+        String subject = "Security Alert: Your Trim password was changed";
+        String resetUrl = dashboardUrl + "/forgot-password";
+        String htmlContent = """
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <h2 style="color: #0f172a; margin-bottom: 16px;">Password Changed</h2>
+                    <p style="color: #475569; font-size: 15px; line-height: 1.6;">
+                        Hello %s, this is a security notice that the password for your Trim account (%s) was recently changed.
+                    </p>
+                    <p style="color: #475569; font-size: 15px; line-height: 1.6;">
+                        If you made this change, you can safely disregard this email.
+                    </p>
+                    <p style="color: #e11d48; font-size: 14px; font-weight: 600; margin-top: 20px;">
+                        If you did NOT make this change, your account may have been compromised.
+                    </p>
+                    <div style="margin: 20px 0;">
+                        <a href="%s" style="background-color: #e11d48; color: #ffffff; padding: 10px 20px; font-weight: 600; text-decoration: none; border-radius: 6px; display: inline-block;">
+                            Reset Your Password Immediately
+                        </a>
+                    </div>
+                </div>
+                """.formatted(user.getUsername(), user.getEmail(), resetUrl);
+
+        sendEmail(user.getEmail(), subject, htmlContent, "Security Notice", resetUrl);
+    }
+
     private void sendEmail(String to, String subject, String htmlContent, String linkLabel, String linkUrl) {
         log.info("\n================================================================================\n" +
                  "📧 [EMAIL NOTIFICATION]\n" +

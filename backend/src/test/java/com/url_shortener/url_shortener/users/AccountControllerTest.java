@@ -77,6 +77,14 @@ class AccountControllerTest {
     }
 
     @Test
+    void requestInitialPasswordSetup_Success() throws Exception {
+        mockMvc.perform(post("/users/me/password/request-setup"))
+                .andExpect(status().isNoContent());
+
+        verify(userService).requestInitialPasswordSetup();
+    }
+
+    @Test
     void getOAuthAccounts_Success() throws Exception {
         OAuthAccountDto dto = OAuthAccountDto.builder()
                 .provider("GOOGLE")

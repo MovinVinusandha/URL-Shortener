@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.url_shortener.url_shortener.auth.PasswordResetToken;
 import com.url_shortener.url_shortener.auth.PasswordResetTokenRepository;
 import com.url_shortener.url_shortener.common.EmailDomainValidator;
 import com.url_shortener.url_shortener.urls.CustomChannelRepository;
@@ -210,6 +211,33 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+
+        // Send security alert notice
+        emailService.sendPasswordChangedAlert(user);
+    }
+
+    @Transactional
+    public void requestInitialPasswordSetup() {
+        var userId = getUserId();
+        var user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+
+        if (user.hasPassword()) {
+            throw new IllegalArgumentException("Your account already has a password set. You can change your password using your current password.");
+        }
+
+        passwordResetTokenRepository.deleteByUser(user);
+
+        String rawToken = AuthTokenUtil.generateRandomToken();
+        String tokenHash = AuthTokenUtil.hashToken(rawToken);
+
+        PasswordResetToken token = PasswordResetToken.builder()
+                .user(user)
+                .tokenHash(tokenHash)
+                .expiresAt(LocalDateTime.now().plusMinutes(30))
+                .build();
+        passwordResetTokenRepository.save(token);
+
+        emailService.sendSetInitialPasswordEmail(user, rawToken);
     }
 
     public void setInitialPassword(PasswordSetRequestDto request) {
