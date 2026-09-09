@@ -56,7 +56,10 @@ The client-side routing is organized into public access pages and authenticated 
 | :--- | :--- | :--- |
 | `/` | `HomePage` | Public landing page featuring instant URL shortening, live previews, and feature showcases. |
 | `/login` | `LoginPage` | Authentication portal for account login and access token retrieval. |
-| `/register` | `RegisterPage` | Account registration interface for new users. |
+| `/register` | `RegisterPage` | Account registration interface for new users (with dynamic disable guard). |
+| `/forgot-password` | `ForgotPasswordPage` | Request password reset email (with console log fallback). |
+| `/reset-password` | `ResetPasswordPage` | Enter new password using secure reset token. |
+| `/verify-email` | `VerifyEmailPage` | Confirm email ownership via verification token. |
 | `/expired` | `ExpiredPage` | Landing notice presented when navigating to an expired short URL. |
 | `/secure/:hash` | `SecurePage` | Password authentication screen required to unlock password-protected destination links. |
 | `*` | `NotFoundPage` | 404 page for unmatched routes. |

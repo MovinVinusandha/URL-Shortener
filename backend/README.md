@@ -40,6 +40,9 @@ The following environment variables configure the backend across development and
 
 | Variable | Description | Default | Example |
 | :--- | :--- | :--- | :--- |
+| `APP_SELF_HOSTED` | Enable self-hosted single-admin mode (skips DNS MX validation) | `false` | `true` |
+| `ALLOW_REGISTRATION` | Permit public visitor registration on the instance | `true` | `false` |
+| `REQUIRE_EMAIL_VERIFICATION` | Enforce email verification token before allowing login | `true` | `false` |
 | `SPRING_DATASOURCE_URL` | JDBC connection URL for MySQL | `jdbc:mysql://localhost:3306/url_shortener` | `jdbc:mysql://localhost:3306/url_shortener` |
 | `SPRING_DATASOURCE_USERNAME` | MySQL database username | `root` | `root` |
 | `SPRING_DATASOURCE_PASSWORD` | MySQL database password | `root` | `secure_db_password` |
@@ -52,6 +55,9 @@ The following environment variables configure the backend across development and
 | `APP_DOMAIN_URL` | Allowed origins for Spring Security CORS headers | `http://localhost:5173,http://localhost` | `https://app.trim.com` |
 | `APP_DASHBOARD_URL` | Frontend URL for password unlock and expired link prompts | `http://app.localhost` | `https://app.trim.com` |
 | `FRONTEND_URL` | General frontend application root URL | `http://localhost` | `https://trim.com` |
+| `SPRING_MAIL_HOST` | SMTP server host (leave empty for console fallback) | - | `smtp.gmail.com` |
+| `OAUTH_GOOGLE_CLIENT_ID` | Google OAuth client ID (leave empty if unconfigured) | - | `google-client-id` |
+| `OAUTH_GITHUB_CLIENT_ID` | GitHub OAuth client ID (leave empty if unconfigured) | - | `github-client-id` |
 
 ## API Endpoints
 
@@ -67,6 +73,7 @@ The following environment variables configure the backend across development and
 
 | Method | Endpoint | Auth Required | Description |
 | :--- | :--- | :--- | :--- |
+| `GET` | `/auth/config` | No | Retrieve public instance authentication capabilities (registration status, OAuth providers, SMTP readiness). |
 | `POST` | `/auth/login` | No | Authenticate credentials and receive an Access Token and Refresh Token cookie. |
 | `POST` | `/auth/refresh` | Cookie | Issue a new Access Token using the valid `refreshToken` cookie. |
 | `GET` | `/auth/me` | Yes | Retrieve the profile details of the currently authenticated user. |

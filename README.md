@@ -127,6 +127,22 @@ Before running the application, copy `.env.example` to `.env` and configure your
 cp .env.example .env
 ```
 
+### Deployment Profiles (Dual-Mode Operation)
+
+Trim is engineered to support two operational profiles out-of-the-box:
+
+1. **Option A: Self-Hosted Mode**
+   - Ideal for single-user homelabs, internal tools, or private servers.
+   - Initial root admin (`ROOT_USER_EMAIL` / `ROOT_USER_PASSWORD`) is auto-verified on startup.
+   - Public registrations can be locked (`ALLOW_REGISTRATION=false`).
+   - Private domains (`.local`, `.lan`, `localhost`) are accepted without DNS MX lookups.
+   - Zero required external services: works without SMTP or OAuth. Unconfigured social buttons appear muted/grayed out, and reset tokens log directly to console logs.
+
+2. **Option B: Multi-Tenant SaaS Mode**
+   - Production multi-user setup with public self-service registration (`ALLOW_REGISTRATION=true`).
+   - Mandatory email verification links before login (`REQUIRE_EMAIL_VERIFICATION=true`).
+   - Full Google and GitHub OAuth 2.0 social authentication and transactional SMTP emails.
+
 <details>
 <summary><strong>Click to expand Environment Variables Reference Table</strong></summary>
 
@@ -134,6 +150,9 @@ cp .env.example .env
 
 | Variable | Description | Default | Example |
 | :--- | :--- | :--- | :--- |
+| `APP_SELF_HOSTED` | Enable self-hosted single-admin mode | `false` | `true` |
+| `ALLOW_REGISTRATION` | Permit public visitor registration on the instance | `true` | `false` |
+| `REQUIRE_EMAIL_VERIFICATION` | Enforce email verification token before allowing login | `true` | `false` |
 | `API_DOMAIN_NAME` | Subdomain host for API endpoints (no protocol or port) | `api.localhost` | `api.trim.com` |
 | `APP_DOMAIN_NAME` | Subdomain host for React SPA dashboard (no protocol or port) | `app.localhost` | `app.trim.com` |
 | `ROOT_DOMAIN_NAME` | Root domain host for landing page and short links | `localhost` | `trim.com` |
@@ -153,6 +172,9 @@ cp .env.example .env
 | `JWT_SECRET` | 256-bit secret key used to sign and verify HMAC-SHA JWT tokens | - | `your_256_bit_secure_random_key` |
 | `ROOT_USER_EMAIL` | Email address for initial administrative root user | `admin@example.com` | `admin@trim.com` |
 | `ROOT_USER_PASSWORD` | Initial password for the administrative root user | `root` | `secure_admin_password` |
+| `SPRING_MAIL_HOST` | Outgoing SMTP mail server host | - | `smtp.gmail.com` |
+| `OAUTH_GOOGLE_CLIENT_ID` | Google OAuth client ID | - | `google-client-id` |
+| `OAUTH_GITHUB_CLIENT_ID` | GitHub OAuth client ID | - | `github-client-id` |
 
 </details>
 
