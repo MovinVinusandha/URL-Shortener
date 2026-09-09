@@ -49,6 +49,9 @@ analytics:
     queue-capacity: 500
 
 app:
+  self-hosted: ${APP_SELF_HOSTED:false}
+  allow-registration: ${ALLOW_REGISTRATION:true}
+  require-email-verification: ${REQUIRE_EMAIL_VERIFICATION:true}
   domain:
     root: ${ROOT_DOMAIN_URL:http://localhost:8080}
   frontend:

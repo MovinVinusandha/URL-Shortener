@@ -45,6 +45,24 @@ public class AuthController {
     @Value("${app.dashboard.url:http://localhost:5173}")
     private String dashboardUrl;
 
+    @Value("${app.self-hosted:false}")
+    private boolean isSelfHosted;
+
+    @Value("${app.allow-registration:true}")
+    private boolean allowRegistration;
+
+    @Value("${app.require-email-verification:true}")
+    private boolean requireEmailVerification;
+
+    @Value("${oauth.google.client-id:${GOOGLE_CLIENT_ID:}}")
+    private String googleClientId;
+
+    @Value("${oauth.github.client-id:${GITHUB_CLIENT_ID:}}")
+    private String githubClientId;
+
+    @Value("${spring.mail.host:}")
+    private String mailHost;
+
     public AuthController(AuthenticationManager authenticationManager,
                           JwtService jwtService,
                           JwtConfig jwtConfig,
@@ -71,6 +89,22 @@ public class AuthController {
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.emailVerificationTokenRepository = emailVerificationTokenRepository;
         this.tokenRevocationService = tokenRevocationService;
+    }
+
+    @GetMapping("/config")
+    public ResponseEntity<PublicAuthConfigDto> getAuthConfig() {
+        boolean googleEnabled = googleClientId != null && !googleClientId.isBlank();
+        boolean githubEnabled = githubClientId != null && !githubClientId.isBlank();
+        boolean smtpEnabled = mailHost != null && !mailHost.isBlank();
+
+        return ResponseEntity.ok(PublicAuthConfigDto.builder()
+                .isSelfHosted(isSelfHosted)
+                .allowRegistration(allowRegistration)
+                .requireEmailVerification(requireEmailVerification && smtpEnabled)
+                .googleOAuthEnabled(googleEnabled)
+                .githubOAuthEnabled(githubEnabled)
+                .smtpConfigured(smtpEnabled)
+                .build());
     }
 
     @GetMapping("/check-username")

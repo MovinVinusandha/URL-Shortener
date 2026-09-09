@@ -39,6 +39,15 @@ export interface OAuthProvidersAvailability {
   github: boolean;
 }
 
+export interface PublicAuthConfig {
+  isSelfHosted: boolean;
+  allowRegistration: boolean;
+  requireEmailVerification: boolean;
+  googleOAuthEnabled: boolean;
+  githubOAuthEnabled: boolean;
+  smtpConfigured: boolean;
+}
+
 // ─── Folders ──────────────────────────────────────────────────────────────────
 
 export interface Folder {

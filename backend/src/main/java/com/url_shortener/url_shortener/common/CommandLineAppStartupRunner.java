@@ -30,6 +30,11 @@ public class CommandLineAppStartupRunner implements CommandLineRunner {
         User rootAdmin;
         if (rootUserAlreadyExists()) {
             rootAdmin = userRepository.findByEmail(rootUserEmail).orElse(null);
+            if (rootAdmin != null && !rootAdmin.isEmailVerified()) {
+                rootAdmin.setEmailVerified(true);
+                rootAdmin.setEmailVerifiedAt(java.time.LocalDateTime.now());
+                userRepository.save(rootAdmin);
+            }
         } else {
             rootAdmin = new User();
             rootAdmin.setUsername("root");
@@ -37,6 +42,8 @@ public class CommandLineAppStartupRunner implements CommandLineRunner {
             rootAdmin.setPublicId("root_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16));
             rootAdmin.setPassword(passwordEncoder.encode(rootUserPassword));
             rootAdmin.setRole(Role.ROOT);
+            rootAdmin.setEmailVerified(true);
+            rootAdmin.setEmailVerifiedAt(java.time.LocalDateTime.now());
             rootAdmin = userRepository.save(rootAdmin);
         }
 

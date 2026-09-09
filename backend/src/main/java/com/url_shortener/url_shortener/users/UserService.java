@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Set;
 
 @Service
-@AllArgsConstructor
 public class UserService {
     private final UserMapper userMapper;
     private final UserRepository userRepository;
@@ -45,6 +44,44 @@ public class UserService {
     private final EmailDomainValidator emailDomainValidator;
     private final com.url_shortener.url_shortener.auth.TokenRevocationService tokenRevocationService;
 
+    @org.springframework.beans.factory.annotation.Value("${app.require-email-verification:true}")
+    private boolean requireEmailVerification;
+
+    @org.springframework.beans.factory.annotation.Value("${spring.mail.host:}")
+    private String mailHost;
+
+    public UserService(UserMapper userMapper,
+                       UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       ClickEventRepository clickEventRepository,
+                       UrlRepository urlRepository,
+                       TagRepository tagRepository,
+                       FolderRepository folderRepository,
+                       EmailVerificationTokenRepository emailVerificationTokenRepository,
+                       PasswordResetTokenRepository passwordResetTokenRepository,
+                       UtmTemplateRepository utmTemplateRepository,
+                       CustomChannelRepository customChannelRepository,
+                       EmailService emailService,
+                       OAuthService oauthService,
+                       EmailDomainValidator emailDomainValidator,
+                       com.url_shortener.url_shortener.auth.TokenRevocationService tokenRevocationService) {
+        this.userMapper = userMapper;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.clickEventRepository = clickEventRepository;
+        this.urlRepository = urlRepository;
+        this.tagRepository = tagRepository;
+        this.folderRepository = folderRepository;
+        this.emailVerificationTokenRepository = emailVerificationTokenRepository;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.utmTemplateRepository = utmTemplateRepository;
+        this.customChannelRepository = customChannelRepository;
+        this.emailService = emailService;
+        this.oauthService = oauthService;
+        this.emailDomainValidator = emailDomainValidator;
+        this.tokenRevocationService = tokenRevocationService;
+    }
+
     @Transactional
     public UserDto registerUser(UserRegister userRegister) {
         String email = userRegister.getEmail().trim().toLowerCase();
@@ -58,13 +95,15 @@ public class UserService {
             throw new IllegalArgumentException("Username '" + username + "' is already taken");
         }
 
+        boolean shouldVerify = requireEmailVerification && mailHost != null && !mailHost.isBlank();
+
         var user = userMapper.toEntity(userRegister);
         user.setEmail(email);
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(userRegister.getPassword()));
         user.setRole(Role.USER);
-        user.setEmailVerified(false);
-        user.setEmailVerifiedAt(null);
+        user.setEmailVerified(!shouldVerify);
+        user.setEmailVerifiedAt(!shouldVerify ? LocalDateTime.now() : null);
         userRepository.save(user);
 
         // Auto-create default "Links" folder for the user
@@ -75,8 +114,10 @@ public class UserService {
                 .build();
         folderRepository.save(defaultFolder);
 
-        // Generate email verification token and send email
-        sendNewVerificationEmail(user);
+        // Generate email verification token and send email if verification is active
+        if (shouldVerify) {
+            sendNewVerificationEmail(user);
+        }
 
         return userMapper.toDto(user);
     }

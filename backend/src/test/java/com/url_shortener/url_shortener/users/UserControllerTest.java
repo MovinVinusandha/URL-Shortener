@@ -53,6 +53,16 @@ class UserControllerTest {
     }
 
     @Test
+    void registerUser_WhenRegistrationDisabled_ReturnsForbidden() {
+        org.springframework.test.util.ReflectionTestUtils.setField(userController, "allowRegistration", false);
+        UserRegister register = new UserRegister("Test", "test@user.com", "Password123!");
+
+        ResponseEntity<?> response = userController.registerUser(register, httpServletRequest);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
     void getAllUsers_Success() {
         UserDto dto = new UserDto("public-id", "Test", "test@user.com", "USER", LocalDateTime.now());
         when(userService.getAllUsers("email")).thenReturn(List.of(dto));

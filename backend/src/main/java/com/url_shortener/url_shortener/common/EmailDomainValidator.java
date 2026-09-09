@@ -1,5 +1,6 @@
 package com.url_shortener.url_shortener.common;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.naming.NamingEnumeration;
@@ -13,6 +14,9 @@ import java.util.Map;
 
 @Component
 public class EmailDomainValidator {
+
+    @Value("${app.self-hosted:false}")
+    private boolean isSelfHosted;
 
     private static final Map<String, String> COMMON_TYPOS = Map.ofEntries(
             Map.entry("gmail.co", "gmail.com"),
@@ -42,8 +46,8 @@ public class EmailDomainValidator {
             );
         }
 
-        // 2. DNS MX / Mail Server Verification
-        if (!hasValidMailServer(domain)) {
+        // 2. DNS MX / Mail Server Verification (skipped in self-hosted mode for intranet / local domains)
+        if (!isSelfHosted && !hasValidMailServer(domain)) {
             throw new IllegalArgumentException(
                     "The email domain '" + domain + "' cannot receive emails or does not exist."
             );
@@ -52,7 +56,7 @@ public class EmailDomainValidator {
 
     public boolean hasValidMailServer(String domain) {
         // Special case: localhost or test domains during test runs
-        if ("localhost".equalsIgnoreCase(domain) || "example.com".equalsIgnoreCase(domain) || "test.com".equalsIgnoreCase(domain)) {
+        if ("localhost".equalsIgnoreCase(domain) || domain.endsWith(".local") || domain.endsWith(".lan") || "example.com".equalsIgnoreCase(domain) || "test.com".equalsIgnoreCase(domain)) {
             return true;
         }
 

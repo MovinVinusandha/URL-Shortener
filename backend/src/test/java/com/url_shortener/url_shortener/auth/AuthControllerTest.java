@@ -86,6 +86,14 @@ class AuthControllerTest {
     }
 
     @Test
+    void getAuthConfig_Success() throws Exception {
+        mockMvc.perform(get("/auth/config"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.allowRegistration").isBoolean())
+                .andExpect(jsonPath("$.selfHosted").isBoolean());
+    }
+
+    @Test
     void login_Success() throws Exception {
         LoginRequest loginRequest = new LoginRequest("test@test.com", "password123");
 

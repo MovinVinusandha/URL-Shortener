@@ -12,14 +12,27 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/user")
-@AllArgsConstructor
 public class UserController {
     private final UserMapper userMapper;
     private final UserService userService;
     private final RateLimiterService rateLimiterService;
 
+    @org.springframework.beans.factory.annotation.Value("${app.allow-registration:true}")
+    private boolean allowRegistration;
+
+    public UserController(UserMapper userMapper, UserService userService, RateLimiterService rateLimiterService) {
+        this.userMapper = userMapper;
+        this.userService = userService;
+        this.rateLimiterService = rateLimiterService;
+    }
+
     @PostMapping
     public ResponseEntity<?> registerUser(@Valid @RequestBody UserRegister userRegister, HttpServletRequest request) {
+        if (!allowRegistration) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Account registration is disabled on this instance. Please contact your administrator."));
+        }
+
         String clientIp = extractClientIp(request);
         if (!rateLimiterService.checkRegistration(clientIp)) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)

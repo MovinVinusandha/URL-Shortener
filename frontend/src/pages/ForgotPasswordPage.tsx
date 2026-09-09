@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Mail, CheckCircle2, ArrowLeft, Terminal } from 'lucide-react';
 import { motion } from 'framer-motion';
 import axiosInstance, { extractBackendError } from '../api/axiosInstance';
 import BrandLogo from '../components/BrandLogo';
+import { useAuth } from '../context/AuthContext';
 
 const ForgotPasswordPage: React.FC = () => {
+  const { authConfig } = useAuth();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -62,10 +64,25 @@ const ForgotPasswordPage: React.FC = () => {
                 <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 mx-auto flex items-center justify-center">
                   <CheckCircle2 className="w-6 h-6 text-emerald-500" />
                 </div>
-                <h1 className="text-xl font-bold tracking-tight text-foreground">Check your inbox</h1>
+                <h1 className="text-xl font-bold tracking-tight text-foreground">
+                  {authConfig && !authConfig.smtpConfigured ? 'Reset Link Generated' : 'Check your inbox'}
+                </h1>
                 <p className="text-sm text-muted-foreground">
                   If an account exists for <span className="font-semibold text-foreground">{email}</span>, you will receive an email with instructions to reset your password.
                 </p>
+
+                {authConfig && !authConfig.smtpConfigured && (
+                  <div className="p-3 bg-muted/60 border border-border rounded-lg text-left text-xs space-y-1 text-muted-foreground">
+                    <div className="flex items-center gap-1.5 font-medium text-foreground">
+                      <Terminal className="w-4 h-4 text-primary" />
+                      <span>Email Delivery Not Configured</span>
+                    </div>
+                    <p>
+                      Since SMTP is not configured on this instance, your reset link was printed directly to the server/docker logs.
+                    </p>
+                  </div>
+                )}
+
                 <div className="pt-4 space-y-2">
                   <Link
                     to="/login"

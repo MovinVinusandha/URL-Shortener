@@ -6,12 +6,13 @@ import React, {
   useCallback,
 } from 'react';
 import axiosInstance from '../api/axiosInstance';
-import type { User } from '../types';
+import type { User, PublicAuthConfig } from '../types';
 
 interface AuthContextValue {
   user: User | null;
   token: string | null;
   loading: boolean;
+  authConfig: PublicAuthConfig | null;
   login: (token: string) => Promise<void>;
   logout: () => void;
   updateUser: (updatedUser: Partial<User>) => void;
@@ -23,10 +24,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [authConfig, setAuthConfig] = useState<PublicAuthConfig | null>(null);
   const [token, setToken] = useState<string | null>(
     localStorage.getItem('token')
   );
   const [loading, setLoading] = useState<boolean>(true);
+
+  /** Fetch global auth capabilities and configuration */
+  const fetchAuthConfig = useCallback(async () => {
+    try {
+      const { data } = await axiosInstance.get<PublicAuthConfig>('/auth/config');
+      setAuthConfig(data);
+    } catch {
+      // Fallback defaults if endpoint unreachable
+      setAuthConfig({
+        isSelfHosted: false,
+        allowRegistration: true,
+        requireEmailVerification: true,
+        googleOAuthEnabled: true,
+        githubOAuthEnabled: true,
+        smtpConfigured: true,
+      });
+    }
+  }, []);
 
   /** Fetch the current user profile from the backend */
   const fetchMe = useCallback(async () => {
@@ -41,8 +61,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  /** On mount: if there's a stored token, validate it; otherwise attempt silent refresh via HttpOnly cookie */
+  /** On mount: fetch auth config and check stored token or silent refresh */
   useEffect(() => {
+    fetchAuthConfig();
+
     const stored = localStorage.getItem('token');
     if (stored) {
       setToken(stored);
@@ -99,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('auth-token-changed', handleTokenChange);
     };
-  }, [fetchMe]);
+  }, [fetchMe, fetchAuthConfig]);
 
   /** Called after a successful POST /auth/login */
   const login = useCallback(
@@ -133,7 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, token, loading, authConfig, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

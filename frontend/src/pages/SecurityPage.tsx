@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 
 const SecurityPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, authConfig } = useAuth();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -74,11 +74,19 @@ const SecurityPage: React.FC = () => {
       await axiosInstance.post('/users/me/password/request-setup');
       setEmailSent(true);
       setCooldown(60);
-      toast.success('Password setup link sent to your email!');
-      setMessage({
-        type: 'success',
-        text: `A secure link to set your password has been sent to ${user?.email || 'your email'}. Check your inbox!`,
-      });
+      if (authConfig && !authConfig.smtpConfigured) {
+        toast('Password setup link generated! Check server logs.', { icon: 'ℹ️' });
+        setMessage({
+          type: 'success',
+          text: `Email delivery is not configured on this instance. The setup link for ${user?.email || 'your account'} has been printed directly to the server/docker logs.`,
+        });
+      } else {
+        toast.success('Password setup link sent to your email!');
+        setMessage({
+          type: 'success',
+          text: `A secure link to set your password has been sent to ${user?.email || 'your email'}. Check your inbox!`,
+        });
+      }
     } catch (error: any) {
       const msg = extractBackendError(error, 'Failed to send password setup email.');
       setMessage({ type: 'error', text: msg });
