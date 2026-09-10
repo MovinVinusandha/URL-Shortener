@@ -25,13 +25,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         var authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        String token = null;
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+        } else if (request.getParameter("access_token") != null && !request.getParameter("access_token").isBlank()) {
+            token = request.getParameter("access_token");
+        }
+
+        if (token == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            var token = authHeader.replace("Bearer ", "");
             var jwt = jwtService.parseToken(token);
             if (jwt == null || jwt.isExpired()) {
                 filterChain.doFilter(request, response);

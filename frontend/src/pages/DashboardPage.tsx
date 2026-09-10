@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useOutletContext, Link, useSearchParams, useParams, useNavigate } from 'react-router-dom';
-import { X, BarChart2, Search, Copy, QrCode, Edit2, Trash2, CornerDownRight, MoreVertical, Filter, SlidersHorizontal, ChevronDown, ArrowUpDown, Check, ArrowDownWideNarrow, Tag, ChevronLeft, CheckCircle2, XCircle, Lock, Folder as FolderIcon, Link as LinkIcon, Layers, FolderPlus } from 'lucide-react';
+import { X, BarChart2, Activity, Search, Copy, QrCode, Edit2, Trash2, CornerDownRight, MoreVertical, Filter, SlidersHorizontal, ChevronDown, ArrowUpDown, Check, ArrowDownWideNarrow, Tag, ChevronLeft, CheckCircle2, XCircle, Lock, Folder as FolderIcon, Link as LinkIcon, Layers, FolderPlus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -1869,6 +1869,16 @@ const DashboardPage: React.FC = () => {
                                   <div className="flex items-center gap-2">
                                     <BarChart2 className="w-3.5 h-3.5 text-muted-foreground" />
                                     <span>Analytics</span>
+                                  </div>
+                                </Link>
+                                <Link
+                                  to={`/events?hash=${extractHash(url.shortUrl)}`}
+                                  onClick={() => setOpenMenuId(null)}
+                                  className="w-full flex items-center px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary rounded-lg transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <Activity className="w-3.5 h-3.5 text-primary" />
+                                    <span>Events</span>
                                   </div>
                                 </Link>
                                 <button

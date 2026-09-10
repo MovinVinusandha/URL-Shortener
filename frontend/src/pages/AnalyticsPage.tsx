@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
@@ -1055,6 +1055,16 @@ const AnalyticsPage: React.FC = () => {
             )}
             
             <DateRangePicker value={dateRange} onChange={setDateRange} />
+
+            {/* Live Events Stream Quick Jump */}
+            <Link
+              to={hashParam ? `/events?hash=${hashParam}` : '/events'}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-secondary/40 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              title="View live real-time event stream"
+            >
+              <Activity className="w-3.5 h-3.5 text-primary" />
+              <span className="hidden sm:inline">Events Stream</span>
+            </Link>
 
             {/* Overview vs Compare Mode Switcher */}
             <div className="relative flex items-center bg-secondary/50 dark:bg-[#121215] p-0.5 rounded-lg border border-border gap-0.5 ml-auto">

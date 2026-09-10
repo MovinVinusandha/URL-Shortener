@@ -10,6 +10,12 @@ vi.mock('../api/axiosInstance', () => ({
   extractBackendError: vi.fn((err, fallback) => err?.response?.data?.message || fallback),
 }));
 
+vi.mock('../context/AuthContext', () => ({
+  useAuth: vi.fn(() => ({
+    authConfig: { smtpConfigured: true },
+  })),
+}));
+
 describe('ForgotPasswordPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();

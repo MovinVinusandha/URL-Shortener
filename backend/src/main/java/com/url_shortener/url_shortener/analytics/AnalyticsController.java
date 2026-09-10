@@ -24,6 +24,7 @@ public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
     private final UserRepository userRepository;
+    private final EventStreamService eventStreamService;
 
     @GetMapping("/analytics/{hash}")
     @Operation(summary = "Get detailed analytics for a short URL")
@@ -117,5 +118,43 @@ public class AnalyticsController {
         User currentUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return ResponseEntity.ok(analyticsService.getUserUsageStats(currentUser));
+    }
+
+    @GetMapping("/analytics/events")
+    @Operation(summary = "Get paginated raw click events stream for the current user")
+    public ResponseEntity<org.springframework.data.domain.Page<com.url_shortener.url_shortener.analytics.dto.ClickEventDto>> getEvents(
+            Authentication authentication,
+            @RequestParam(name = "period", defaultValue = "all") String period,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String hash,
+            @RequestParam(required = false) String country,
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false) String device,
+            @RequestParam(required = false) String browser,
+            @RequestParam(required = false) String os,
+            @RequestParam(required = false) String search,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "30") int size
+    ) {
+        Long userId = (Long) authentication.getPrincipal();
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+                Math.max(0, page),
+                Math.min(100, Math.max(1, size))
+        );
+
+        return ResponseEntity.ok(analyticsService.getPaginatedEvents(
+                currentUser, period, startDate, endDate, hash, country, city, device, browser, os, search, pageable
+        ));
+    }
+
+    @GetMapping(value = "/analytics/events/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "Subscribe to live real-time click events stream via Server-Sent Events (SSE)")
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter streamEvents(Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        return eventStreamService.subscribe(userId);
     }
 }

@@ -20,6 +20,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import SecurePage from './pages/SecurePage';
 import SettingsPage from './pages/SettingsPage';
 import SecurityPage from './pages/SecurityPage';
+import EventsPage from './pages/EventsPage';
 import DashboardLayout from './layouts/DashboardLayout';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
@@ -50,6 +51,7 @@ function AnimatedRoutes() {
                 <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/analytics/:hash" element={<AnalyticsPage />} />
                 <Route path="/analytics/f/:folderSlug" element={<AnalyticsPage />} />
+                <Route path="/events" element={<EventsPage />} />
                 <Route path="/folders" element={<FoldersPage />} />
                 <Route path="/tags" element={<TagsPage />} />
                 <Route path="/utm-templates" element={<UtmTemplatesPage />} />

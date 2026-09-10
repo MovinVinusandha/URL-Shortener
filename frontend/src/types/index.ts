@@ -119,3 +119,44 @@ export interface UrlEntry {
   folderId?: number | null;
   folderName?: string | null;
 }
+
+// ─── Click Events (Stream & Realtime) ─────────────────────────────────────────
+
+export interface ClickEventDto {
+  id: number;
+  urlId: number;
+  shortUrlHash: string;
+  originalUrl: string;
+  timestamp: string;
+
+  device?: string;
+  browser?: string;
+  os?: string;
+
+  country?: string;
+  city?: string;
+  region?: string;
+  continent?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmTerm?: string;
+  utmContent?: string;
+
+  referer?: string;
+  ipAddress?: string;
+}
+
+export interface PaginatedEvents {
+  content: ClickEventDto[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}

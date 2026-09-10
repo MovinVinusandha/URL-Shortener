@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, Link, useNavigate, useParams } from 'react-router-dom';
-import { Link as LinkIcon, BarChart2, Folder as FolderIcon, Tag as TagIcon, ChevronDown, FolderPlus, HelpCircle, User, Settings, Gift, LogOut, ArrowLeft, Shield, Download, Sun, Moon, Monitor, SlidersHorizontal, Layers } from 'lucide-react';
+import { Link as LinkIcon, BarChart2, Activity, Folder as FolderIcon, Tag as TagIcon, ChevronDown, FolderPlus, HelpCircle, User, Settings, Gift, LogOut, ArrowLeft, Shield, Download, Sun, Moon, Monitor, SlidersHorizontal, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -524,6 +524,10 @@ const DashboardLayout: React.FC = () => {
               <h1 className="text-base font-semibold text-foreground tracking-tight px-1">
                 Analytics
               </h1>
+            ) : location.pathname.startsWith('/events') ? (
+              <h1 className="text-base font-semibold text-foreground tracking-tight px-1">
+                Events
+              </h1>
             ) : location.pathname.startsWith('/folders') ? (
               <h1 className="text-base font-semibold text-foreground tracking-tight px-1">
                 Folders
@@ -580,6 +584,13 @@ const DashboardLayout: React.FC = () => {
                 >
                   <BarChart2 className="w-3.5 h-3.5" />
                   Analytics
+                </Link>
+                <Link 
+                  to="/events" 
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-xs transition-colors ${location.pathname.startsWith('/events') ? 'bg-secondary text-foreground font-semibold' : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'}`}
+                >
+                  <Activity className="w-3.5 h-3.5" />
+                  Events
                 </Link>
                 <Link 
                   to="/folders" 

@@ -694,6 +694,40 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
             """)
     Long countTotalFolderClicks(@Param("folderId") Long folderId, @Param("userId") Long userId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate, @Param("utmSource") String utmSource, @Param("utmMedium") String utmMedium, @Param("utmCampaign") String utmCampaign, @Param("utmTerm") String utmTerm, @Param("utmContent") String utmContent, @Param("referer") String referer);
 
+    @Query("""
+            SELECT c FROM ClickEvent c
+            WHERE c.url.user.id = :userId
+              AND (:hash IS NULL OR c.url.shortUrl = :hash)
+              AND (:country IS NULL OR LOWER(c.country) = LOWER(:country))
+              AND (:city IS NULL OR LOWER(c.city) = LOWER(:city))
+              AND (:device IS NULL OR LOWER(c.device) = LOWER(:device))
+              AND (:browser IS NULL OR LOWER(c.browser) = LOWER(:browser))
+              AND (:os IS NULL OR LOWER(c.os) = LOWER(:os))
+              AND (:search IS NULL OR (
+                    LOWER(c.url.shortUrl) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                    LOWER(c.url.longUrl) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                    LOWER(c.city) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                    LOWER(c.country) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                    LOWER(c.referer) LIKE LOWER(CONCAT('%', :search, '%'))
+              ))
+              AND (:startDate IS NULL OR c.timestamp >= :startDate)
+              AND (:endDate IS NULL OR c.timestamp <= :endDate)
+            ORDER BY c.timestamp DESC
+            """)
+    Page<ClickEvent> findEventsForUser(
+            @Param("userId") Long userId,
+            @Param("hash") String hash,
+            @Param("country") String country,
+            @Param("city") String city,
+            @Param("device") String device,
+            @Param("browser") String browser,
+            @Param("os") String os,
+            @Param("search") String search,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            Pageable pageable
+    );
+
     @org.springframework.data.jpa.repository.Modifying
     @Query("DELETE FROM ClickEvent c WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.user.id = :userId)")
     void deleteByUserId(@Param("userId") Long userId);

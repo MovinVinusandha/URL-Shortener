@@ -47,6 +47,8 @@ class AnalyticsServiceTest {
     private UserAgentParserService userAgentParserService;
     @Mock
     private GeoLocationService geoLocationService;
+    @Mock
+    private EventStreamService eventStreamService;
 
     @InjectMocks
     private AnalyticsService analyticsService;
@@ -396,5 +398,39 @@ class AnalyticsServiceTest {
         assertThat((String) ReflectionTestUtils.invokeMethod(analyticsService, "hashIp", "   ")).isEqualTo("0000000000000000");
         String hash = ReflectionTestUtils.invokeMethod(analyticsService, "hashIp", "192.168.1.1");
         assertThat(hash).hasSize(16);
+    }
+
+    @Test
+    void getPaginatedEvents_ReturnsEventsPage() {
+        Url testUrl = Url.builder().id(10L).shortUrl("test-hash").longUrl("https://example.com").user(currentUser).build();
+        ClickEvent event = ClickEvent.builder()
+                .id(1L)
+                .url(testUrl)
+                .timestamp(LocalDateTime.now())
+                .country("United States")
+                .city("San Francisco")
+                .device("Desktop")
+                .browser("Chrome")
+                .os("macOS")
+                .latitude(37.7749)
+                .longitude(-122.4194)
+                .build();
+
+        org.springframework.data.domain.Page<ClickEvent> mockPage =
+                new org.springframework.data.domain.PageImpl<>(List.of(event));
+
+        when(clickEventRepository.findEventsForUser(
+                eq(1L), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(), any(), any()
+        )).thenReturn(mockPage);
+
+        var result = analyticsService.getPaginatedEvents(
+                currentUser, "24h", null, null, null, null, null, null, null, null, null,
+                org.springframework.data.domain.PageRequest.of(0, 10)
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getShortUrlHash()).isEqualTo("test-hash");
+        assertThat(result.getContent().get(0).getLatitude()).isEqualTo(37.7749);
     }
 }

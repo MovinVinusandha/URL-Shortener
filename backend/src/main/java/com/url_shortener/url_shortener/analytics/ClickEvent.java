@@ -81,6 +81,14 @@ public class ClickEvent {
     @Column(name = "continent", length = 50)
     private String continent;
 
+    /** Latitude coordinate for geographic visualizers. */
+    @Column(name = "latitude")
+    private Double latitude;
+
+    /** Longitude coordinate for geographic visualizers. */
+    @Column(name = "longitude")
+    private Double longitude;
+
     // ── UTM Campaign Tracking ────────────────────────────────────────────────
 
     @Column(name = "utm_source", length = 150)

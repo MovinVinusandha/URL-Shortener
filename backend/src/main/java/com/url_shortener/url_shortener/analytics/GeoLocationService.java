@@ -25,20 +25,27 @@ public class GeoLocationService {
      * @param city      City name, or "Unknown" / "Local".
      * @param region    Region / state / province name, or "Unknown" / "Local".
      * @param continent Continent name, or "Unknown" / "Local".
+     * @param latitude  Latitude coordinate, or null if unresolvable.
+     * @param longitude Longitude coordinate, or null if unresolvable.
      */
-    public record GeoInfo(String country, String city, String region, String continent) {
+    public record GeoInfo(String country, String city, String region, String continent, Double latitude, Double longitude) {
+        /** Overloaded constructor without coordinates for backward compatibility. */
+        public GeoInfo(String country, String city, String region, String continent) {
+            this(country, city, region, continent, null, null);
+        }
+
         /** Returned when the IP is a private/loopback address. */
         static GeoInfo local() {
-            return new GeoInfo("Local", "Local", "Local", "Local");
+            return new GeoInfo("Local", "Local", "Local", "Local", null, null);
         }
         /** Returned on any API error or unresolvable IP. */
         static GeoInfo unknown() {
-            return new GeoInfo("Unknown", "Unknown", "Unknown", "Unknown");
+            return new GeoInfo("Unknown", "Unknown", "Unknown", "Unknown", null, null);
         }
     }
 
     private static final String GEO_API_URL =
-            "http://ip-api.com/json/{ip}?fields=status,country,city,regionName,continent";
+            "http://ip-api.com/json/{ip}?fields=status,country,city,regionName,continent,lat,lon";
 
     /**
      * IP prefixes that indicate a private, loopback, or link-local address.
@@ -97,7 +104,9 @@ public class GeoLocationService {
                     valueOrUnknown(response.country()),
                     valueOrUnknown(response.city()),
                     valueOrUnknown(response.regionName()),
-                    valueOrUnknown(response.continent())
+                    valueOrUnknown(response.continent()),
+                    response.lat(),
+                    response.lon()
             );
 
         } catch (Exception e) {

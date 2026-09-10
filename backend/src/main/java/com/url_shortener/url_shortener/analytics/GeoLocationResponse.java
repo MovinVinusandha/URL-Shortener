@@ -34,8 +34,19 @@ public record GeoLocationResponse(
         String regionName,
 
         /** Continent name (e.g., "Asia", "North America", "Europe"). */
-        String continent
+        String continent,
+
+        /** Latitude coordinate. */
+        Double lat,
+
+        /** Longitude coordinate. */
+        Double lon
 ) {
+    /** Overloaded constructor without coordinates for backward compatibility. */
+    public GeoLocationResponse(String status, String country, String city, String regionName, String continent) {
+        this(status, country, city, regionName, continent, null, null);
+    }
+
     /** Returns true only when the API reports a successful lookup. */
     public boolean isSuccess() {
         return "success".equalsIgnoreCase(status);

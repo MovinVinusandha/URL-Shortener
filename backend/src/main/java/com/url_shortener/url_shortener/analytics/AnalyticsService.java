@@ -38,6 +38,7 @@ public class AnalyticsService {
     private final ClickEventRepository     clickEventRepository;
     private final UserAgentParserService   userAgentParserService;
     private final GeoLocationService       geoLocationService;
+    private final EventStreamService       eventStreamService;
 
     public UserUsageStatsDto getUserUsageStats(User currentUser) {
         long totalLinks = urlRepository.countByUserId(currentUser.getId());
@@ -300,7 +301,7 @@ public class AnalyticsService {
                 geoInfo = geoLocationService.lookup(ipAddress);
             } catch (Exception e) {
                 log.warn("Failed GeoIP lookup for {}: {}", ipAddress, e.getMessage());
-                geoInfo = new GeoLocationService.GeoInfo("Unknown", "Unknown", "Unknown", "Unknown");
+                geoInfo = GeoLocationService.GeoInfo.unknown();
             }
 
             // 4. Extract UTM Parameters & Referrer
@@ -321,7 +322,7 @@ public class AnalyticsService {
             // 6. Build and persist the ClickEvent
             ClickEvent event = ClickEvent.builder()
                     .url(url)
-                    .timestamp(LocalDateTime.now())
+                    .timestamp(LocalDateTime.now(java.time.ZoneOffset.UTC))
                     .device(deviceInfo.device())
                     .browser(deviceInfo.browser())
                     .os(deviceInfo.os())
@@ -329,6 +330,8 @@ public class AnalyticsService {
                     .city(geoInfo.city())
                     .region(geoInfo.region())
                     .continent(geoInfo.continent())
+                    .latitude(geoInfo.latitude())
+                    .longitude(geoInfo.longitude())
                     .utmSource(utmSource)
                     .utmMedium(utmMedium)
                     .utmCampaign(utmCampaign)
@@ -338,7 +341,35 @@ public class AnalyticsService {
                     .ipAddress(hashedIp)
                     .build();
 
-            clickEventRepository.save(event);
+            ClickEvent savedEvent = clickEventRepository.save(event);
+
+            // Broadcast to real-time subscribers if the URL has an owner
+            if (url.getUser() != null) {
+                com.url_shortener.url_shortener.analytics.dto.ClickEventDto eventDto = com.url_shortener.url_shortener.analytics.dto.ClickEventDto.builder()
+                        .id(savedEvent.getId())
+                        .urlId(url.getId())
+                        .shortUrlHash(url.getShortUrl())
+                        .originalUrl(url.getLongUrl())
+                        .timestamp(savedEvent.getTimestamp())
+                        .device(savedEvent.getDevice())
+                        .browser(savedEvent.getBrowser())
+                        .os(savedEvent.getOs())
+                        .country(savedEvent.getCountry())
+                        .city(savedEvent.getCity())
+                        .region(savedEvent.getRegion())
+                        .continent(savedEvent.getContinent())
+                        .latitude(savedEvent.getLatitude())
+                        .longitude(savedEvent.getLongitude())
+                        .utmSource(savedEvent.getUtmSource())
+                        .utmMedium(savedEvent.getUtmMedium())
+                        .utmCampaign(savedEvent.getUtmCampaign())
+                        .utmTerm(savedEvent.getUtmTerm())
+                        .utmContent(savedEvent.getUtmContent())
+                        .referer(savedEvent.getReferer())
+                        .ipAddress(savedEvent.getIpAddress())
+                        .build();
+                eventStreamService.broadcastEvent(url.getUser().getId(), eventDto);
+            }
 
             // Keep legacy statistic column in sync for any code paths that still read it
             if (url.getStatistic() != null) {
@@ -498,27 +529,28 @@ public class AnalyticsService {
 
     private DateRange parseDates(String startDateStr, String endDateStr, String period) {
         LocalDateTime now = LocalDateTime.now(java.time.ZoneOffset.UTC);
+        LocalDateTime liveBufferEnd = now.plusMinutes(15);
 
         if (startDateStr != null && !startDateStr.isBlank()) {
             LocalDateTime start = parseIsoDateTime(startDateStr, true);
             LocalDateTime end = (endDateStr != null && !endDateStr.isBlank())
                     ? parseIsoDateTime(endDateStr, false)
-                    : now;
+                    : liveBufferEnd;
             return new DateRange(start, end);
         }
 
         if (period != null) {
             return switch (period.toLowerCase()) {
-                case "24h" -> new DateRange(now.minusHours(24), now);
-                case "7d"  -> new DateRange(now.minusDays(7),  now);
-                case "30d" -> new DateRange(now.minusDays(30), now);
-                case "90d" -> new DateRange(now.minusDays(90), now);
-                case "all" -> new DateRange(LocalDateTime.of(1970, 1, 1, 0, 0), now);
-                default    -> new DateRange(now.minusDays(30), now);
+                case "24h" -> new DateRange(now.minusHours(24), liveBufferEnd);
+                case "7d"  -> new DateRange(now.minusDays(7),  liveBufferEnd);
+                case "30d" -> new DateRange(now.minusDays(30), liveBufferEnd);
+                case "90d" -> new DateRange(now.minusDays(90), liveBufferEnd);
+                case "all" -> new DateRange(LocalDateTime.of(1970, 1, 1, 0, 0), liveBufferEnd);
+                default    -> new DateRange(now.minusDays(30), liveBufferEnd);
             };
         }
 
-        return new DateRange(now.minusDays(30), now);
+        return new DateRange(now.minusDays(30), liveBufferEnd);
     }
 
     private LocalDateTime parseIsoDateTime(String str, boolean isStart) {
@@ -549,6 +581,62 @@ public class AnalyticsService {
         } catch (NoSuchAlgorithmException e) {
             return "0000000000000000";
         }
+    }
+
+    public org.springframework.data.domain.Page<com.url_shortener.url_shortener.analytics.dto.ClickEventDto> getPaginatedEvents(
+            User currentUser,
+            String period,
+            String startDateStr,
+            String endDateStr,
+            String hash,
+            String country,
+            String city,
+            String device,
+            String browser,
+            String os,
+            String search,
+            org.springframework.data.domain.Pageable pageable
+    ) {
+        DateRange dates = parseDates(startDateStr, endDateStr, period);
+        LocalDateTime startDate = dates.start();
+        LocalDateTime endDate = dates.end();
+
+        return clickEventRepository.findEventsForUser(
+                currentUser.getId(),
+                (hash != null && !hash.isBlank()) ? hash : null,
+                (country != null && !country.isBlank()) ? country : null,
+                (city != null && !city.isBlank()) ? city : null,
+                (device != null && !device.isBlank()) ? device : null,
+                (browser != null && !browser.isBlank()) ? browser : null,
+                (os != null && !os.isBlank()) ? os : null,
+                (search != null && !search.isBlank()) ? search.trim() : null,
+                startDate,
+                endDate,
+                pageable
+        ).map(event -> com.url_shortener.url_shortener.analytics.dto.ClickEventDto.builder()
+                .id(event.getId())
+                .urlId(event.getUrl().getId())
+                .shortUrlHash(event.getUrl().getShortUrl())
+                .originalUrl(event.getUrl().getLongUrl())
+                .timestamp(event.getTimestamp())
+                .device(event.getDevice())
+                .browser(event.getBrowser())
+                .os(event.getOs())
+                .country(event.getCountry())
+                .city(event.getCity())
+                .region(event.getRegion())
+                .continent(event.getContinent())
+                .latitude(event.getLatitude())
+                .longitude(event.getLongitude())
+                .utmSource(event.getUtmSource())
+                .utmMedium(event.getUtmMedium())
+                .utmCampaign(event.getUtmCampaign())
+                .utmTerm(event.getUtmTerm())
+                .utmContent(event.getUtmContent())
+                .referer(event.getReferer())
+                .ipAddress(event.getIpAddress())
+                .build()
+        );
     }
 
     public record DateRange(LocalDateTime start, LocalDateTime end) {}
