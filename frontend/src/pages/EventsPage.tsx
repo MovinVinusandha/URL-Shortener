@@ -822,7 +822,7 @@ export const EventsPage: React.FC = () => {
         {/* Left: Search, Filter Popover, Date Range */}
         <div className="flex items-center flex-wrap gap-2 flex-1 min-w-[280px]">
           {/* Search Input */}
-          <div className="relative flex items-center bg-secondary/50 rounded-lg px-2.5 py-1.5 border border-border/70 focus-within:border-primary/60 focus-within:bg-background transition-all w-60 max-w-full">
+          <div className="relative flex items-center bg-secondary/50 rounded-lg px-2.5 py-1.5 border border-border focus-within:border-primary/60 focus-within:bg-background transition-all w-60 max-w-full">
             <Search className="w-3.5 h-3.5 text-muted-foreground mr-2 shrink-0" />
             <input
               type="text"
@@ -845,8 +845,8 @@ export const EventsPage: React.FC = () => {
               onClick={() => setIsFilterOpen(!isFilterOpen)}
               className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-medium transition-all cursor-pointer ${
                 activeFilterCount > 0
-                  ? 'border-border/90 bg-secondary text-foreground shadow-xs' 
-                  : 'bg-background border-input text-foreground hover:bg-secondary'
+                  ? 'border-border bg-secondary text-foreground shadow-xs' 
+                  : 'bg-background border-border text-foreground hover:bg-secondary'
               }`}
             >
               <Filter className={`w-3.5 h-3.5 ${activeFilterCount > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
@@ -867,7 +867,7 @@ export const EventsPage: React.FC = () => {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -4, scale: 0.98 }}
                   transition={{ duration: 0.1, ease: 'easeOut' }}
-                  className="absolute left-0 top-full mt-1.5 w-64 rounded-xl shadow-xl bg-popover border border-border/80 divide-y divide-border/60 focus:outline-none z-[60] overflow-hidden"
+                  className="absolute left-0 top-full mt-1.5 w-64 rounded-xl shadow-xl bg-popover border border-border divide-y divide-border focus:outline-none z-[60] overflow-hidden"
                 >
                   {activeFilterCategory === 'none' ? (
                     <div className="p-1 space-y-0.5">
@@ -925,7 +925,7 @@ export const EventsPage: React.FC = () => {
                   ) : (
                     <div className="flex flex-col">
                       {/* Submenu Header */}
-                      <div className="p-2 border-b border-border/60 flex items-center justify-between bg-muted/20">
+                      <div className="p-2 border-b border-border flex items-center justify-between bg-muted/20">
                         <button 
                           type="button"
                           onClick={() => setActiveFilterCategory('none')}
@@ -968,7 +968,7 @@ export const EventsPage: React.FC = () => {
                       {/* Country Submenu */}
                       {activeFilterCategory === 'country' && (
                         <div className="flex flex-col">
-                          <div className="p-2 border-b border-border/60">
+                          <div className="p-2 border-b border-border">
                             <input
                               type="text"
                               autoFocus={true}
@@ -1020,7 +1020,7 @@ export const EventsPage: React.FC = () => {
                       {/* Link Submenu */}
                       {activeFilterCategory === 'link' && (
                         <div className="flex flex-col">
-                          <div className="p-2 border-b border-border/60">
+                          <div className="p-2 border-b border-border">
                             <input
                               type="text"
                               autoFocus={true}
@@ -1094,7 +1094,7 @@ export const EventsPage: React.FC = () => {
             <button 
               type="button"
               onClick={() => setIsDisplayOpen(!isDisplayOpen)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-background border border-input rounded-lg text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer shadow-xs"
+              className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border rounded-lg text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer shadow-xs"
               aria-label="Display settings"
             >
               <SlidersHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
@@ -1131,7 +1131,7 @@ export const EventsPage: React.FC = () => {
                         <button 
                           type="button"
                           onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
-                          className="flex items-center justify-between w-32 px-2.5 py-1 bg-background border border-input rounded-lg text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                          className="flex items-center justify-between w-32 px-2.5 py-1 bg-background border border-border rounded-lg text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer"
                         >
                           <span className="truncate">
                             {sortBy === 'timestamp' ? 'Date created' : sortBy === 'country' ? 'Country' : sortBy === 'device' ? 'Device' : 'Link'}
@@ -1157,14 +1157,18 @@ export const EventsPage: React.FC = () => {
                                 <button
                                   key={key}
                                   type="button"
-                                  onClick={() => { setSortBy(key); setIsSortMenuOpen(false); }}
-                                  className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114] transition-colors cursor-pointer"
+                                  onClick={() => {
+                                    setSortBy(key);
+                                    setIsSortMenuOpen(false);
+                                  }}
+                                  className={`w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors cursor-pointer ${
+                                    sortBy === key 
+                                      ? 'bg-primary/10 text-primary font-medium' 
+                                      : 'text-foreground hover:bg-secondary'
+                                  }`}
                                 >
-                                  <span className="flex items-center gap-2">
-                                    <ArrowDownWideNarrow className="w-3.5 h-3.5 text-muted-foreground" />
-                                    {label}
-                                  </span>
-                                  {sortBy === key && <Check className="w-3.5 h-3.5 text-primary stroke-[2.5]" />}
+                                  <span>{label}</span>
+                                  {sortBy === key && <Check className="w-3.5 h-3.5 text-primary" />}
                                 </button>
                               ))}
                             </motion.div>
@@ -1199,8 +1203,8 @@ export const EventsPage: React.FC = () => {
                             onClick={() => toggleColumnVisibility(key)}
                             className={`px-2.5 py-1 text-xs border rounded-lg font-medium transition-all cursor-pointer ${
                               isChecked 
-                                ? 'border-neutral-200/80 dark:border-[#27272A] bg-neutral-100 dark:bg-[#18181B] text-foreground shadow-xs' 
-                                : 'border-border/60 bg-background/50 text-muted-foreground hover:bg-secondary hover:text-foreground'
+                                ? 'border-neutral-300 dark:border-neutral-800 bg-neutral-100 dark:bg-[#18181B] text-foreground shadow-xs' 
+                                : 'border-border bg-background/50 text-muted-foreground hover:bg-secondary hover:text-foreground'
                             }`}
                           >
                             {label}
@@ -1225,7 +1229,7 @@ export const EventsPage: React.FC = () => {
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
               isLive
                 ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                : 'border-border/70 bg-secondary/50 text-muted-foreground hover:text-foreground'
+                : 'border-border bg-secondary/50 text-muted-foreground hover:text-foreground'
             }`}
           >
             <span className="relative flex h-2 w-2">
@@ -1242,7 +1246,7 @@ export const EventsPage: React.FC = () => {
             onClick={() => fetchEvents(page)}
             disabled={isLoading}
             title="Refresh events"
-            className="p-1.5 rounded-lg border border-border/70 bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-50 cursor-pointer"
+            className="p-1.5 rounded-lg border border-border bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-primary' : ''}`} />
           </button>
@@ -1289,7 +1293,7 @@ export const EventsPage: React.FC = () => {
         <div className="px-6 py-2 bg-muted/10 flex flex-wrap items-center gap-2 shrink-0">
           {/* Device Pill */}
           {selectedDevice !== 'all' && (
-            <div className="inline-flex items-center h-7 rounded-md border border-border/60 bg-secondary text-xs overflow-hidden divide-x divide-border/60">
+            <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
               <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
                 <Monitor className="w-3 h-3" />
                 <span>Device</span>
@@ -1313,7 +1317,7 @@ export const EventsPage: React.FC = () => {
 
           {/* Country Pill */}
           {selectedCountry && (
-            <div className="inline-flex items-center h-7 rounded-md border border-border/60 bg-secondary text-xs overflow-hidden divide-x divide-border/60">
+            <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
               <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
                 <MapPin className="w-3 h-3" />
                 <span>Country</span>
@@ -1337,7 +1341,7 @@ export const EventsPage: React.FC = () => {
 
           {/* Link Hash Pill */}
           {linkHashParam && (
-            <div className="inline-flex items-center h-7 rounded-md border border-border/60 bg-secondary text-xs overflow-hidden divide-x divide-border/60">
+            <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
               <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
                 <Layers className="w-3 h-3" />
                 <span>Link</span>
@@ -1379,7 +1383,7 @@ export const EventsPage: React.FC = () => {
             <div className="bg-background border border-border rounded-xl shadow-xs overflow-hidden flex flex-col flex-1 min-h-0">
               <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto relative">
                 <table className="w-full text-left border-collapse text-xs">
-                  <thead className="sticky top-0 z-20 bg-muted/40 dark:bg-[#121215] backdrop-blur-md border-b border-border/80 text-muted-foreground font-medium text-xs shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                  <thead className="sticky top-0 z-20 bg-background border-b border-border text-foreground font-semibold text-xs shadow-xs">
                     <tr>
                       {visibleColumns.date && (
                         <th 
@@ -1391,7 +1395,7 @@ export const EventsPage: React.FC = () => {
                               setSortOrder('desc');
                             }
                           }}
-                          className="py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors select-none"
+                          className="py-3 px-4 font-semibold cursor-pointer hover:text-foreground transition-colors select-none"
                         >
                           <span className="inline-flex items-center gap-1.5">
                             Date
@@ -1409,7 +1413,7 @@ export const EventsPage: React.FC = () => {
                               setSortOrder('asc');
                             }
                           }}
-                          className="py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors select-none"
+                          className="py-3 px-4 font-semibold cursor-pointer hover:text-foreground transition-colors select-none"
                         >
                           <span className="inline-flex items-center gap-1.5">
                             Link
@@ -1418,7 +1422,7 @@ export const EventsPage: React.FC = () => {
                         </th>
                       )}
                       {visibleColumns.referer && (
-                        <th className="py-3 px-4 font-medium">Referer</th>
+                        <th className="py-3 px-4 font-semibold">Referer</th>
                       )}
                       {visibleColumns.country && (
                         <th 
@@ -1430,7 +1434,7 @@ export const EventsPage: React.FC = () => {
                               setSortOrder('asc');
                             }
                           }}
-                          className="py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors select-none"
+                          className="py-3 px-4 font-semibold cursor-pointer hover:text-foreground transition-colors select-none"
                         >
                           <span className="inline-flex items-center gap-1.5">
                             Country
@@ -1439,7 +1443,7 @@ export const EventsPage: React.FC = () => {
                         </th>
                       )}
                       {visibleColumns.city && (
-                        <th className="py-3 px-4 font-medium">City</th>
+                        <th className="py-3 px-4 font-semibold">City</th>
                       )}
                       {visibleColumns.device && (
                         <th 
@@ -1451,7 +1455,7 @@ export const EventsPage: React.FC = () => {
                               setSortOrder('asc');
                             }
                           }}
-                          className="py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors select-none"
+                          className="py-3 px-4 font-semibold cursor-pointer hover:text-foreground transition-colors select-none"
                         >
                           <span className="inline-flex items-center gap-1.5">
                             Device
@@ -1460,22 +1464,20 @@ export const EventsPage: React.FC = () => {
                         </th>
                       )}
                       {visibleColumns.browser && (
-                        <th className="py-3 px-4 font-medium">Browser</th>
+                        <th className="py-3 px-4 font-semibold">Browser</th>
                       )}
                       {visibleColumns.os && (
-                        <th className="py-3 px-4 font-medium">OS</th>
+                        <th className="py-3 px-4 font-semibold">OS</th>
                       )}
                       {visibleColumns.campaign && (
-                        <th className="py-3 px-4 font-medium">Campaign</th>
+                        <th className="py-3 px-4 font-semibold">Campaign</th>
                       )}
-                      {/* Far right: Empty header for row action triggers */}
-                      <th className="py-3 px-4 text-right w-10"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {sortedEvents.length === 0 && !isLoading ? (
                       <tr>
-                        <td colSpan={10} className="py-16 text-center text-muted-foreground">
+                        <td colSpan={9} className="py-16 text-center text-muted-foreground">
                           <div className="flex flex-col items-center justify-center gap-2">
                             <Activity className="w-8 h-8 text-muted-foreground/40 stroke-1" />
                             <p className="text-xs font-medium text-foreground">No click events recorded</p>
@@ -1490,7 +1492,7 @@ export const EventsPage: React.FC = () => {
                         <tr
                           key={ev.id}
                           onClick={() => setActiveEvent(ev)}
-                          className="group border-b border-dashed border-border/80 last:border-b-0 hover:bg-neutral-100/70 dark:hover:bg-[#111114] cursor-pointer transition-colors"
+                          className="group border-b border-dashed border-border last:border-b-0 hover:bg-neutral-100/70 dark:hover:bg-[#111114] cursor-pointer transition-colors"
                         >
                           {/* 1. Date */}
                           {visibleColumns.date && (
@@ -1564,7 +1566,7 @@ export const EventsPage: React.FC = () => {
                           {visibleColumns.campaign && (
                             <td className="py-3 px-4 whitespace-nowrap">
                               {ev.utmCampaign ? (
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-primary/10 text-primary border border-primary/20">
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-secondary text-foreground border border-neutral-300 dark:border-neutral-800">
                                   {ev.utmCampaign}
                                 </span>
                               ) : (
@@ -1572,21 +1574,6 @@ export const EventsPage: React.FC = () => {
                               )}
                             </td>
                           )}
-
-                          {/* 10. Actions */}
-                          <td className="py-3 px-4 text-right whitespace-nowrap">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveEvent(ev);
-                              }}
-                              title="View event details"
-                              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
-                            >
-                              <MoreHorizontal className="w-3.5 h-3.5" />
-                            </button>
-                          </td>
                         </tr>
                       ))
                     )}
@@ -1595,7 +1582,7 @@ export const EventsPage: React.FC = () => {
               </div>
 
               {/* Pagination Controls inside Box Footer */}
-              <div className="px-4 py-3 border-t border-border/80 flex items-center justify-between text-xs text-muted-foreground shrink-0 bg-muted/20 dark:bg-[#121215]/50">
+              <div className="px-4 py-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground shrink-0 bg-muted/20 dark:bg-[#121215]/50">
                 <span>
                   {totalElements === 0
                     ? 'Viewing 0 of 0 events'
@@ -1654,7 +1641,7 @@ export const EventsPage: React.FC = () => {
               </AnimatePresence>
 
               {/* Minimal floating stats card (Sink.cool style) */}
-              <div className="absolute top-4 left-6 z-10 flex flex-col gap-1 bg-card/80 backdrop-blur-md border border-border/70 p-3 rounded-xl shadow-xs">
+              <div className="absolute top-4 left-6 z-10 flex flex-col gap-1 bg-card/80 backdrop-blur-md border border-border p-3 rounded-xl shadow-xs">
                 <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground">
                   <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground'}`} />
                   <span>{isLive ? 'Live updates active' : 'Updates paused'}</span>
@@ -1803,54 +1790,42 @@ export const EventsPage: React.FC = () => {
               </div>
 
               {/* Under-Globe Control Dock: 3 View Options (Analytics | Bars | Live Badge) + Zoom Controls */}
-              <div className="absolute bottom-3 inset-x-0 mx-auto max-w-fit z-20 flex items-center gap-2 bg-card/95 backdrop-blur-md border border-border/90 p-1.5 rounded-2xl shadow-2xl">
+              <div className="absolute bottom-3 inset-x-0 mx-auto max-w-fit z-20 flex items-center gap-2 bg-card/95 backdrop-blur-md border border-border p-1.5 rounded-2xl shadow-2xl">
                 
-                {/* 3 View Options Segmented Selector */}
-                <div className="flex items-center bg-secondary/60 p-0.5 rounded-xl border border-border/50">
-                  <button
-                    type="button"
-                    onClick={() => setGlobeBadgeOption('analytics')}
-                    className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                      globeBadgeOption === 'analytics'
-                        ? 'bg-background text-foreground shadow-xs font-bold'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                    }`}
-                    title="Analytics view: counts and growth percentages"
-                  >
-                    <TrendingUp className="w-3.5 h-3.5 text-primary" />
-                    <span>Analytics</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setGlobeBadgeOption('bars')}
-                    className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                      globeBadgeOption === 'bars'
-                        ? 'bg-background text-foreground shadow-xs font-bold'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                    }`}
-                    title="Bars view: count shown as percentage"
-                  >
-                    <BarChart2 className="w-3.5 h-3.5 text-primary" />
-                    <span>Bars</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setGlobeBadgeOption('live')}
-                    className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                      globeBadgeOption === 'live'
-                        ? 'bg-background text-foreground shadow-xs font-bold'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                    }`}
-                    title="Live Badge view: realtime visitor beacons"
-                  >
-                    <Radio className="w-3.5 h-3.5 text-primary" />
-                    <span>Live Badge</span>
-                  </button>
+                {/* 3 View Options Segmented Selector (Matching Stream vs Globe 3D & Overview vs Compare style) */}
+                <div className="relative flex items-center bg-secondary/50 dark:bg-[#121215] p-0.5 rounded-lg border border-border gap-0.5">
+                  {[
+                    { key: 'analytics' as const, label: 'Analytics', icon: TrendingUp, iconColor: 'text-[#0099ff]' },
+                    { key: 'bars' as const, label: 'Bars', icon: BarChart2, iconColor: 'text-[#0099ff]' },
+                    { key: 'live' as const, label: 'Live Badge', icon: Radio, iconColor: 'text-[#0099ff]' },
+                  ].map(({ key, label, icon: Icon, iconColor }) => {
+                    const isActive = globeBadgeOption === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setGlobeBadgeOption(key)}
+                        className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                          isActive
+                            ? 'text-foreground font-semibold'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {isActive && (
+                          <motion.div
+                            layoutId="activeGlobeBadgeOptionSegment"
+                            className="absolute inset-0 bg-card rounded-md border border-border z-[-1] shadow-xs"
+                            transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                          />
+                        )}
+                        <Icon className={`w-3.5 h-3.5 ${iconColor}`} />
+                        <span>{label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
-                <div className="w-[1px] h-5 bg-border/60 mx-0.5" />
+                <div className="w-[1px] h-5 bg-border mx-0.5" />
 
                 {/* Zoom Controls */}
                 <div className="flex items-center gap-0.5">
@@ -1881,10 +1856,10 @@ export const EventsPage: React.FC = () => {
                 </div>
               </div>
             </div>{/* Right: Live Event Ticker Feed with INDEPENDENT SCROLL */}
-            <div className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-border/70 bg-card/40 flex flex-col h-full overflow-hidden">
+            <div className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-border bg-card/40 flex flex-col h-full overflow-hidden">
               
               {/* Ticker Header */}
-              <div className="p-3.5 border-b border-border/60 flex items-center justify-between shrink-0 bg-muted/20">
+              <div className="p-3.5 border-b border-border flex items-center justify-between shrink-0 bg-muted/20">
                 <div className="flex items-center gap-2">
                   <Activity className="w-4 h-4 text-primary" />
                   <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
@@ -1892,7 +1867,7 @@ export const EventsPage: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded-md border border-border/50">
+                  <span className="text-[10px] font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded-md border border-border">
                     {recentLiveEvents.length > 0 ? `${recentLiveEvents.length} live` : `${events.length} events`}
                   </span>
                 </div>
@@ -1912,7 +1887,7 @@ export const EventsPage: React.FC = () => {
                       className={`p-3 rounded-xl border transition-all cursor-pointer text-xs ${
                         isIncoming
                           ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/40 shadow-sm'
-                          : 'border-border/60 bg-card hover:border-primary/40 hover:bg-secondary/40'
+                          : 'border-border bg-card hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
@@ -1931,7 +1906,7 @@ export const EventsPage: React.FC = () => {
                         </span>
                       </div>
 
-                      <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1.5 border-t border-border/30">
+                      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                         <span className="truncate max-w-[150px]">{ev.browser || 'Unknown'} · {ev.os || ev.device || 'Desktop'}</span>
                         <span className="truncate max-w-[90px] font-mono">{ev.referer ? ev.referer.replace(/^https?:\/\//, '') : 'Direct'}</span>
                       </div>
@@ -1973,11 +1948,11 @@ export const EventsPage: React.FC = () => {
                 className="relative w-full max-w-xl bg-background border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh] z-10"
               >
                 {/* Header */}
-                <div className="flex items-start justify-between px-6 py-4 border-b border-border/80 shrink-0 bg-muted/20 dark:bg-[#121215]/50">
+                <div className="flex items-start justify-between px-6 py-4 border-b border-border shrink-0 bg-muted/20 dark:bg-[#121215]/50">
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-semibold text-foreground tracking-tight">Event Details</h3>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-primary/10 text-primary border border-primary/20">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-secondary text-foreground border border-neutral-300 dark:border-neutral-800">
                         #{activeEvent.id}
                       </span>
                     </div>
@@ -2049,7 +2024,7 @@ export const EventsPage: React.FC = () => {
                     </div>
 
                     {/* Location Row */}
-                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border/80 text-xs">
+                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border text-xs">
                       <span className="text-muted-foreground">Location</span>
                       <div className="flex items-center gap-2 text-right">
                         {getCountryBadge(activeEvent.country, activeEvent.city)}
@@ -2062,7 +2037,7 @@ export const EventsPage: React.FC = () => {
                     </div>
 
                     {/* Device Row */}
-                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border/80 text-xs">
+                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border text-xs">
                       <span className="text-muted-foreground">Device & Client</span>
                       <div className="flex items-center gap-1.5 font-medium text-foreground">
                         {getDeviceIcon(activeEvent.device)}
@@ -2079,7 +2054,7 @@ export const EventsPage: React.FC = () => {
                     </div>
 
                     {/* Referrer Row */}
-                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border/80 text-xs">
+                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border text-xs">
                       <span className="text-muted-foreground">Referrer</span>
                       <span className="font-mono text-foreground font-medium truncate max-w-[220px]" title={activeEvent.referer || 'Direct'}>
                         {activeEvent.referer ? activeEvent.referer.replace(/^https?:\/\//, '') : '(direct)'}
@@ -2087,7 +2062,7 @@ export const EventsPage: React.FC = () => {
                     </div>
 
                     {/* IP Address Row */}
-                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border/80 text-xs">
+                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border text-xs">
                       <span className="text-muted-foreground">IP Address</span>
                       <div className="flex items-center gap-1.5">
                         <Shield className="w-3.5 h-3.5 text-muted-foreground/60" />
@@ -2099,7 +2074,7 @@ export const EventsPage: React.FC = () => {
 
                     {/* UTM Campaign Tags */}
                     {(activeEvent.utmCampaign || activeEvent.utmSource || activeEvent.utmMedium) && (
-                      <div className="py-2.5 border-b border-dashed border-border/80 text-xs space-y-1.5">
+                      <div className="py-2.5 border-b border-dashed border-border text-xs space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="text-muted-foreground">Campaign</span>
                           <span className="font-semibold text-primary font-mono">{activeEvent.utmCampaign || '—'}</span>
@@ -2121,7 +2096,7 @@ export const EventsPage: React.FC = () => {
                   </div>
 
                   {/* Collapsible Raw JSON Payload */}
-                  <div className="pt-4 border-t border-border/80">
+                  <div className="pt-4 border-t border-border">
                     <div className="flex items-center justify-between mb-2">
                       <button
                         type="button"
@@ -2160,7 +2135,7 @@ export const EventsPage: React.FC = () => {
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
-                          className="p-3 rounded-lg border border-border/70 bg-muted/40 font-mono text-[10px] text-muted-foreground overflow-x-auto select-all max-h-48"
+                          className="p-3 rounded-lg border border-border bg-muted/40 font-mono text-[10px] text-muted-foreground overflow-x-auto select-all max-h-48"
                         >
                           {JSON.stringify(activeEvent, null, 2)}
                         </motion.pre>

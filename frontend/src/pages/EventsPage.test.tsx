@@ -540,11 +540,11 @@ describe('EventsPage', () => {
       expect(screen.getByText(/\/dub-drawer-test/i)).toBeInTheDocument();
     });
 
-    // Click the row action button (...) to open details drawer
-    const detailsBtn = screen.getByTitle(/view event details/i);
-    fireEvent.click(detailsBtn);
+    // Click the event row to open details modal
+    const eventRow = screen.getByText(/\/dub-drawer-test/i);
+    fireEvent.click(eventRow);
 
-    // Verify drawer opened with redesigned sections
+    // Verify modal opened with redesigned sections
     await waitFor(() => {
       expect(screen.getByText(/event details/i)).toBeInTheDocument();
       expect(screen.getByText('#401')).toBeInTheDocument();

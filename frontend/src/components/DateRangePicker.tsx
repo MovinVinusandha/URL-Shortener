@@ -231,7 +231,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChang
     <div className="relative inline-block text-left" ref={containerRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 bg-background border border-input rounded-lg px-3 py-1.5 text-xs font-medium text-foreground hover:bg-secondary transition-colors"
+        className="flex items-center gap-2 bg-background border border-border rounded-lg px-3 py-1.5 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer shadow-xs"
       >
         <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground" />
         <span>{getDisplayText()}</span>
