@@ -31,7 +31,15 @@ import {
   Eye,
   TrendingUp,
   BarChart2,
-  Percent
+  Percent,
+  Settings,
+  MoreHorizontal,
+  Copy,
+  CheckCircle2,
+  Shield,
+  SlidersHorizontal,
+  ArrowUpDown,
+  ArrowDownWideNarrow
 } from 'lucide-react';
 import createGlobe from 'cobe';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -91,6 +99,39 @@ function getCountryBadge(country?: string, city?: string) {
     </span>
   );
 }
+
+function formatEventDateTime(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    return format(date, "MMM d 'at' h:mm a");
+  } catch {
+    return dateString;
+  }
+}
+
+export interface TableColumnsVisibility {
+  date: boolean;
+  link: boolean;
+  referer: boolean;
+  country: boolean;
+  city: boolean;
+  device: boolean;
+  browser: boolean;
+  os: boolean;
+  campaign: boolean;
+}
+
+export const DEFAULT_COLUMNS_VISIBILITY: TableColumnsVisibility = {
+  date: true,
+  link: true,
+  referer: true,
+  country: true,
+  device: true,
+  campaign: true,
+  city: false,
+  browser: false,
+  os: false,
+};
 
 export type GlobeViewOption = 'analytics' | 'bars' | 'live';
 
@@ -259,6 +300,17 @@ export const EventsPage: React.FC = () => {
 
   // Selected event for detail drawer
   const [activeEvent, setActiveEvent] = useState<ClickEventDto | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [copiedJson, setCopiedJson] = useState(false);
+  const [showJsonRaw, setShowJsonRaw] = useState(false);
+
+  const handleCopyText = (text: string, fieldName: string) => {
+    try {
+      navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch {}
+  };
 
   // Globe Canvas and Animation References
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -276,6 +328,37 @@ export const EventsPage: React.FC = () => {
   const badgeRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const topBadgesRef = useRef<GlobeBadge[]>([]);
 
+  // Column customization state (Dub.co style)
+  const [visibleColumns, setVisibleColumns] = useState<TableColumnsVisibility>(() => {
+    try {
+      const saved = localStorage.getItem('trim_events_table_columns');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        delete parsed.event;
+        return { ...DEFAULT_COLUMNS_VISIBILITY, ...parsed };
+      }
+    } catch {}
+    return DEFAULT_COLUMNS_VISIBILITY;
+  });
+  // Sorting and Display popover state (Matching Links tab Display function)
+  const [sortBy, setSortBy] = useState<'timestamp' | 'country' | 'link' | 'device'>('timestamp');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+
+  const [isDisplayOpen, setIsDisplayOpen] = useState(false);
+  const displayRef = useRef<HTMLDivElement>(null);
+
+  const toggleColumnVisibility = (key: keyof TableColumnsVisibility) => {
+    setVisibleColumns((prev) => {
+      const updated = { ...prev, [key]: !prev[key] };
+      try {
+        localStorage.setItem('trim_events_table_columns', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
   // Close popovers on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -283,10 +366,34 @@ export const EventsPage: React.FC = () => {
         setIsFilterOpen(false);
         setActiveFilterCategory('none');
       }
+      if (displayRef.current && !displayRef.current.contains(e.target as Node)) {
+        setIsDisplayOpen(false);
+        setIsSortMenuOpen(false);
+      }
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
+        setIsSortMenuOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Sorted events based on Ordering section
+  const sortedEvents = useMemo(() => {
+    return [...events].sort((a, b) => {
+      let cmp = 0;
+      if (sortBy === 'timestamp') {
+        cmp = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+      } else if (sortBy === 'country') {
+        cmp = (a.country || '').localeCompare(b.country || '');
+      } else if (sortBy === 'link') {
+        cmp = (a.shortUrlHash || '').localeCompare(b.shortUrlHash || '');
+      } else if (sortBy === 'device') {
+        cmp = (a.device || '').localeCompare(b.device || '');
+      }
+      return sortOrder === 'asc' ? cmp : -cmp;
+    });
+  }, [events, sortBy, sortOrder]);
 
   // ── 1. Fetch Paginated Events ───────────────────────────────────────────────
   const fetchEvents = useCallback(async (pageToFetch = page) => {
@@ -710,7 +817,7 @@ export const EventsPage: React.FC = () => {
     <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-background text-foreground">
       
       {/* ── Top Filter & Control Toolbar ────────────────────────────────────── */}
-      <div className="border-b border-border/60 bg-background px-6 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <div className="bg-background px-6 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
         
         {/* Left: Search, Filter Popover, Date Range */}
         <div className="flex items-center flex-wrap gap-2 flex-1 min-w-[280px]">
@@ -981,6 +1088,131 @@ export const EventsPage: React.FC = () => {
 
           {/* Date Range Picker Component */}
           <DateRangePicker value={dateRange} onChange={(val) => { setDateRange(val); setPage(0); }} />
+
+          {/* Display Popover (Matching Links tab Display function) */}
+          <div className="relative" ref={displayRef}>
+            <button 
+              type="button"
+              onClick={() => setIsDisplayOpen(!isDisplayOpen)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-background border border-input rounded-lg text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer shadow-xs"
+              aria-label="Display settings"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
+              <span>Display</span>
+              <ChevronDown className="w-3 h-3 text-muted-foreground" />
+            </button>
+            
+            <AnimatePresence>
+              {isDisplayOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.1, ease: 'easeOut' }}
+                  className="absolute top-full left-0 mt-1.5 bg-popover rounded-xl shadow-xl border border-border w-[310px] z-50 flex flex-col"
+                >
+                  {/* Ordering Section */}
+                  <div className="p-3 border-b border-border flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-foreground text-xs font-medium">
+                      <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>Ordering</span>
+                    </div>
+                    <div className="relative flex items-center gap-1.5">
+                      <button 
+                        type="button"
+                        onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                        className="p-1.5 bg-secondary border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                        title={sortOrder === 'asc' ? 'Sort Ascending' : 'Sort Descending'}
+                      >
+                        <ArrowUpDown className={`h-3.5 w-3.5 transform transition-transform ${sortOrder === 'asc' ? 'rotate-180' : ''}`} />
+                      </button>
+                      
+                      <div className="relative" ref={sortMenuRef}>
+                        <button 
+                          type="button"
+                          onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
+                          className="flex items-center justify-between w-32 px-2.5 py-1 bg-background border border-input rounded-lg text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                        >
+                          <span className="truncate">
+                            {sortBy === 'timestamp' ? 'Date created' : sortBy === 'country' ? 'Country' : sortBy === 'device' ? 'Device' : 'Link'}
+                          </span>
+                          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                        </button>
+                        
+                        <AnimatePresence>
+                          {isSortMenuOpen && (
+                            <motion.div 
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                              transition={{ duration: 0.1, ease: 'easeOut' }}
+                              className="absolute right-0 top-full mt-1 w-44 bg-popover rounded-xl shadow-lg border border-border z-[60] overflow-hidden py-1"
+                            >
+                              {[
+                                { key: 'timestamp' as const, label: 'Date created' },
+                                { key: 'country' as const, label: 'Country' },
+                                { key: 'device' as const, label: 'Device' },
+                                { key: 'link' as const, label: 'Link' },
+                              ].map(({ key, label }) => (
+                                <button
+                                  key={key}
+                                  type="button"
+                                  onClick={() => { setSortBy(key); setIsSortMenuOpen(false); }}
+                                  className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114] transition-colors cursor-pointer"
+                                >
+                                  <span className="flex items-center gap-2">
+                                    <ArrowDownWideNarrow className="w-3.5 h-3.5 text-muted-foreground" />
+                                    {label}
+                                  </span>
+                                  {sortBy === key && <Check className="w-3.5 h-3.5 text-primary stroke-[2.5]" />}
+                                </button>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Display Properties Section */}
+                  <div className="p-3 flex flex-col gap-2">
+                    <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      Display Properties
+                    </h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { key: 'link' as const, label: 'Short link' },
+                        { key: 'date' as const, label: 'Created Date' },
+                        { key: 'referer' as const, label: 'Referrer' },
+                        { key: 'country' as const, label: 'Country' },
+                        { key: 'city' as const, label: 'City' },
+                        { key: 'device' as const, label: 'Device' },
+                        { key: 'browser' as const, label: 'Browser' },
+                        { key: 'os' as const, label: 'OS' },
+                        { key: 'campaign' as const, label: 'Campaign' },
+                      ].map(({ key, label }) => {
+                        const isChecked = visibleColumns[key];
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => toggleColumnVisibility(key)}
+                            className={`px-2.5 py-1 text-xs border rounded-lg font-medium transition-all cursor-pointer ${
+                              isChecked 
+                                ? 'border-neutral-200/80 dark:border-[#27272A] bg-neutral-100 dark:bg-[#18181B] text-foreground shadow-xs' 
+                                : 'border-border/60 bg-background/50 text-muted-foreground hover:bg-secondary hover:text-foreground'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Right: Globe Map Style Selector, Live Indicator, View Switcher */}
@@ -1017,37 +1249,44 @@ export const EventsPage: React.FC = () => {
 
 
 
-          {/* Segmented View Switcher */}
-          <div className="flex items-center bg-secondary/60 p-0.5 rounded-lg border border-border/70">
-            <button
-              onClick={() => setViewMode('stream')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-all cursor-pointer ${
-                viewMode === 'stream'
-                  ? 'bg-background text-foreground shadow-xs font-semibold'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <ListFilter className="w-3.5 h-3.5" />
-              <span>Stream</span>
-            </button>
-            <button
-              onClick={() => setViewMode('globe')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-all cursor-pointer ${
-                viewMode === 'globe'
-                  ? 'bg-background text-foreground shadow-xs font-semibold'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <GlobeIcon className="w-3.5 h-3.5 text-primary" />
-              <span>Globe 3D</span>
-            </button>
+          {/* Overview vs Compare Mode Switcher Style for Stream vs Globe 3D */}
+          <div className="relative flex items-center bg-secondary/50 dark:bg-[#121215] p-0.5 rounded-lg border border-border gap-0.5">
+            {(['stream', 'globe'] as const).map((mode) => {
+              const isActive = viewMode === mode;
+              const label = mode === 'stream' ? 'Stream' : 'Globe 3D';
+              const Icon = mode === 'stream' ? ListFilter : GlobeIcon;
+              const iconColor = mode === 'stream' ? 'text-primary' : 'text-[#0099ff]';
+
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setViewMode(mode)}
+                  className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                    isActive
+                      ? 'text-foreground font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeEventsViewModeSegment"
+                      className="absolute inset-0 bg-card rounded-md border border-border z-[-1] shadow-xs"
+                      transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                    />
+                  )}
+                  <Icon className={`w-3.5 h-3.5 ${iconColor}`} />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
       {/* ── Active Compound Filter Pills ──────────────────────────────────── */}
       {activeFilterCount > 0 && (
-        <div className="px-6 py-2 border-b border-border/40 bg-muted/10 flex flex-wrap items-center gap-2 shrink-0">
+        <div className="px-6 py-2 bg-muted/10 flex flex-wrap items-center gap-2 shrink-0">
           {/* Device Pill */}
           {selectedDevice !== 'all' && (
             <div className="inline-flex items-center h-7 rounded-md border border-border/60 bg-secondary text-xs overflow-hidden divide-x divide-border/60">
@@ -1064,6 +1303,7 @@ export const EventsPage: React.FC = () => {
               <button 
                 type="button"
                 onClick={() => { setSelectedDevice('all'); setPage(0); }}
+                aria-label="Remove device filter"
                 className="flex items-center justify-center px-1.5 h-full text-muted-foreground hover:text-foreground hover:bg-background transition-colors cursor-pointer"
               >
                 <X className="w-3 h-3" />
@@ -1087,6 +1327,7 @@ export const EventsPage: React.FC = () => {
               <button 
                 type="button"
                 onClick={() => { setSelectedCountry(null); setPage(0); }}
+                aria-label="Remove country filter"
                 className="flex items-center justify-center px-1.5 h-full text-muted-foreground hover:text-foreground hover:bg-background transition-colors cursor-pointer"
               >
                 <X className="w-3 h-3" />
@@ -1117,156 +1358,268 @@ export const EventsPage: React.FC = () => {
                   });
                   setPage(0);
                 }}
+                aria-label="Remove link filter"
                 className="flex items-center justify-center px-1.5 h-full text-muted-foreground hover:text-foreground hover:bg-background transition-colors cursor-pointer"
               >
                 <X className="w-3 h-3" />
               </button>
             </div>
           )}
-
-          {/* Clear All Filters */}
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedDevice('all');
-              setSelectedCountry(null);
-              setSearchParams(prev => {
-                const u = new URLSearchParams(prev);
-                u.delete('hash');
-                return u;
-              });
-              setPage(0);
-            }}
-            className="text-xs text-muted-foreground hover:text-foreground font-medium underline underline-offset-4 ml-1 cursor-pointer transition-colors"
-          >
-            Clear filters
-          </button>
         </div>
       )}
 
       {/* ── Main Viewport Area ─────────────────────────────────────────────── */}
       <div className="flex-1 overflow-hidden relative flex">
 
-        {/* MODE A: Stream Table View (Dub.co style) */}
+        {/* MODE A: Stream Table View (Dub.co style boxed in page with Fixed Header) */}
         {viewMode === 'stream' ? (
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0 h-full p-4 sm:p-6 max-w-7xl mx-auto w-full overflow-hidden">
             
-            {/* Table Container */}
-            <div className="flex-1 overflow-y-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead className="sticky top-0 z-10 bg-muted/30 backdrop-blur border-b border-border/60 text-muted-foreground font-semibold uppercase tracking-wider text-[10px]">
-                  <tr>
-                    <th className="py-2.5 px-6">Event / Slug</th>
-                    <th className="py-2.5 px-4">Location</th>
-                    <th className="py-2.5 px-4">Client</th>
-                    <th className="py-2.5 px-4">Referrer</th>
-                    <th className="py-2.5 px-4">Campaign</th>
-                    <th className="py-2.5 px-6 text-right">Time</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/30">
-                  {events.length === 0 && !isLoading ? (
+            {/* Table inside Box-like Structure */}
+            <div className="bg-background border border-border rounded-xl shadow-xs overflow-hidden flex flex-col flex-1 min-h-0">
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto relative">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="sticky top-0 z-20 bg-muted/40 dark:bg-[#121215] backdrop-blur-md border-b border-border/80 text-muted-foreground font-medium text-xs shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
                     <tr>
-                      <td colSpan={6} className="py-16 text-center text-muted-foreground">
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <Activity className="w-8 h-8 text-muted-foreground/40 stroke-1" />
-                          <p className="text-xs font-medium text-foreground">No click events recorded</p>
-                          <p className="text-[11px] text-muted-foreground max-w-xs">
-                            Visits on your short links will stream here in real-time.
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    events.map((ev) => (
-                      <tr
-                        key={ev.id}
-                        onClick={() => setActiveEvent(ev)}
-                        className="group hover:bg-muted/30 dark:hover:bg-[#121215] cursor-pointer transition-colors"
-                      >
-                        {/* Short Link / Destination */}
-                        <td className="py-3 px-6">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-foreground font-mono group-hover:text-primary transition-colors">
-                              /{ev.shortUrlHash}
-                            </span>
-                            <span className="text-[11px] text-muted-foreground truncate max-w-[220px]">
-                              ➔ {ev.originalUrl}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Location */}
-                        <td className="py-3 px-4">
-                          {getCountryBadge(ev.country, ev.city)}
-                        </td>
-
-                        {/* Device / Browser */}
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary/60 text-foreground border border-border/40 text-[11px] font-medium">
-                              {getDeviceIcon(ev.device)}
-                              <span>{ev.device || 'Desktop'}</span>
-                            </span>
-                            {ev.browser && (
-                              <span className="px-1.5 py-0.5 rounded-md bg-secondary/30 text-muted-foreground border border-border/30 text-[10px] font-mono">
-                                {ev.browser}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Referrer */}
-                        <td className="py-3 px-4">
-                          <span className="text-muted-foreground truncate max-w-[130px] block font-mono text-[11px]">
-                            {ev.referer ? ev.referer.replace(/^https?:\/\//, '') : '—'}
+                      {visibleColumns.date && (
+                        <th 
+                          onClick={() => {
+                            if (sortBy === 'timestamp') {
+                              setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setSortBy('timestamp');
+                              setSortOrder('desc');
+                            }
+                          }}
+                          className="py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors select-none"
+                        >
+                          <span className="inline-flex items-center gap-1.5">
+                            Date
+                            <ArrowUpDown className={`w-3 h-3 ${sortBy === 'timestamp' ? 'text-primary opacity-100' : 'opacity-50'}`} />
                           </span>
-                        </td>
-
-                        {/* UTM Campaign */}
-                        <td className="py-3 px-4">
-                          {ev.utmCampaign ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 text-[11px] font-medium max-w-[130px] truncate">
-                              <Sparkles className="w-3 h-3 shrink-0" />
-                              <span className="truncate">{ev.utmCampaign}</span>
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/40 text-xs">—</span>
-                          )}
-                        </td>
-
-                        {/* Relative Timestamp */}
-                        <td className="py-3 px-6 text-right whitespace-nowrap text-muted-foreground font-mono text-[11px]">
-                          {formatRelativeTime(ev.timestamp)}
+                        </th>
+                      )}
+                      {visibleColumns.link && (
+                        <th 
+                          onClick={() => {
+                            if (sortBy === 'link') {
+                              setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setSortBy('link');
+                              setSortOrder('asc');
+                            }
+                          }}
+                          className="py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors select-none"
+                        >
+                          <span className="inline-flex items-center gap-1.5">
+                            Link
+                            {sortBy === 'link' && <ArrowUpDown className="w-3 h-3 text-primary" />}
+                          </span>
+                        </th>
+                      )}
+                      {visibleColumns.referer && (
+                        <th className="py-3 px-4 font-medium">Referer</th>
+                      )}
+                      {visibleColumns.country && (
+                        <th 
+                          onClick={() => {
+                            if (sortBy === 'country') {
+                              setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setSortBy('country');
+                              setSortOrder('asc');
+                            }
+                          }}
+                          className="py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors select-none"
+                        >
+                          <span className="inline-flex items-center gap-1.5">
+                            Country
+                            {sortBy === 'country' && <ArrowUpDown className="w-3 h-3 text-primary" />}
+                          </span>
+                        </th>
+                      )}
+                      {visibleColumns.city && (
+                        <th className="py-3 px-4 font-medium">City</th>
+                      )}
+                      {visibleColumns.device && (
+                        <th 
+                          onClick={() => {
+                            if (sortBy === 'device') {
+                              setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setSortBy('device');
+                              setSortOrder('asc');
+                            }
+                          }}
+                          className="py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors select-none"
+                        >
+                          <span className="inline-flex items-center gap-1.5">
+                            Device
+                            {sortBy === 'device' && <ArrowUpDown className="w-3 h-3 text-primary" />}
+                          </span>
+                        </th>
+                      )}
+                      {visibleColumns.browser && (
+                        <th className="py-3 px-4 font-medium">Browser</th>
+                      )}
+                      {visibleColumns.os && (
+                        <th className="py-3 px-4 font-medium">OS</th>
+                      )}
+                      {visibleColumns.campaign && (
+                        <th className="py-3 px-4 font-medium">Campaign</th>
+                      )}
+                      {/* Far right: Empty header for row action triggers */}
+                      <th className="py-3 px-4 text-right w-10"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedEvents.length === 0 && !isLoading ? (
+                      <tr>
+                        <td colSpan={10} className="py-16 text-center text-muted-foreground">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <Activity className="w-8 h-8 text-muted-foreground/40 stroke-1" />
+                            <p className="text-xs font-medium text-foreground">No click events recorded</p>
+                            <p className="text-[11px] text-muted-foreground max-w-xs">
+                              Visits on your short links will stream here in real-time.
+                            </p>
+                          </div>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ) : (
+                      sortedEvents.map((ev) => (
+                        <tr
+                          key={ev.id}
+                          onClick={() => setActiveEvent(ev)}
+                          className="group border-b border-dashed border-border/80 last:border-b-0 hover:bg-neutral-100/70 dark:hover:bg-[#111114] cursor-pointer transition-colors"
+                        >
+                          {/* 1. Date */}
+                          {visibleColumns.date && (
+                            <td className="py-3 px-4 whitespace-nowrap text-muted-foreground font-mono text-[11px]">
+                              {formatEventDateTime(ev.timestamp)}
+                            </td>
+                          )}
 
-            {/* Pagination Controls */}
-            <div className="px-6 py-3 border-t border-border/60 flex items-center justify-between text-xs text-muted-foreground shrink-0 bg-background">
-              <span>Total events: {totalElements}</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={page === 0 || isLoading}
-                  className="p-1 rounded-md border border-border hover:bg-secondary text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </button>
-                <span className="px-2 font-mono text-[11px]">
-                  Page {page + 1} of {Math.max(1, Math.ceil(totalElements / pageSize))}
+                          {/* 2. Link */}
+                          {visibleColumns.link && (
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-foreground font-mono group-hover:text-primary transition-colors">
+                                  /{ev.shortUrlHash}
+                                </span>
+                                <span className="text-[11px] text-muted-foreground truncate max-w-[160px]">
+                                  {ev.originalUrl}
+                                </span>
+                              </div>
+                            </td>
+                          )}
+
+                          {/* 3. Referer */}
+                          {visibleColumns.referer && (
+                            <td className="py-3 px-4">
+                              <span className="font-mono text-xs text-muted-foreground truncate block max-w-[140px]" title={ev.referer || 'Direct'}>
+                                {ev.referer ? ev.referer.replace(/^https?:\/\//, '') : 'Direct'}
+                              </span>
+                            </td>
+                          )}
+
+                          {/* 4. Country */}
+                          {visibleColumns.country && (
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              {getCountryBadge(ev.country, ev.city)}
+                            </td>
+                          )}
+
+                          {/* 5. City */}
+                          {visibleColumns.city && (
+                            <td className="py-3 px-4 whitespace-nowrap text-xs text-foreground font-medium">
+                              {ev.city || '—'}
+                            </td>
+                          )}
+
+                          {/* 6. Device */}
+                          {visibleColumns.device && (
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1.5 text-xs text-foreground font-medium">
+                                {getDeviceIcon(ev.device)}
+                                <span>{ev.device || 'Desktop'}</span>
+                              </span>
+                            </td>
+                          )}
+
+                          {/* 7. Browser */}
+                          {visibleColumns.browser && (
+                            <td className="py-3 px-4 whitespace-nowrap text-xs text-muted-foreground font-mono">
+                              {ev.browser || '—'}
+                            </td>
+                          )}
+
+                          {/* 8. OS */}
+                          {visibleColumns.os && (
+                            <td className="py-3 px-4 whitespace-nowrap text-xs text-muted-foreground font-mono">
+                              {ev.os || '—'}
+                            </td>
+                          )}
+
+                          {/* 9. Campaign */}
+                          {visibleColumns.campaign && (
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              {ev.utmCampaign ? (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-primary/10 text-primary border border-primary/20">
+                                  {ev.utmCampaign}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground/50 text-xs">—</span>
+                              )}
+                            </td>
+                          )}
+
+                          {/* 10. Actions */}
+                          <td className="py-3 px-4 text-right whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveEvent(ev);
+                              }}
+                              title="View event details"
+                              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                            >
+                              <MoreHorizontal className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Controls inside Box Footer */}
+              <div className="px-4 py-3 border-t border-border/80 flex items-center justify-between text-xs text-muted-foreground shrink-0 bg-muted/20 dark:bg-[#121215]/50">
+                <span>
+                  {totalElements === 0
+                    ? 'Viewing 0 of 0 events'
+                    : `Viewing ${page * pageSize + 1}-${Math.min((page + 1) * pageSize, totalElements)} of ${totalElements} events`}
                 </span>
-                <button
-                  onClick={() => setPage((p) => p + 1)}
-                  disabled={(page + 1) * pageSize >= totalElements || isLoading}
-                  className="p-1 rounded-md border border-border hover:bg-secondary text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={page === 0 || isLoading}
+                    className="p-1 rounded-md border border-border hover:bg-secondary text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="px-2 font-mono text-[11px]">
+                    Page {page + 1} of {Math.max(1, Math.ceil(totalElements / pageSize))}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => p + 1)}
+                    disabled={(page + 1) * pageSize >= totalElements || isLoading}
+                    className="p-1 rounded-md border border-border hover:bg-secondary text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1597,33 +1950,43 @@ export const EventsPage: React.FC = () => {
           </div>
         )}
 
-        {/* ── Slide-over Event Details Drawer (Dub Style) ────────────────────── */}
+        {/* ── Event Details Modal Popup Box (Centered Dialog with Trim Minimalist Design) ── */}
         <AnimatePresence>
           {activeEvent && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-50 bg-black/50 backdrop-blur-xs flex justify-end"
-              onClick={() => setActiveEvent(null)}
-            >
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+              {/* Dimmed backdrop */}
               <motion.div
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 280 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+                onClick={() => setActiveEvent(null)}
+              />
+
+              {/* Centered Modal Popup Box */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ type: 'spring', duration: 0.2, bounce: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-md bg-background border-l border-border/80 h-full flex flex-col shadow-2xl p-6 overflow-y-auto"
+                className="relative w-full max-w-xl bg-background border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh] z-10"
               >
-                {/* Drawer Header */}
-                <div className="flex items-center justify-between pb-4 border-b border-border/60 mb-6 shrink-0">
+                {/* Header */}
+                <div className="flex items-start justify-between px-6 py-4 border-b border-border/80 shrink-0 bg-muted/20 dark:bg-[#121215]/50">
                   <div>
-                    <h3 className="text-sm font-semibold text-foreground tracking-tight">Event Details</h3>
-                    <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                      ID #{activeEvent.id} · {new Date(activeEvent.timestamp).toUTCString()}
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-semibold text-foreground tracking-tight">Event Details</h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-primary/10 text-primary border border-primary/20">
+                        #{activeEvent.id}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground font-mono mt-1">
+                      {format(new Date(activeEvent.timestamp), 'PPpp')} ({formatRelativeTime(activeEvent.timestamp)})
                     </p>
                   </div>
                   <button
+                    type="button"
                     onClick={() => setActiveEvent(null)}
                     className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
                   >
@@ -1631,122 +1994,182 @@ export const EventsPage: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Link Summary Card */}
-                <div className="rounded-xl border border-border/60 bg-secondary/30 p-4 mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Target Link
-                    </span>
-                    <a
-                      href={activeEvent.originalUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline flex items-center gap-1 text-xs font-medium"
-                    >
-                      <span>Visit</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                  <div className="font-mono text-sm font-semibold text-foreground mb-1">
-                    /{activeEvent.shortUrlHash}
-                  </div>
-                  <p className="text-xs text-muted-foreground break-all">
-                    {activeEvent.originalUrl}
-                  </p>
-                </div>
-
-                {/* Audit Grid Details */}
-                <div className="space-y-4 mb-6">
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    
-                    {/* Location Box */}
-                    <div className="p-3 rounded-lg border border-border/50 bg-secondary/20">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
-                        Location
+                {/* Modal Body: Target Link Card, Event Properties, and Raw JSON */}
+                <div className="p-6 overflow-y-auto space-y-6">
+                  {/* Target Link Card */}
+                  <div className="rounded-xl border border-border bg-secondary/30 dark:bg-card/60 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Target Link
                       </span>
-                      <div className="font-medium text-foreground">
-                        {activeEvent.city || 'Unknown'}, {activeEvent.country || 'Unknown'}
-                      </div>
-                      <span className="text-[11px] text-muted-foreground font-mono">
-                        {activeEvent.latitude != null && activeEvent.longitude != null 
-                          ? `${activeEvent.latitude.toFixed(2)}°, ${activeEvent.longitude.toFixed(2)}°` 
-                          : 'Coordinates unavailable'}
-                      </span>
-                    </div>
-
-                    {/* Client Device Box */}
-                    <div className="p-3 rounded-lg border border-border/50 bg-secondary/20">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
-                        Client
-                      </span>
-                      <div className="font-medium text-foreground">
-                        {activeEvent.browser || 'Unknown'} · {activeEvent.os || 'Unknown'}
-                      </div>
-                      <span className="text-[11px] text-muted-foreground">
-                        Class: {activeEvent.device || 'Desktop'}
-                      </span>
-                    </div>
-
-                    {/* Referrer Box */}
-                    <div className="p-3 rounded-lg border border-border/50 bg-secondary/20">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
-                        Referrer
-                      </span>
-                      <div className="font-mono text-foreground truncate" title={activeEvent.referer || 'Direct'}>
-                        {activeEvent.referer || 'Direct / None'}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(activeEvent.originalUrl, 'targetUrl')}
+                          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs transition-colors cursor-pointer"
+                          title="Copy original URL"
+                        >
+                          {copiedField === 'targetUrl' ? (
+                            <>
+                              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                              <span className="text-emerald-500 text-[11px] font-medium">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              <span className="text-[11px]">Copy</span>
+                            </>
+                          )}
+                        </button>
+                        <span className="text-muted-foreground/40">·</span>
+                        <a
+                          href={activeEvent.originalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline flex items-center gap-1 text-xs font-medium"
+                        >
+                          <span>Visit</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
                       </div>
                     </div>
 
-                    {/* Privacy Hashed IP Box */}
-                    <div className="p-3 rounded-lg border border-border/50 bg-secondary/20">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
-                        Hashed IP (Privacy)
-                      </span>
-                      <div className="font-mono text-muted-foreground text-[11px] truncate">
-                        {activeEvent.ipAddress ? `${activeEvent.ipAddress.substring(0, 16)}...` : 'Anonymized'}
-                      </div>
+                    <div className="font-mono text-sm font-semibold text-foreground mb-1">
+                      /{activeEvent.shortUrlHash}
                     </div>
+                    <p className="text-xs text-muted-foreground break-all leading-relaxed font-mono">
+                      {activeEvent.originalUrl}
+                    </p>
                   </div>
 
-                  {/* UTM Parameters (if any) */}
-                  {(activeEvent.utmSource || activeEvent.utmMedium || activeEvent.utmCampaign) && (
-                    <div className="p-3 rounded-lg border border-border/50 bg-secondary/20 space-y-1.5 text-xs">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
-                        UTM Campaign Tags
-                      </span>
-                      {activeEvent.utmCampaign && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground font-mono">utm_campaign:</span>
-                          <span className="font-semibold text-foreground">{activeEvent.utmCampaign}</span>
-                        </div>
-                      )}
-                      {activeEvent.utmSource && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground font-mono">utm_source:</span>
-                          <span className="font-semibold text-foreground">{activeEvent.utmSource}</span>
-                        </div>
-                      )}
-                      {activeEvent.utmMedium && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground font-mono">utm_medium:</span>
-                          <span className="font-semibold text-foreground">{activeEvent.utmMedium}</span>
-                        </div>
-                      )}
+                  {/* Clean Dashed Key-Value Audit Rows */}
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                      Event Properties
                     </div>
-                  )}
-                </div>
 
-                {/* Raw JSON Audit Payload */}
-                <div className="mt-auto">
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
-                    Raw Event JSON
-                  </span>
-                  <pre className="p-3 rounded-lg border border-border/50 bg-muted/40 font-mono text-[10px] text-muted-foreground overflow-x-auto select-all max-h-40">
-                    {JSON.stringify(activeEvent, null, 2)}
-                  </pre>
+                    {/* Location Row */}
+                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border/80 text-xs">
+                      <span className="text-muted-foreground">Location</span>
+                      <div className="flex items-center gap-2 text-right">
+                        {getCountryBadge(activeEvent.country, activeEvent.city)}
+                        {activeEvent.latitude != null && activeEvent.longitude != null && (
+                          <span className="text-[10px] font-mono text-muted-foreground/70">
+                            ({activeEvent.latitude.toFixed(2)}°, {activeEvent.longitude.toFixed(2)}°)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Device Row */}
+                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border/80 text-xs">
+                      <span className="text-muted-foreground">Device & Client</span>
+                      <div className="flex items-center gap-1.5 font-medium text-foreground">
+                        {getDeviceIcon(activeEvent.device)}
+                        <span>{activeEvent.device || 'Desktop'}</span>
+                        <span className="text-muted-foreground/50">·</span>
+                        <span className="text-muted-foreground">{activeEvent.browser || 'Unknown'}</span>
+                        {activeEvent.os && (
+                          <>
+                            <span className="text-muted-foreground/50">·</span>
+                            <span className="text-muted-foreground">{activeEvent.os}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Referrer Row */}
+                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border/80 text-xs">
+                      <span className="text-muted-foreground">Referrer</span>
+                      <span className="font-mono text-foreground font-medium truncate max-w-[220px]" title={activeEvent.referer || 'Direct'}>
+                        {activeEvent.referer ? activeEvent.referer.replace(/^https?:\/\//, '') : '(direct)'}
+                      </span>
+                    </div>
+
+                    {/* IP Address Row */}
+                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border/80 text-xs">
+                      <span className="text-muted-foreground">IP Address</span>
+                      <div className="flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5 text-muted-foreground/60" />
+                        <span className="font-mono text-[11px] text-muted-foreground">
+                          {activeEvent.ipAddress ? `${activeEvent.ipAddress.substring(0, 16)}...` : 'Anonymized'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* UTM Campaign Tags */}
+                    {(activeEvent.utmCampaign || activeEvent.utmSource || activeEvent.utmMedium) && (
+                      <div className="py-2.5 border-b border-dashed border-border/80 text-xs space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Campaign</span>
+                          <span className="font-semibold text-primary font-mono">{activeEvent.utmCampaign || '—'}</span>
+                        </div>
+                        {activeEvent.utmSource && (
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-muted-foreground/70">Source</span>
+                            <span className="text-foreground font-mono">{activeEvent.utmSource}</span>
+                          </div>
+                        )}
+                        {activeEvent.utmMedium && (
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-muted-foreground/70">Medium</span>
+                            <span className="text-foreground font-mono">{activeEvent.utmMedium}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Collapsible Raw JSON Payload */}
+                  <div className="pt-4 border-t border-border/80">
+                    <div className="flex items-center justify-between mb-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowJsonRaw(!showJsonRaw)}
+                        className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                      >
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showJsonRaw ? 'rotate-180' : ''}`} />
+                        <span>Raw Event JSON</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleCopyText(JSON.stringify(activeEvent, null, 2), 'rawJson');
+                          setCopiedJson(true);
+                          setTimeout(() => setCopiedJson(false), 2000);
+                        }}
+                        className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        {copiedJson ? (
+                          <>
+                            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                            <span className="text-emerald-500 font-medium">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy JSON</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <AnimatePresence>
+                      {showJsonRaw && (
+                        <motion.pre
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="p-3 rounded-lg border border-border/70 bg-muted/40 font-mono text-[10px] text-muted-foreground overflow-x-auto select-all max-h-48"
+                        >
+                          {JSON.stringify(activeEvent, null, 2)}
+                        </motion.pre>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
               </motion.div>
-            </motion.div>
+            </div>
           )}
         </AnimatePresence>
 

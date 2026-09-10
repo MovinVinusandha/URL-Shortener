@@ -172,17 +172,17 @@ describe('EventsPage', () => {
 
     // Verify compound filter pill appears
     await waitFor(() => {
-      expect(screen.getByText('Device')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /remove device filter/i })).toBeInTheDocument();
       expect(screen.getByText('is')).toBeInTheDocument();
-      expect(screen.getByText('Mobile')).toBeInTheDocument();
+      expect(screen.getAllByText('Mobile').length).toBeGreaterThan(0);
     });
 
-    // Clear filters
-    const clearBtn = screen.getByRole('button', { name: /clear filters/i });
-    fireEvent.click(clearBtn);
+    // Dismiss filter via the cross icon on the pill (Clear filters button was removed)
+    const removeFilterBtn = screen.getByRole('button', { name: /remove device filter/i });
+    fireEvent.click(removeFilterBtn);
 
     await waitFor(() => {
-      expect(screen.queryByText('Mobile')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /remove device filter/i })).not.toBeInTheDocument();
     });
   });
 
@@ -398,6 +398,166 @@ describe('EventsPage', () => {
           }),
         })
       );
+    });
+  });
+
+  it('renders Dub.co table columns, supports toggling column visibility, and shows functional pagination text', async () => {
+    const mockEvents = [
+      {
+        id: 301,
+        urlId: 1,
+        shortUrlHash: 'dub-promo',
+        originalUrl: 'https://example.com/dub',
+        timestamp: '2026-07-31T15:50:00Z',
+        device: 'Desktop',
+        browser: 'Chrome',
+        os: 'macOS',
+        country: 'United States',
+        city: 'New York',
+        latitude: 40.7128,
+        longitude: -74.0060,
+        referer: 'twitter.com',
+        utmCampaign: 'summer-sale',
+      },
+      {
+        id: 302,
+        urlId: 2,
+        shortUrlHash: 'dub-launch',
+        originalUrl: 'https://example.com/launch',
+        timestamp: '2026-07-31T15:55:00Z',
+        device: 'Mobile',
+        browser: 'Safari',
+        os: 'iOS',
+        country: 'United Kingdom',
+        city: 'London',
+        latitude: 51.5074,
+        longitude: -0.1278,
+        referer: 'Direct',
+      },
+    ];
+
+    (axiosInstance.get as any).mockResolvedValueOnce({
+      data: {
+        content: mockEvents,
+        totalElements: 2,
+        totalPages: 1,
+        size: 30,
+        number: 0,
+        first: true,
+        last: true,
+        empty: false,
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <EventsPage />
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+
+    // Verify pagination text format: "Viewing 1-2 of 2 events"
+    await waitFor(() => {
+      expect(screen.getByText(/viewing 1-2 of 2 events/i)).toBeInTheDocument();
+    });
+
+    // Verify Dub.co table columns header (Event column removed)
+    expect(screen.getByRole('columnheader', { name: /date/i })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /^event$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /link/i })).toBeInTheDocument();
+
+    // Verify Display dropdown button (Links tab style)
+    const displayBtn = screen.getByRole('button', { name: /display/i });
+    fireEvent.click(displayBtn);
+
+    // Verify Display Popover has Ordering and Display Properties
+    expect(screen.getByText(/ordering/i)).toBeInTheDocument();
+    expect(screen.getByText(/display properties/i)).toBeInTheDocument();
+
+    // OS is false by default
+    expect(screen.queryByRole('columnheader', { name: /^os$/i })).not.toBeInTheDocument();
+
+    // Toggle OS column on via pill badge
+    const osToggle = screen.getByRole('button', { name: /^os$/i });
+    fireEvent.click(osToggle);
+    await waitFor(() => {
+      expect(screen.getByRole('columnheader', { name: /^os$/i })).toBeInTheDocument();
+    });
+
+    // Toggle Device column (true by default) off
+    const deviceToggle = screen.getByRole('button', { name: /^device$/i });
+    fireEvent.click(deviceToggle);
+    await waitFor(() => {
+      expect(screen.queryByRole('columnheader', { name: /^device$/i })).not.toBeInTheDocument();
+    });
+  });
+
+  it('opens redesigned minimalist Event Details modal popup and shows audit details and raw JSON', async () => {
+    const mockEvent = {
+      id: 401,
+      urlId: 1,
+      shortUrlHash: 'dub-drawer-test',
+      originalUrl: 'https://example.com/target-destination',
+      timestamp: '2026-08-01T12:00:00Z',
+      ipAddress: '192.168.1.1',
+      device: 'Desktop',
+      browser: 'Chrome',
+      os: 'macOS',
+      country: 'Germany',
+      city: 'Berlin',
+      latitude: 52.5200,
+      longitude: 13.4050,
+      referer: 'google.com',
+      utmSource: 'newsletter',
+      utmMedium: 'email',
+      utmCampaign: 'germany-launch',
+    };
+
+    (axiosInstance.get as any).mockResolvedValueOnce({
+      data: {
+        content: [mockEvent],
+        totalElements: 1,
+        totalPages: 1,
+        size: 30,
+        number: 0,
+        first: true,
+        last: true,
+        empty: false,
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <EventsPage />
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+
+    // Wait for event to render in table
+    await waitFor(() => {
+      expect(screen.getByText(/\/dub-drawer-test/i)).toBeInTheDocument();
+    });
+
+    // Click the row action button (...) to open details drawer
+    const detailsBtn = screen.getByTitle(/view event details/i);
+    fireEvent.click(detailsBtn);
+
+    // Verify drawer opened with redesigned sections
+    await waitFor(() => {
+      expect(screen.getByText(/event details/i)).toBeInTheDocument();
+      expect(screen.getByText('#401')).toBeInTheDocument();
+      expect(screen.getAllByText('https://example.com/target-destination').length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/berlin, germany/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText('germany-launch').length).toBeGreaterThan(0);
+    });
+
+    // Toggle Raw JSON viewer
+    const jsonToggle = screen.getByRole('button', { name: /raw event json/i });
+    fireEvent.click(jsonToggle);
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /copy json/i })).toBeInTheDocument();
     });
   });
 });
