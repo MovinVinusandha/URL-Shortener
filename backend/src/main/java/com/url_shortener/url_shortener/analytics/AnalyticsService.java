@@ -594,6 +594,7 @@ public class AnalyticsService {
             String device,
             String browser,
             String os,
+            String campaign,
             String search,
             org.springframework.data.domain.Pageable pageable
     ) {
@@ -609,6 +610,7 @@ public class AnalyticsService {
                 (device != null && !device.isBlank()) ? device : null,
                 (browser != null && !browser.isBlank()) ? browser : null,
                 (os != null && !os.isBlank()) ? os : null,
+                (campaign != null && !campaign.isBlank()) ? campaign : null,
                 (search != null && !search.isBlank()) ? search.trim() : null,
                 startDate,
                 endDate,

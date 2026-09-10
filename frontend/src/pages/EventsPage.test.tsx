@@ -560,5 +560,107 @@ describe('EventsPage', () => {
       expect(screen.getByRole('button', { name: /copy json/i })).toBeInTheDocument();
     });
   });
+
+  it('supports interactive pill popovers and column header sorting states', async () => {
+    const mockEvents = [
+      {
+        id: 501,
+        urlId: 1,
+        shortUrlHash: 'alpha-link',
+        originalUrl: 'https://example.com/alpha',
+        timestamp: '2026-09-01T10:00:00Z',
+        device: 'Desktop',
+        browser: 'Chrome',
+        os: 'macOS',
+        country: 'United States',
+        city: 'New York',
+        latitude: 40.7128,
+        longitude: -74.0060,
+        utmCampaign: 'promo-summer',
+      },
+      {
+        id: 502,
+        urlId: 2,
+        shortUrlHash: 'beta-link',
+        originalUrl: 'https://example.com/beta',
+        timestamp: '2026-09-02T10:00:00Z',
+        device: 'Mobile',
+        browser: 'Safari',
+        os: 'iOS',
+        country: 'Canada',
+        city: 'Toronto',
+        latitude: 43.6532,
+        longitude: -79.3832,
+        utmCampaign: 'promo-winter',
+      },
+    ];
+
+    (axiosInstance.get as any).mockResolvedValue({
+      data: {
+        content: mockEvents,
+        totalElements: 2,
+        totalPages: 1,
+        size: 30,
+        number: 0,
+        first: true,
+        last: true,
+        empty: false,
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <EventsPage />
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+
+    // Wait for events to load in table so availableCampaigns is populated
+    await waitFor(() => {
+      expect(screen.getByText(/\/alpha-link/i)).toBeInTheDocument();
+    });
+
+    // Open filter dropdown and apply campaign filter
+    const filterBtn = screen.getByRole('button', { name: /filter/i });
+    fireEvent.click(filterBtn);
+
+    const campaignCategoryBtn = screen.getByRole('button', { name: /campaign/i });
+    fireEvent.click(campaignCategoryBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /promo-summer/i })).toBeInTheDocument();
+    });
+
+    const summerCampaignBtn = screen.getByRole('button', { name: /promo-summer/i });
+    fireEvent.click(summerCampaignBtn);
+
+    // Verify campaign pill is rendered
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /remove campaign filter/i })).toBeInTheDocument();
+      expect(screen.getAllByText('promo-summer').length).toBeGreaterThanOrEqual(1);
+    });
+
+    // Clicking the pill value button opens the interactive pill popover
+    const pillValueBtn = screen.getAllByText('promo-summer')[0];
+    fireEvent.click(pillValueBtn);
+
+    // In the popover, select promo-winter
+    await waitFor(() => {
+      const winterOption = screen.getByRole('button', { name: /promo-winter/i });
+      expect(winterOption).toBeInTheDocument();
+      fireEvent.click(winterOption);
+    });
+
+    // Verify campaign switched to promo-winter
+    await waitFor(() => {
+      expect(screen.getAllByText('promo-winter').length).toBeGreaterThanOrEqual(1);
+    });
+
+    // Test column header sorting click
+    const countryHeaders = screen.getAllByText(/^Country$/i);
+    fireEvent.click(countryHeaders[0]);
+  });
 });
+
 

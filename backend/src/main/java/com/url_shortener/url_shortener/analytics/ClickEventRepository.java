@@ -697,23 +697,25 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
     @Query("""
             SELECT c FROM ClickEvent c
             WHERE c.url.user.id = :userId
-              AND (:hash IS NULL OR c.url.shortUrl = :hash)
-              AND (:country IS NULL OR LOWER(c.country) = LOWER(:country))
-              AND (:city IS NULL OR LOWER(c.city) = LOWER(:city))
-              AND (:device IS NULL OR LOWER(c.device) = LOWER(:device))
-              AND (:browser IS NULL OR LOWER(c.browser) = LOWER(:browser))
-              AND (:os IS NULL OR LOWER(c.os) = LOWER(:os))
-              AND (:search IS NULL OR (
-                    LOWER(c.url.shortUrl) LIKE LOWER(CONCAT('%', :search, '%')) OR
-                    LOWER(c.url.longUrl) LIKE LOWER(CONCAT('%', :search, '%')) OR
-                    LOWER(c.city) LIKE LOWER(CONCAT('%', :search, '%')) OR
-                    LOWER(c.country) LIKE LOWER(CONCAT('%', :search, '%')) OR
-                    LOWER(c.referer) LIKE LOWER(CONCAT('%', :search, '%'))
-              ))
-              AND (:startDate IS NULL OR c.timestamp >= :startDate)
-              AND (:endDate IS NULL OR c.timestamp <= :endDate)
-            ORDER BY c.timestamp DESC
-            """)
+               AND (:hash IS NULL OR c.url.shortUrl = :hash)
+               AND (:country IS NULL OR LOWER(c.country) = LOWER(:country))
+               AND (:city IS NULL OR LOWER(c.city) = LOWER(:city))
+               AND (:device IS NULL OR LOWER(c.device) = LOWER(:device))
+               AND (:browser IS NULL OR LOWER(c.browser) = LOWER(:browser))
+               AND (:os IS NULL OR LOWER(c.os) = LOWER(:os))
+               AND (:campaign IS NULL OR LOWER(c.utmCampaign) = LOWER(:campaign))
+               AND (:search IS NULL OR (
+                     LOWER(c.url.shortUrl) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                     LOWER(c.url.longUrl) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                     LOWER(c.city) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                     LOWER(c.country) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                     LOWER(c.referer) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                     LOWER(c.utmCampaign) LIKE LOWER(CONCAT('%', :search, '%'))
+               ))
+               AND (:startDate IS NULL OR c.timestamp >= :startDate)
+               AND (:endDate IS NULL OR c.timestamp <= :endDate)
+             ORDER BY c.timestamp DESC
+             """)
     Page<ClickEvent> findEventsForUser(
             @Param("userId") Long userId,
             @Param("hash") String hash,
@@ -722,6 +724,7 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
             @Param("device") String device,
             @Param("browser") String browser,
             @Param("os") String os,
+            @Param("campaign") String campaign,
             @Param("search") String search,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,

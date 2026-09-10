@@ -420,11 +420,11 @@ class AnalyticsServiceTest {
                 new org.springframework.data.domain.PageImpl<>(List.of(event));
 
         when(clickEventRepository.findEventsForUser(
-                eq(1L), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(), any(), any()
+                eq(1L), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(), any(), any()
         )).thenReturn(mockPage);
 
         var result = analyticsService.getPaginatedEvents(
-                currentUser, "24h", null, null, null, null, null, null, null, null, null,
+                currentUser, "24h", null, null, null, null, null, null, null, null, null, null,
                 org.springframework.data.domain.PageRequest.of(0, 10)
         );
 

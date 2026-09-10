@@ -133,6 +133,7 @@ public class AnalyticsController {
             @RequestParam(required = false) String device,
             @RequestParam(required = false) String browser,
             @RequestParam(required = false) String os,
+            @RequestParam(required = false) String campaign,
             @RequestParam(required = false) String search,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "30") int size
@@ -147,7 +148,7 @@ public class AnalyticsController {
         );
 
         return ResponseEntity.ok(analyticsService.getPaginatedEvents(
-                currentUser, period, startDate, endDate, hash, country, city, device, browser, os, search, pageable
+                currentUser, period, startDate, endDate, hash, country, city, device, browser, os, campaign, search, pageable
         ));
     }
 

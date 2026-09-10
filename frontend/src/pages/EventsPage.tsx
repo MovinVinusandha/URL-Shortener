@@ -253,6 +253,15 @@ export function projectCoordinate(lat: number, lon: number, phi: number, theta: 
   };
 }
 
+export const DEFAULT_COUNTRIES: string[] = [
+  'Australia', 'Austria', 'Belgium', 'Brazil', 'Canada', 'China', 'Denmark',
+  'Finland', 'France', 'Germany', 'India', 'Indonesia', 'Ireland', 'Italy',
+  'Japan', 'Malaysia', 'Mexico', 'Netherlands', 'New Zealand', 'Norway',
+  'Poland', 'Portugal', 'Singapore', 'South Africa', 'South Korea', 'Spain',
+  'Sri Lanka', 'Sweden', 'Switzerland', 'Thailand', 'Turkey', 'United Arab Emirates',
+  'United Kingdom', 'United States', 'Vietnam'
+];
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const EventsPage: React.FC = () => {
@@ -281,6 +290,11 @@ export const EventsPage: React.FC = () => {
   const [page, setPage] = useState<number>(0);
   const [pageSize] = useState<number>(30);
 
+  // Master known filter choices (preserved across selections so all options remain visible)
+  const [knownCountries, setKnownCountries] = useState<string[]>(DEFAULT_COUNTRIES);
+  const [knownLinks, setKnownLinks] = useState<{ hash: string; url: string }[]>([]);
+  const [knownCampaigns, setKnownCampaigns] = useState<{ name: string; count: number }[]>([]);
+
   // Filter Bar state
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
@@ -291,6 +305,21 @@ export const EventsPage: React.FC = () => {
   const [activeFilterCategory, setActiveFilterCategory] = useState<'none' | 'device' | 'country' | 'link' | 'campaign'>('none');
   const [filterSearch, setFilterSearch] = useState('');
   const filterRef = useRef<HTMLDivElement>(null);
+
+  // Filter Pill Popover states & refs
+  const [isDevicePillOpen, setIsDevicePillOpen] = useState(false);
+  const [isCountryPillOpen, setIsCountryPillOpen] = useState(false);
+  const [isLinkPillOpen, setIsLinkPillOpen] = useState(false);
+  const [isCampaignPillOpen, setIsCampaignPillOpen] = useState(false);
+
+  const [countryPillSearch, setCountryPillSearch] = useState('');
+  const [linkPillSearch, setLinkPillSearch] = useState('');
+  const [campaignPillSearch, setCampaignPillSearch] = useState('');
+
+  const devicePillRef = useRef<HTMLDivElement>(null);
+  const countryPillRef = useRef<HTMLDivElement>(null);
+  const linkPillRef = useRef<HTMLDivElement>(null);
+  const campaignPillRef = useRef<HTMLDivElement>(null);
 
   // Selected Filter Values
   const [selectedDevice, setSelectedDevice] = useState<string>('all');
@@ -341,13 +370,50 @@ export const EventsPage: React.FC = () => {
     return DEFAULT_COLUMNS_VISIBILITY;
   });
   // Sorting and Display popover state (Matching Links tab Display function)
-  const [sortBy, setSortBy] = useState<'timestamp' | 'country' | 'link' | 'device'>('timestamp');
+  const [sortBy, setSortBy] = useState<'timestamp' | 'country' | 'link' | 'device' | 'linkType'>('timestamp');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
 
   const [isDisplayOpen, setIsDisplayOpen] = useState(false);
   const displayRef = useRef<HTMLDivElement>(null);
+
+  // Click outside listener for all dropdowns & popovers
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (displayRef.current && !displayRef.current.contains(target)) {
+        setIsDisplayOpen(false);
+        setIsSortMenuOpen(false);
+      } else if (sortMenuRef.current && !sortMenuRef.current.contains(target)) {
+        setIsSortMenuOpen(false);
+      }
+
+      if (filterRef.current && !filterRef.current.contains(target)) {
+        setIsFilterOpen(false);
+        setActiveFilterCategory('none');
+      }
+
+      if (devicePillRef.current && !devicePillRef.current.contains(target)) {
+        setIsDevicePillOpen(false);
+      }
+
+      if (countryPillRef.current && !countryPillRef.current.contains(target)) {
+        setIsCountryPillOpen(false);
+      }
+
+      if (linkPillRef.current && !linkPillRef.current.contains(target)) {
+        setIsLinkPillOpen(false);
+      }
+
+      if (campaignPillRef.current && !campaignPillRef.current.contains(target)) {
+        setIsCampaignPillOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const toggleColumnVisibility = (key: keyof TableColumnsVisibility) => {
     setVisibleColumns((prev) => {
@@ -359,41 +425,46 @@ export const EventsPage: React.FC = () => {
     });
   };
 
-  // Close popovers on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
-        setIsFilterOpen(false);
-        setActiveFilterCategory('none');
-      }
-      if (displayRef.current && !displayRef.current.contains(e.target as Node)) {
-        setIsDisplayOpen(false);
-        setIsSortMenuOpen(false);
-      }
-      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
-        setIsSortMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Sorted events based on Ordering section
+  // Sorted and Filtered events based on active filters and Ordering section
   const sortedEvents = useMemo(() => {
-    return [...events].sort((a, b) => {
-      let cmp = 0;
-      if (sortBy === 'timestamp') {
-        cmp = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-      } else if (sortBy === 'country') {
-        cmp = (a.country || '').localeCompare(b.country || '');
-      } else if (sortBy === 'link') {
-        cmp = (a.shortUrlHash || '').localeCompare(b.shortUrlHash || '');
-      } else if (sortBy === 'device') {
-        cmp = (a.device || '').localeCompare(b.device || '');
-      }
-      return sortOrder === 'asc' ? cmp : -cmp;
-    });
-  }, [events, sortBy, sortOrder]);
+    return events
+      .filter((ev) => {
+        if (selectedDevice !== 'all' && (ev.device || 'Desktop').toLowerCase() !== selectedDevice.toLowerCase()) return false;
+        if (selectedCountry && (ev.country || '').toLowerCase() !== selectedCountry.toLowerCase()) return false;
+        if (linkHashParam && ev.shortUrlHash !== linkHashParam) return false;
+        if (selectedCampaign && ev.utmCampaign !== selectedCampaign) return false;
+        if (debouncedSearch.trim()) {
+          const q = debouncedSearch.toLowerCase();
+          const matches =
+            (ev.shortUrlHash || '').toLowerCase().includes(q) ||
+            (ev.originalUrl || '').toLowerCase().includes(q) ||
+            (ev.city || '').toLowerCase().includes(q) ||
+            (ev.country || '').toLowerCase().includes(q) ||
+            (ev.referer || '').toLowerCase().includes(q) ||
+            (ev.device || '').toLowerCase().includes(q) ||
+            (ev.utmCampaign || '').toLowerCase().includes(q);
+          if (!matches) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        let cmp = 0;
+        if (sortBy === 'timestamp') {
+          cmp = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+        } else if (sortBy === 'country') {
+          cmp = (a.country || '').localeCompare(b.country || '');
+        } else if (sortBy === 'link') {
+          cmp = (a.shortUrlHash || '').localeCompare(b.shortUrlHash || '');
+        } else if (sortBy === 'device') {
+          cmp = (a.device || '').localeCompare(b.device || '');
+        } else if (sortBy === 'linkType') {
+          const typeA = a.utmCampaign ? 'campaign' : 'standalone';
+          const typeB = b.utmCampaign ? 'campaign' : 'standalone';
+          cmp = typeA.localeCompare(typeB);
+        }
+        return sortOrder === 'asc' ? cmp : -cmp;
+      });
+  }, [events, selectedDevice, selectedCountry, linkHashParam, selectedCampaign, debouncedSearch, sortBy, sortOrder]);
 
   // ── 1. Fetch Paginated Events ───────────────────────────────────────────────
   const fetchEvents = useCallback(async (pageToFetch = page) => {
@@ -432,15 +503,52 @@ export const EventsPage: React.FC = () => {
         params.hash = linkHashParam;
       }
 
+      // Campaign filter
+      if (selectedCampaign) {
+        params.campaign = selectedCampaign;
+      }
+
       const { data } = await axiosInstance.get<PaginatedEvents>('/analytics/events', { params });
-      setEvents(data.content || []);
+      const rawEvents = data.content || [];
+      setEvents(rawEvents);
       setTotalElements(data.totalElements || 0);
+
+      // Accumulate known filter choices so dropdowns preserve full selections
+      setKnownCountries((prev) => {
+        const set = new Set(prev);
+        rawEvents.forEach((e) => {
+          if (e.country && e.country !== 'Unknown' && e.country !== 'Local') {
+            set.add(e.country);
+          }
+        });
+        return Array.from(set).sort();
+      });
+
+      setKnownLinks((prev) => {
+        const map = new Map<string, string>();
+        prev.forEach((l) => map.set(l.hash, l.url));
+        rawEvents.forEach((e) => {
+          if (e.shortUrlHash) map.set(e.shortUrlHash, e.originalUrl);
+        });
+        return Array.from(map.entries()).map(([hash, url]) => ({ hash, url }));
+      });
+
+      setKnownCampaigns((prev) => {
+        const map = new Map<string, number>();
+        prev.forEach((c) => map.set(c.name, c.count));
+        rawEvents.forEach((e) => {
+          if (e.utmCampaign) {
+            map.set(e.utmCampaign, (map.get(e.utmCampaign) || 0) + 1);
+          }
+        });
+        return Array.from(map.entries()).map(([name, count]) => ({ name, count }));
+      });
     } catch (err) {
       console.error('Failed to load events', err);
     } finally {
       setIsLoading(false);
     }
-  }, [page, pageSize, dateRange, debouncedSearch, selectedDevice, selectedCountry, linkHashParam, viewMode]);
+  }, [page, pageSize, dateRange, debouncedSearch, selectedDevice, selectedCountry, linkHashParam, selectedCampaign, viewMode]);
 
   useEffect(() => {
     fetchEvents(page);
@@ -485,6 +593,27 @@ export const EventsPage: React.FC = () => {
           // Prepend to live feed
           setRecentLiveEvents((prev) => [newEvent, ...prev.slice(0, 49)]);
 
+          // Accumulate known filter choices
+          if (newEvent.country && newEvent.country !== 'Unknown' && newEvent.country !== 'Local') {
+            setKnownCountries((prev) => (prev.includes(newEvent.country!) ? prev : [...prev, newEvent.country!].sort()));
+          }
+          if (newEvent.shortUrlHash && newEvent.originalUrl) {
+            setKnownLinks((prev) =>
+              prev.some((l) => l.hash === newEvent.shortUrlHash)
+                ? prev
+                : [...prev, { hash: newEvent.shortUrlHash, url: newEvent.originalUrl }]
+            );
+          }
+          if (newEvent.utmCampaign) {
+            setKnownCampaigns((prev) => {
+              const existing = prev.find((c) => c.name === newEvent.utmCampaign);
+              if (existing) {
+                return prev.map((c) => (c.name === newEvent.utmCampaign ? { ...c, count: c.count + 1 } : c));
+              }
+              return [...prev, { name: newEvent.utmCampaign!, count: 1 }];
+            });
+          }
+
           // Trigger real-time arrival visual & camera swivel
           setLatestArrival(newEvent);
           
@@ -499,8 +628,21 @@ export const EventsPage: React.FC = () => {
             };
           }
 
-          // Prepend to historical table if on first page and no search
-          if (page === 0 && !searchQuery.trim()) {
+          // Check if new live event matches currently active filters
+          const matches =
+            (selectedDevice === 'all' || (newEvent.device || 'Desktop').toLowerCase() === selectedDevice.toLowerCase()) &&
+            (!selectedCountry || (newEvent.country || '').toLowerCase() === selectedCountry.toLowerCase()) &&
+            (!linkHashParam || newEvent.shortUrlHash === linkHashParam) &&
+            (!selectedCampaign || newEvent.utmCampaign === selectedCampaign) &&
+            (!debouncedSearch.trim() ||
+              (newEvent.shortUrlHash || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+              (newEvent.originalUrl || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+              (newEvent.city || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+              (newEvent.country || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+              (newEvent.utmCampaign || '').toLowerCase().includes(debouncedSearch.toLowerCase()));
+
+          // Prepend to historical table if on first page and matches active filters
+          if (page === 0 && matches) {
             setEvents((prev) => [newEvent, ...prev.slice(0, pageSize - 1)]);
             setTotalElements((prev) => prev + 1);
           }
@@ -522,7 +664,7 @@ export const EventsPage: React.FC = () => {
       }
       setLiveConnected(false);
     };
-  }, [isLive, page, pageSize]);
+  }, [isLive, page, pageSize, selectedDevice, selectedCountry, linkHashParam, selectedCampaign, debouncedSearch]);
 
   // Auto-dismiss the arrival HUD chip after 4 seconds
   useEffect(() => {
@@ -664,26 +806,38 @@ export const EventsPage: React.FC = () => {
   // Keep topBadgesRef synchronized for 60fps animation loop
   topBadgesRef.current = topBadges;
 
-  // Available unique countries and links for filter dropdowns
+  // Available unique countries and links for filter dropdowns (merges master known choices with current events)
   const availableCountries = useMemo(() => {
-    const set = new Set<string>();
-    events.forEach(e => {
+    const set = new Set<string>(knownCountries);
+    events.forEach((e) => {
       if (e.country && e.country !== 'Unknown' && e.country !== 'Local') {
         set.add(e.country);
       }
     });
     return Array.from(set).sort();
-  }, [events]);
+  }, [events, knownCountries]);
 
   const availableLinks = useMemo(() => {
     const map = new Map<string, string>();
-    events.forEach(e => {
+    knownLinks.forEach((l) => map.set(l.hash, l.url));
+    events.forEach((e) => {
       if (e.shortUrlHash) {
         map.set(e.shortUrlHash, e.originalUrl);
       }
     });
     return Array.from(map.entries()).map(([hash, url]) => ({ hash, url }));
-  }, [events]);
+  }, [events, knownLinks]);
+
+  const availableCampaigns = useMemo(() => {
+    const map = new Map<string, number>();
+    knownCampaigns.forEach((c) => map.set(c.name, c.count));
+    events.forEach((e) => {
+      if (e.utmCampaign) {
+        map.set(e.utmCampaign, Math.max(map.get(e.utmCampaign) || 0, 1));
+      }
+    });
+    return Array.from(map.entries()).map(([name, count]) => ({ name, count }));
+  }, [events, knownCampaigns]);
 
   // Active filter count
   const activeFilterCount = useMemo(() => {
@@ -845,14 +999,14 @@ export const EventsPage: React.FC = () => {
               onClick={() => setIsFilterOpen(!isFilterOpen)}
               className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-medium transition-all cursor-pointer ${
                 activeFilterCount > 0
-                  ? 'border-border bg-secondary text-foreground shadow-xs' 
-                  : 'bg-background border-border text-foreground hover:bg-secondary'
+                  ? 'border-neutral-200/80 dark:border-[#27272A] bg-neutral-100 dark:bg-[#18181B] text-foreground shadow-sm hover:bg-neutral-200/60 dark:hover:bg-[#202024]' 
+                  : 'bg-background border-input text-foreground hover:bg-secondary'
               }`}
             >
-              <Filter className={`w-3.5 h-3.5 ${activeFilterCount > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
+              <Filter className={`w-3.5 h-3.5 ${activeFilterCount > 0 ? 'text-[#0099ff]' : 'text-muted-foreground'}`} />
               <span>Filter</span>
               {activeFilterCount > 0 && (
-                <span className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-full leading-none font-semibold shadow-xs">
+                <span className="bg-[#0099ff] text-white text-[10px] px-1.5 py-0.5 rounded-full leading-none font-semibold shadow-sm">
                   {activeFilterCount}
                 </span>
               )}
@@ -867,22 +1021,22 @@ export const EventsPage: React.FC = () => {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -4, scale: 0.98 }}
                   transition={{ duration: 0.1, ease: 'easeOut' }}
-                  className="absolute left-0 top-full mt-1.5 w-64 rounded-xl shadow-xl bg-popover border border-border divide-y divide-border focus:outline-none z-[60] overflow-hidden"
+                  className="absolute left-0 top-full mt-1 w-64 rounded-xl shadow-lg bg-popover border border-border divide-y divide-border focus:outline-none z-[60] overflow-hidden"
                 >
                   {activeFilterCategory === 'none' ? (
-                    <div className="p-1 space-y-0.5">
+                    <div className="py-1 p-1 space-y-0.5">
                       {/* Category: Device */}
                       <button 
                         type="button"
                         onClick={() => setActiveFilterCategory('device')}
-                        className="w-full flex items-center justify-between px-2.5 py-2 text-xs text-foreground hover:bg-secondary/70 rounded-lg transition-colors group cursor-pointer"
+                        className="w-full flex items-center justify-between px-2.5 py-2 text-xs text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114] rounded-lg transition-colors group cursor-pointer"
                       >
                         <div className="flex items-center">
                           <Monitor className="mr-2.5 h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
                           <span>Device Type</span>
                         </div>
                         {selectedDevice !== 'all' && (
-                          <span className="text-[10px] text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-md">
+                          <span className="text-[10px] text-[#0099ff] font-medium bg-[#0099ff]/10 px-2 py-0.5 rounded-md">
                             {selectedDevice}
                           </span>
                         )}
@@ -892,14 +1046,14 @@ export const EventsPage: React.FC = () => {
                       <button 
                         type="button"
                         onClick={() => { setActiveFilterCategory('country'); setFilterSearch(''); }}
-                        className="w-full flex items-center justify-between px-2.5 py-2 text-xs text-foreground hover:bg-secondary/70 rounded-lg transition-colors group cursor-pointer"
+                        className="w-full flex items-center justify-between px-2.5 py-2 text-xs text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114] rounded-lg transition-colors group cursor-pointer"
                       >
                         <div className="flex items-center">
                           <MapPin className="mr-2.5 h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
                           <span>Country</span>
                         </div>
                         {selectedCountry && (
-                          <span className="text-[10px] text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-md truncate max-w-[90px]">
+                          <span className="text-[10px] text-[#0099ff] font-medium bg-[#0099ff]/10 px-2 py-0.5 rounded-md truncate max-w-[90px]">
                             {selectedCountry}
                           </span>
                         )}
@@ -909,15 +1063,32 @@ export const EventsPage: React.FC = () => {
                       <button 
                         type="button"
                         onClick={() => { setActiveFilterCategory('link'); setFilterSearch(''); }}
-                        className="w-full flex items-center justify-between px-2.5 py-2 text-xs text-foreground hover:bg-secondary/70 rounded-lg transition-colors group cursor-pointer"
+                        className="w-full flex items-center justify-between px-2.5 py-2 text-xs text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114] rounded-lg transition-colors group cursor-pointer"
                       >
                         <div className="flex items-center">
                           <Layers className="mr-2.5 h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
                           <span>Short Link</span>
                         </div>
                         {linkHashParam && (
-                          <span className="text-[10px] text-primary font-mono bg-primary/10 px-2 py-0.5 rounded-md">
+                          <span className="text-[10px] text-[#0099ff] font-mono bg-[#0099ff]/10 px-2 py-0.5 rounded-md">
                             /{linkHashParam}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Category: Campaign */}
+                      <button 
+                        type="button"
+                        onClick={() => { setActiveFilterCategory('campaign'); setCampaignPillSearch(''); }}
+                        className="w-full flex items-center justify-between px-2.5 py-2 text-xs text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114] rounded-lg transition-colors group cursor-pointer"
+                      >
+                        <div className="flex items-center">
+                          <Layers className="mr-2.5 h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
+                          <span>Campaign</span>
+                        </div>
+                        {selectedCampaign && (
+                          <span className="text-[10px] text-[#0099ff] font-medium bg-[#0099ff]/10 px-2 py-0.5 rounded-md truncate max-w-[90px]">
+                            {selectedCampaign}
                           </span>
                         )}
                       </button>
@@ -925,13 +1096,13 @@ export const EventsPage: React.FC = () => {
                   ) : (
                     <div className="flex flex-col">
                       {/* Submenu Header */}
-                      <div className="p-2 border-b border-border flex items-center justify-between bg-muted/20">
+                      <div className="p-1.5 border-b border-border/80 bg-background/80 flex items-center justify-between">
                         <button 
                           type="button"
                           onClick={() => setActiveFilterCategory('none')}
-                          className="text-[11px] font-medium text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer"
+                          className="p-1 hover:bg-neutral-100/70 dark:hover:bg-[#18181B] rounded-lg text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 cursor-pointer"
                         >
-                          <ChevronLeft className="w-3.5 h-3.5" /> Back
+                          <ChevronLeft className="w-3.5 h-3.5" />
                         </button>
                         <span className="text-xs font-semibold capitalize text-foreground">
                           {activeFilterCategory}
@@ -941,44 +1112,50 @@ export const EventsPage: React.FC = () => {
 
                       {/* Device Submenu */}
                       {activeFilterCategory === 'device' && (
-                        <div className="p-1 space-y-0.5">
-                          {['all', 'Desktop', 'Mobile', 'Tablet'].map((dev) => (
-                            <button
-                              key={dev}
-                              type="button"
-                              onClick={() => {
-                                setSelectedDevice(dev);
-                                setIsFilterOpen(false);
-                                setActiveFilterCategory('none');
-                                setPage(0);
-                              }}
-                              className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors cursor-pointer ${
-                                selectedDevice === dev
-                                  ? 'bg-secondary font-medium text-foreground'
-                                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
-                              }`}
-                            >
-                              <span>{dev === 'all' ? 'All Devices' : dev}</span>
-                              {selectedDevice === dev && <Check className="w-3.5 h-3.5 text-primary" />}
-                            </button>
-                          ))}
+                        <div className="py-1 p-1 space-y-0.5">
+                          {['all', 'Desktop', 'Mobile', 'Tablet'].map((dev) => {
+                            const isSelected = selectedDevice === dev;
+                            return (
+                              <button
+                                key={dev}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedDevice(dev);
+                                  setIsFilterOpen(false);
+                                  setActiveFilterCategory('none');
+                                  setPage(0);
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg cursor-pointer transition-colors ${
+                                  isSelected
+                                    ? 'bg-[#0099ff]/10 text-[#0099ff] font-semibold'
+                                    : 'text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
+                                }`}
+                              >
+                                <span className="font-medium">{dev === 'all' ? 'All Devices' : dev}</span>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-[#0099ff] stroke-[2.5]" />}
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
 
                       {/* Country Submenu */}
                       {activeFilterCategory === 'country' && (
-                        <div className="flex flex-col">
-                          <div className="p-2 border-b border-border">
-                            <input
-                              type="text"
-                              autoFocus={true}
-                              placeholder="Search country..."
-                              value={filterSearch}
-                              onChange={(e) => setFilterSearch(e.target.value)}
-                              className="w-full bg-secondary/50 rounded-md px-2 py-1 text-xs border border-border outline-none"
-                            />
+                        <>
+                          <div className="p-1.5 border-b border-border/80 bg-background/80 flex items-center">
+                            <div className="relative flex-1 flex items-center bg-secondary/40 rounded-md px-2 py-0.5 border border-border/40 focus-within:border-primary/50 transition-all">
+                              <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+                              <input
+                                type="text"
+                                autoFocus={true}
+                                placeholder="Search country..."
+                                value={filterSearch}
+                                onChange={(e) => setFilterSearch(e.target.value)}
+                                className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1 px-2 text-foreground placeholder:text-muted-foreground"
+                              />
+                            </div>
                           </div>
-                          <div className="max-h-48 overflow-y-auto p-1 space-y-0.5">
+                          <div className="py-1 p-1 max-h-48 overflow-y-auto">
                             <button
                               type="button"
                               onClick={() => {
@@ -987,50 +1164,57 @@ export const EventsPage: React.FC = () => {
                                 setActiveFilterCategory('none');
                                 setPage(0);
                               }}
-                              className="w-full text-left px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary rounded-lg cursor-pointer"
+                              className="w-full text-left px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114] rounded-lg cursor-pointer"
                             >
                               All Countries
                             </button>
                             {availableCountries
                               .filter(c => c.toLowerCase().includes(filterSearch.toLowerCase()))
-                              .map(country => (
-                                <button
-                                  key={country}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedCountry(country);
-                                    setIsFilterOpen(false);
-                                    setActiveFilterCategory('none');
-                                    setPage(0);
-                                  }}
-                                  className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors cursor-pointer ${
-                                    selectedCountry === country
-                                      ? 'bg-secondary font-medium text-foreground'
-                                      : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
-                                  }`}
-                                >
-                                  <span className="truncate">{country}</span>
-                                  {selectedCountry === country && <Check className="w-3.5 h-3.5 text-primary" />}
-                                </button>
-                              ))}
+                              .map(country => {
+                                const isSelected = selectedCountry === country;
+                                return (
+                                  <button
+                                    key={country}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedCountry(country);
+                                      setIsFilterOpen(false);
+                                      setActiveFilterCategory('none');
+                                      setPage(0);
+                                    }}
+                                    className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg cursor-pointer transition-colors ${
+                                      isSelected
+                                        ? 'bg-[#0099ff]/10 text-[#0099ff] font-semibold'
+                                        : 'text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
+                                    }`}
+                                  >
+                                    <span className="truncate font-medium">{country}</span>
+                                    {isSelected && <Check className="w-3.5 h-3.5 text-[#0099ff] stroke-[2.5]" />}
+                                  </button>
+                                );
+                              })}
+                            {availableCountries.length === 0 && <div className="px-2.5 py-2 text-xs text-muted-foreground">No countries found</div>}
                           </div>
-                        </div>
+                        </>
                       )}
 
                       {/* Link Submenu */}
                       {activeFilterCategory === 'link' && (
-                        <div className="flex flex-col">
-                          <div className="p-2 border-b border-border">
-                            <input
-                              type="text"
-                              autoFocus={true}
-                              placeholder="Search link hash..."
-                              value={filterSearch}
-                              onChange={(e) => setFilterSearch(e.target.value)}
-                              className="w-full bg-secondary/50 rounded-md px-2 py-1 text-xs border border-border outline-none font-mono"
-                            />
+                        <>
+                          <div className="p-1.5 border-b border-border/80 bg-background/80 flex items-center">
+                            <div className="relative flex-1 flex items-center bg-secondary/40 rounded-md px-2 py-0.5 border border-border/40 focus-within:border-primary/50 transition-all">
+                              <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+                              <input
+                                type="text"
+                                autoFocus={true}
+                                placeholder="Search link hash..."
+                                value={filterSearch}
+                                onChange={(e) => setFilterSearch(e.target.value)}
+                                className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1 px-2 text-foreground placeholder:text-muted-foreground font-mono"
+                              />
+                            </div>
                           </div>
-                          <div className="max-h-48 overflow-y-auto p-1 space-y-0.5">
+                          <div className="py-1 p-1 max-h-48 overflow-y-auto space-y-0.5">
                             <button
                               type="button"
                               onClick={() => {
@@ -1043,41 +1227,99 @@ export const EventsPage: React.FC = () => {
                                 setActiveFilterCategory('none');
                                 setPage(0);
                               }}
-                              className="w-full text-left px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary rounded-lg cursor-pointer"
+                              className="w-full text-left px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114] rounded-lg cursor-pointer"
                             >
                               All Links
                             </button>
                             {availableLinks
                               .filter(l => l.hash.toLowerCase().includes(filterSearch.toLowerCase()) || l.url.toLowerCase().includes(filterSearch.toLowerCase()))
-                              .map(l => (
+                              .map(l => {
+                                const isSelected = linkHashParam === l.hash;
+                                return (
+                                  <button
+                                    key={l.hash}
+                                    type="button"
+                                    onClick={() => {
+                                      setSearchParams(prev => {
+                                        const u = new URLSearchParams(prev);
+                                        u.set('hash', l.hash);
+                                        return u;
+                                      });
+                                      setIsFilterOpen(false);
+                                      setActiveFilterCategory('none');
+                                      setPage(0);
+                                    }}
+                                    className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg cursor-pointer transition-colors ${
+                                      isSelected
+                                        ? 'bg-[#0099ff]/10 text-[#0099ff] font-semibold'
+                                        : 'text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
+                                    }`}
+                                  >
+                                    <div className="flex flex-col text-left truncate">
+                                      <span className="font-mono font-semibold">/{l.hash}</span>
+                                      <span className="text-[10px] text-muted-foreground truncate max-w-[170px]">{l.url}</span>
+                                    </div>
+                                    {isSelected && <Check className="w-3.5 h-3.5 text-[#0099ff] stroke-[2.5] shrink-0 ml-2" />}
+                                  </button>
+                                );
+                              })}
+                            {availableLinks.length === 0 && <div className="px-2.5 py-2 text-xs text-muted-foreground">No links found</div>}
+                          </div>
+                        </>
+                      )}
+
+                      {/* Campaign Submenu */}
+                      {activeFilterCategory === 'campaign' && (
+                        <>
+                          <div className="p-1.5 border-b border-border/80 bg-background/80 flex items-center">
+                            <div className="relative flex-1 flex items-center bg-secondary/40 rounded-md px-2 py-0.5 border border-border/40 focus-within:border-primary/50 transition-all">
+                              <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+                              <input 
+                                type="text" 
+                                autoFocus={true}
+                                value={campaignPillSearch}
+                                onChange={e => setCampaignPillSearch(e.target.value)}
+                                placeholder="Search campaigns..." 
+                                className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1 px-2 text-foreground placeholder:text-muted-foreground"
+                              />
+                            </div>
+                          </div>
+                          <div className="py-1 p-1 max-h-48 overflow-y-auto">
+                            {availableCampaigns.filter(c => c.name.toLowerCase().includes(campaignPillSearch.toLowerCase())).map(c => {
+                              const isSelected = selectedCampaign === c.name;
+                              return (
                                 <button
-                                  key={l.hash}
+                                  key={c.name}
                                   type="button"
                                   onClick={() => {
-                                    setSearchParams(prev => {
-                                      const u = new URLSearchParams(prev);
-                                      u.set('hash', l.hash);
-                                      return u;
-                                    });
+                                    const nextCampaign = isSelected ? null : c.name;
+                                    setSelectedCampaign(nextCampaign);
                                     setIsFilterOpen(false);
                                     setActiveFilterCategory('none');
                                     setPage(0);
                                   }}
-                                  className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors cursor-pointer ${
-                                    linkHashParam === l.hash
-                                      ? 'bg-secondary font-medium text-foreground'
-                                      : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+                                  className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg cursor-pointer transition-colors ${
+                                    isSelected 
+                                      ? 'bg-[#0099ff]/10 text-[#0099ff] font-semibold' 
+                                      : 'text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
                                   }`}
                                 >
-                                  <div className="flex flex-col text-left truncate">
-                                    <span className="font-mono font-semibold text-foreground">/{l.hash}</span>
-                                    <span className="text-[10px] text-muted-foreground truncate max-w-[170px]">{l.url}</span>
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <Layers className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-[#0099ff]' : 'text-muted-foreground'}`} />
+                                    <span className="truncate font-medium">{c.name}</span>
                                   </div>
-                                  {linkHashParam === l.hash && <Check className="w-3.5 h-3.5 text-primary shrink-0 ml-2" />}
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className="text-[10px] text-muted-foreground font-medium px-1.5 py-0.5 rounded-full bg-secondary/50">
+                                      {c.count}
+                                    </span>
+                                    {isSelected && <Check className="w-3.5 h-3.5 text-[#0099ff] stroke-[2.5]" />}
+                                  </div>
                                 </button>
-                              ))}
+                              );
+                            })}
+                            {availableCampaigns.length === 0 && <div className="px-2.5 py-2 text-xs text-muted-foreground">No UTM campaigns found</div>}
                           </div>
-                        </div>
+                        </>
                       )}
                     </div>
                   )}
@@ -1293,80 +1535,340 @@ export const EventsPage: React.FC = () => {
         <div className="px-6 py-2 bg-muted/10 flex flex-wrap items-center gap-2 shrink-0">
           {/* Device Pill */}
           {selectedDevice !== 'all' && (
-            <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
-              <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
-                <Monitor className="w-3 h-3" />
-                <span>Device</span>
+            <div className="relative inline-flex items-center" ref={devicePillRef}>
+              <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
+                <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
+                  <Monitor className="w-3 h-3 text-[#0099ff]" />
+                  <span>Device</span>
+                </div>
+                <div className="flex items-center px-2 h-full bg-background text-muted-foreground font-medium">
+                  is
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setIsDevicePillOpen(prev => !prev)}
+                  className="flex items-center gap-1 px-2.5 h-full font-medium text-foreground cursor-pointer hover:bg-background transition-colors"
+                >
+                  <span className="font-semibold text-[#0099ff]">{selectedDevice}</span>
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { setSelectedDevice('all'); setPage(0); setIsDevicePillOpen(false); }}
+                  aria-label="Remove device filter"
+                  className="flex items-center justify-center px-2 h-full text-muted-foreground hover:text-foreground hover:bg-background transition-colors cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <div className="flex items-center px-2 h-full bg-background/60 text-muted-foreground font-medium">
-                is
-              </div>
-              <div className="px-2.5 h-full flex items-center font-semibold text-foreground">
-                {selectedDevice}
-              </div>
-              <button 
-                type="button"
-                onClick={() => { setSelectedDevice('all'); setPage(0); }}
-                aria-label="Remove device filter"
-                className="flex items-center justify-center px-1.5 h-full text-muted-foreground hover:text-foreground hover:bg-background transition-colors cursor-pointer"
-              >
-                <X className="w-3 h-3" />
-              </button>
+
+              {/* Popover Dropdown for Device */}
+              <AnimatePresence>
+                {isDevicePillOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.1, ease: 'easeOut' }}
+                    className="absolute left-0 top-full mt-1 w-44 rounded-xl shadow-lg bg-popover border border-border divide-y divide-border focus:outline-none z-[70] overflow-hidden py-1"
+                  >
+                    {['all', 'Desktop', 'Mobile', 'Tablet'].map((dev) => {
+                      const isSelected = selectedDevice === dev;
+                      return (
+                        <button
+                          key={dev}
+                          type="button"
+                          onClick={() => {
+                            setSelectedDevice(dev);
+                            setIsDevicePillOpen(false);
+                            setPage(0);
+                          }}
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'bg-[#0099ff]/10 text-[#0099ff] font-semibold'
+                              : 'text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
+                          }`}
+                        >
+                          <span className="font-medium">{dev === 'all' ? 'All Devices' : dev}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-[#0099ff] stroke-[2.5]" />}
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 
           {/* Country Pill */}
           {selectedCountry && (
-            <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
-              <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
-                <MapPin className="w-3 h-3" />
-                <span>Country</span>
+            <div className="relative inline-flex items-center" ref={countryPillRef}>
+              <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
+                <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
+                  <MapPin className="w-3 h-3 text-[#0099ff]" />
+                  <span>Country</span>
+                </div>
+                <div className="flex items-center px-2 h-full bg-background text-muted-foreground font-medium">
+                  is
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setIsCountryPillOpen(prev => !prev)}
+                  className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground cursor-pointer hover:bg-background transition-colors"
+                >
+                  <span className="truncate max-w-[150px] font-semibold text-[#0099ff]">{selectedCountry}</span>
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { setSelectedCountry(null); setPage(0); setIsCountryPillOpen(false); }}
+                  aria-label="Remove country filter"
+                  className="flex items-center justify-center px-2 h-full text-muted-foreground hover:text-foreground hover:bg-background transition-colors cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <div className="flex items-center px-2 h-full bg-background/60 text-muted-foreground font-medium">
-                is
-              </div>
-              <div className="px-2.5 h-full flex items-center font-semibold text-foreground">
-                {selectedCountry}
-              </div>
-              <button 
-                type="button"
-                onClick={() => { setSelectedCountry(null); setPage(0); }}
-                aria-label="Remove country filter"
-                className="flex items-center justify-center px-1.5 h-full text-muted-foreground hover:text-foreground hover:bg-background transition-colors cursor-pointer"
-              >
-                <X className="w-3 h-3" />
-              </button>
+
+              {/* Popover Dropdown for Country */}
+              <AnimatePresence>
+                {isCountryPillOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.1, ease: 'easeOut' }}
+                    className="absolute left-0 top-full mt-1 w-64 rounded-xl shadow-lg bg-popover border border-border divide-y divide-border focus:outline-none z-[70] overflow-hidden"
+                  >
+                    <div className="p-1.5 border-b border-border/80 bg-background/80 flex items-center">
+                      <div className="relative flex-1 flex items-center bg-secondary/40 rounded-md px-2 py-0.5 border border-border/40 focus-within:border-primary/50 transition-all">
+                        <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+                        <input
+                          type="text"
+                          autoFocus={true}
+                          placeholder="Search country..."
+                          value={countryPillSearch}
+                          onChange={(e) => setCountryPillSearch(e.target.value)}
+                          className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1 px-2 text-foreground placeholder:text-muted-foreground"
+                        />
+                      </div>
+                    </div>
+                    <div className="py-1 p-1 max-h-48 overflow-y-auto">
+                      {availableCountries
+                        .filter(c => c.toLowerCase().includes(countryPillSearch.toLowerCase()))
+                        .map(country => {
+                          const isSelected = selectedCountry === country;
+                          return (
+                            <button
+                              key={country}
+                              type="button"
+                              onClick={() => {
+                                setSelectedCountry(country);
+                                setIsCountryPillOpen(false);
+                                setPage(0);
+                              }}
+                              className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg cursor-pointer transition-colors ${
+                                isSelected
+                                  ? 'bg-[#0099ff]/10 text-[#0099ff] font-semibold'
+                                  : 'text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
+                              }`}
+                            >
+                              <span className="truncate font-medium">{country}</span>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-[#0099ff] stroke-[2.5]" />}
+                            </button>
+                          );
+                        })}
+                      {availableCountries.length === 0 && <div className="px-2.5 py-2 text-xs text-muted-foreground">No countries found</div>}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 
           {/* Link Hash Pill */}
           {linkHashParam && (
-            <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
-              <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
-                <Layers className="w-3 h-3" />
-                <span>Link</span>
+            <div className="relative inline-flex items-center" ref={linkPillRef}>
+              <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
+                <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
+                  <Layers className="w-3 h-3 text-[#0099ff]" />
+                  <span>Link</span>
+                </div>
+                <div className="flex items-center px-2 h-full bg-background text-muted-foreground font-medium">
+                  is
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setIsLinkPillOpen(prev => !prev)}
+                  className="flex items-center gap-1.5 px-2.5 h-full font-mono font-medium text-foreground cursor-pointer hover:bg-background transition-colors"
+                >
+                  <span className="font-semibold text-[#0099ff]">/{linkHashParam}</span>
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setSearchParams(prev => {
+                      const u = new URLSearchParams(prev);
+                      u.delete('hash');
+                      return u;
+                    });
+                    setPage(0);
+                    setIsLinkPillOpen(false);
+                  }}
+                  aria-label="Remove link filter"
+                  className="flex items-center justify-center px-2 h-full text-muted-foreground hover:text-foreground hover:bg-background transition-colors cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <div className="flex items-center px-2 h-full bg-background/60 text-muted-foreground font-medium">
-                is
+
+              {/* Popover Dropdown for Link */}
+              <AnimatePresence>
+                {isLinkPillOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.1, ease: 'easeOut' }}
+                    className="absolute left-0 top-full mt-1 w-64 rounded-xl shadow-lg bg-popover border border-border divide-y divide-border focus:outline-none z-[70] overflow-hidden"
+                  >
+                    <div className="p-1.5 border-b border-border/80 bg-background/80 flex items-center">
+                      <div className="relative flex-1 flex items-center bg-secondary/40 rounded-md px-2 py-0.5 border border-border/40 focus-within:border-primary/50 transition-all">
+                        <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+                        <input
+                          type="text"
+                          autoFocus={true}
+                          placeholder="Search link..."
+                          value={linkPillSearch}
+                          onChange={(e) => setLinkPillSearch(e.target.value)}
+                          className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1 px-2 text-foreground placeholder:text-muted-foreground font-mono"
+                        />
+                      </div>
+                    </div>
+                    <div className="py-1 p-1 max-h-48 overflow-y-auto space-y-0.5">
+                      {availableLinks
+                        .filter(l => l.hash.toLowerCase().includes(linkPillSearch.toLowerCase()) || l.url.toLowerCase().includes(linkPillSearch.toLowerCase()))
+                        .map(l => {
+                          const isSelected = linkHashParam === l.hash;
+                          return (
+                            <button
+                              key={l.hash}
+                              type="button"
+                              onClick={() => {
+                                setSearchParams(prev => {
+                                  const u = new URLSearchParams(prev);
+                                  u.set('hash', l.hash);
+                                  return u;
+                                });
+                                setIsLinkPillOpen(false);
+                                setPage(0);
+                              }}
+                              className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg cursor-pointer transition-colors ${
+                                isSelected
+                                  ? 'bg-[#0099ff]/10 text-[#0099ff] font-semibold'
+                                  : 'text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
+                              }`}
+                            >
+                              <div className="flex flex-col text-left truncate">
+                                <span className="font-mono font-semibold">/{l.hash}</span>
+                                <span className="text-[10px] text-muted-foreground truncate max-w-[170px]">{l.url}</span>
+                              </div>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-[#0099ff] stroke-[2.5]" />}
+                            </button>
+                          );
+                        })}
+                      {availableLinks.length === 0 && <div className="px-2.5 py-2 text-xs text-muted-foreground">No links found</div>}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* Campaign Filter Pill */}
+          {selectedCampaign && (
+            <div className="relative inline-flex items-center" ref={campaignPillRef}>
+              <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
+                <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
+                  <Layers className="w-3 h-3 text-[#0099ff]" />
+                  <span>Campaign</span>
+                </div>
+                <div className="flex items-center px-2 h-full bg-background text-muted-foreground font-medium">
+                  is
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setIsCampaignPillOpen(prev => !prev)}
+                  className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground cursor-pointer hover:bg-background transition-colors"
+                >
+                  <span className="truncate max-w-[150px] font-semibold text-[#0099ff]">{selectedCampaign}</span>
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { setSelectedCampaign(null); setPage(0); setIsCampaignPillOpen(false); }}
+                  aria-label="Remove campaign filter"
+                  className="flex items-center justify-center px-2 h-full text-muted-foreground hover:text-foreground hover:bg-background transition-colors cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <div className="px-2.5 h-full flex items-center font-mono font-semibold text-foreground">
-                /{linkHashParam}
-              </div>
-              <button 
-                type="button"
-                onClick={() => {
-                  setSearchParams(prev => {
-                    const u = new URLSearchParams(prev);
-                    u.delete('hash');
-                    return u;
-                  });
-                  setPage(0);
-                }}
-                aria-label="Remove link filter"
-                className="flex items-center justify-center px-1.5 h-full text-muted-foreground hover:text-foreground hover:bg-background transition-colors cursor-pointer"
-              >
-                <X className="w-3 h-3" />
-              </button>
+
+              {/* Popover Dropdown for Campaign */}
+              <AnimatePresence>
+                {isCampaignPillOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.1, ease: 'easeOut' }}
+                    className="absolute left-0 top-full mt-1 w-64 rounded-xl shadow-lg bg-popover border border-border divide-y divide-border focus:outline-none z-[70] overflow-hidden"
+                  >
+                    <div className="p-1.5 border-b border-border/80 bg-background/80 flex items-center">
+                      <div className="relative flex-1 flex items-center bg-secondary/40 rounded-md px-2 py-0.5 border border-border/40 focus-within:border-primary/50 transition-all">
+                        <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+                        <input 
+                          type="text" 
+                          autoFocus={true}
+                          value={campaignPillSearch}
+                          onChange={e => setCampaignPillSearch(e.target.value)}
+                          placeholder="Search campaigns..." 
+                          className="w-full border-none focus:ring-0 focus:outline-none bg-transparent text-xs py-1 px-2 text-foreground placeholder:text-muted-foreground"
+                        />
+                      </div>
+                    </div>
+                    <div className="py-1 p-1 max-h-48 overflow-y-auto">
+                      {availableCampaigns.filter(c => c.name.toLowerCase().includes(campaignPillSearch.toLowerCase())).map(c => {
+                        const isSelected = selectedCampaign === c.name;
+                        return (
+                          <button
+                            key={c.name}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCampaign(c.name);
+                              setIsCampaignPillOpen(false);
+                              setPage(0);
+                            }}
+                            className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg cursor-pointer transition-colors ${
+                              isSelected 
+                                ? 'bg-[#0099ff]/10 text-[#0099ff] font-semibold' 
+                                : 'text-foreground hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Layers className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-[#0099ff]' : 'text-muted-foreground'}`} />
+                              <span className="truncate font-medium">{c.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[10px] text-muted-foreground font-medium px-1.5 py-0.5 rounded-full bg-secondary/50">
+                                {c.count}
+                              </span>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-[#0099ff] stroke-[2.5]" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                      {availableCampaigns.length === 0 && <div className="px-2.5 py-2 text-xs text-muted-foreground">No UTM campaigns found</div>}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -1395,11 +1897,11 @@ export const EventsPage: React.FC = () => {
                               setSortOrder('desc');
                             }
                           }}
-                          className="py-3 px-4 font-semibold cursor-pointer hover:text-foreground transition-colors select-none"
+                          className="group/th py-3 px-4 font-semibold cursor-pointer hover:text-foreground transition-colors select-none border-r border-border last:border-r-0"
                         >
                           <span className="inline-flex items-center gap-1.5">
-                            Date
-                            <ArrowUpDown className={`w-3 h-3 ${sortBy === 'timestamp' ? 'text-primary opacity-100' : 'opacity-50'}`} />
+                            <span>Date</span>
+                            <ArrowUpDown className={`w-3 h-3 transition-opacity ${sortBy === 'timestamp' ? 'text-[#0099ff] opacity-100' : 'text-muted-foreground opacity-0 group-hover/th:opacity-100'}`} />
                           </span>
                         </th>
                       )}
@@ -1413,16 +1915,16 @@ export const EventsPage: React.FC = () => {
                               setSortOrder('asc');
                             }
                           }}
-                          className="py-3 px-4 font-semibold cursor-pointer hover:text-foreground transition-colors select-none"
+                          className="group/th py-3 px-4 font-semibold cursor-pointer hover:text-foreground transition-colors select-none border-r border-border last:border-r-0"
                         >
                           <span className="inline-flex items-center gap-1.5">
-                            Link
-                            {sortBy === 'link' && <ArrowUpDown className="w-3 h-3 text-primary" />}
+                            <span>Link</span>
+                            <ArrowUpDown className={`w-3 h-3 transition-opacity ${sortBy === 'link' ? 'text-[#0099ff] opacity-100' : 'text-muted-foreground opacity-0 group-hover/th:opacity-100'}`} />
                           </span>
                         </th>
                       )}
                       {visibleColumns.referer && (
-                        <th className="py-3 px-4 font-semibold">Referer</th>
+                        <th className="py-3 px-4 font-semibold border-r border-border last:border-r-0">Referer</th>
                       )}
                       {visibleColumns.country && (
                         <th 
@@ -1434,16 +1936,16 @@ export const EventsPage: React.FC = () => {
                               setSortOrder('asc');
                             }
                           }}
-                          className="py-3 px-4 font-semibold cursor-pointer hover:text-foreground transition-colors select-none"
+                          className="group/th py-3 px-4 font-semibold cursor-pointer hover:text-foreground transition-colors select-none border-r border-border last:border-r-0"
                         >
                           <span className="inline-flex items-center gap-1.5">
-                            Country
-                            {sortBy === 'country' && <ArrowUpDown className="w-3 h-3 text-primary" />}
+                            <span>Country</span>
+                            <ArrowUpDown className={`w-3 h-3 transition-opacity ${sortBy === 'country' ? 'text-[#0099ff] opacity-100' : 'text-muted-foreground opacity-0 group-hover/th:opacity-100'}`} />
                           </span>
                         </th>
                       )}
                       {visibleColumns.city && (
-                        <th className="py-3 px-4 font-semibold">City</th>
+                        <th className="py-3 px-4 font-semibold border-r border-border last:border-r-0">City</th>
                       )}
                       {visibleColumns.device && (
                         <th 
@@ -1455,22 +1957,22 @@ export const EventsPage: React.FC = () => {
                               setSortOrder('asc');
                             }
                           }}
-                          className="py-3 px-4 font-semibold cursor-pointer hover:text-foreground transition-colors select-none"
+                          className="group/th py-3 px-4 font-semibold cursor-pointer hover:text-foreground transition-colors select-none border-r border-border last:border-r-0"
                         >
                           <span className="inline-flex items-center gap-1.5">
-                            Device
-                            {sortBy === 'device' && <ArrowUpDown className="w-3 h-3 text-primary" />}
+                            <span>Device</span>
+                            <ArrowUpDown className={`w-3 h-3 transition-opacity ${sortBy === 'device' ? 'text-[#0099ff] opacity-100' : 'text-muted-foreground opacity-0 group-hover/th:opacity-100'}`} />
                           </span>
                         </th>
                       )}
                       {visibleColumns.browser && (
-                        <th className="py-3 px-4 font-semibold">Browser</th>
+                        <th className="py-3 px-4 font-semibold border-r border-border last:border-r-0">Browser</th>
                       )}
                       {visibleColumns.os && (
-                        <th className="py-3 px-4 font-semibold">OS</th>
+                        <th className="py-3 px-4 font-semibold border-r border-border last:border-r-0">OS</th>
                       )}
                       {visibleColumns.campaign && (
-                        <th className="py-3 px-4 font-semibold">Campaign</th>
+                        <th className="py-3 px-4 font-semibold border-r border-border last:border-r-0">Campaign</th>
                       )}
                     </tr>
                   </thead>
@@ -1496,14 +1998,14 @@ export const EventsPage: React.FC = () => {
                         >
                           {/* 1. Date */}
                           {visibleColumns.date && (
-                            <td className="py-3 px-4 whitespace-nowrap text-muted-foreground font-mono text-[11px]">
+                            <td className="py-3 px-4 whitespace-nowrap text-muted-foreground font-mono text-[11px] border-r border-border last:border-r-0">
                               {formatEventDateTime(ev.timestamp)}
                             </td>
                           )}
 
                           {/* 2. Link */}
                           {visibleColumns.link && (
-                            <td className="py-3 px-4">
+                            <td className="py-3 px-4 border-r border-border last:border-r-0">
                               <div className="flex items-center gap-1.5">
                                 <span className="font-semibold text-foreground font-mono group-hover:text-primary transition-colors">
                                   /{ev.shortUrlHash}
@@ -1517,7 +2019,7 @@ export const EventsPage: React.FC = () => {
 
                           {/* 3. Referer */}
                           {visibleColumns.referer && (
-                            <td className="py-3 px-4">
+                            <td className="py-3 px-4 border-r border-border last:border-r-0">
                               <span className="font-mono text-xs text-muted-foreground truncate block max-w-[140px]" title={ev.referer || 'Direct'}>
                                 {ev.referer ? ev.referer.replace(/^https?:\/\//, '') : 'Direct'}
                               </span>
@@ -1526,21 +2028,21 @@ export const EventsPage: React.FC = () => {
 
                           {/* 4. Country */}
                           {visibleColumns.country && (
-                            <td className="py-3 px-4 whitespace-nowrap">
+                            <td className="py-3 px-4 whitespace-nowrap border-r border-border last:border-r-0">
                               {getCountryBadge(ev.country, ev.city)}
                             </td>
                           )}
 
                           {/* 5. City */}
                           {visibleColumns.city && (
-                            <td className="py-3 px-4 whitespace-nowrap text-xs text-foreground font-medium">
+                            <td className="py-3 px-4 whitespace-nowrap text-xs text-foreground font-medium border-r border-border last:border-r-0">
                               {ev.city || '—'}
                             </td>
                           )}
 
                           {/* 6. Device */}
                           {visibleColumns.device && (
-                            <td className="py-3 px-4 whitespace-nowrap">
+                            <td className="py-3 px-4 whitespace-nowrap border-r border-border last:border-r-0">
                               <span className="inline-flex items-center gap-1.5 text-xs text-foreground font-medium">
                                 {getDeviceIcon(ev.device)}
                                 <span>{ev.device || 'Desktop'}</span>
@@ -1550,21 +2052,21 @@ export const EventsPage: React.FC = () => {
 
                           {/* 7. Browser */}
                           {visibleColumns.browser && (
-                            <td className="py-3 px-4 whitespace-nowrap text-xs text-muted-foreground font-mono">
+                            <td className="py-3 px-4 whitespace-nowrap text-xs text-muted-foreground font-mono border-r border-border last:border-r-0">
                               {ev.browser || '—'}
                             </td>
                           )}
 
                           {/* 8. OS */}
                           {visibleColumns.os && (
-                            <td className="py-3 px-4 whitespace-nowrap text-xs text-muted-foreground font-mono">
+                            <td className="py-3 px-4 whitespace-nowrap text-xs text-muted-foreground font-mono border-r border-border last:border-r-0">
                               {ev.os || '—'}
                             </td>
                           )}
 
                           {/* 9. Campaign */}
                           {visibleColumns.campaign && (
-                            <td className="py-3 px-4 whitespace-nowrap">
+                            <td className="py-3 px-4 whitespace-nowrap border-r border-border last:border-r-0">
                               {ev.utmCampaign ? (
                                 <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-secondary text-foreground border border-neutral-300 dark:border-neutral-800">
                                   {ev.utmCampaign}
@@ -1582,7 +2084,7 @@ export const EventsPage: React.FC = () => {
               </div>
 
               {/* Pagination Controls inside Box Footer */}
-              <div className="px-4 py-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground shrink-0 bg-muted/20 dark:bg-[#121215]/50">
+              <div className="px-4 py-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground shrink-0 bg-background">
                 <span>
                   {totalElements === 0
                     ? 'Viewing 0 of 0 events'
@@ -2096,7 +2598,7 @@ export const EventsPage: React.FC = () => {
                   </div>
 
                   {/* Collapsible Raw JSON Payload */}
-                  <div className="pt-4 border-t border-border">
+                  <div className="pt-4">
                     <div className="flex items-center justify-between mb-2">
                       <button
                         type="button"
