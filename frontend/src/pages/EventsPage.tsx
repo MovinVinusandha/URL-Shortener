@@ -133,7 +133,7 @@ export const DEFAULT_COLUMNS_VISIBILITY: TableColumnsVisibility = {
   os: false,
 };
 
-export type GlobeViewOption = 'analytics' | 'bars' | 'live';
+export type GlobeViewOption = 'visits' | 'live';
 
 export function isWithinDateRange(timestamp: string, dateRange: DateRangeValue): boolean {
   try {
@@ -271,8 +271,8 @@ export const EventsPage: React.FC = () => {
   // Mode: 'stream' (Dub Table) vs 'globe' (Sink 3D Visualizer)
   const [viewMode, setViewMode] = useState<'stream' | 'globe'>('stream');
 
-  // 3 Globe View Options: 'analytics' (default), 'bars' (count as percentage), or 'live'
-  const [globeBadgeOption, setGlobeBadgeOption] = useState<GlobeViewOption>('analytics');
+  // 2 Globe View Options: 'visits' (default) or 'live' (real-time stream)
+  const [globeBadgeOption, setGlobeBadgeOption] = useState<GlobeViewOption>('visits');
 
   // Zoom Controls
   const [zoomLevel, setZoomLevel] = useState<number>(1);
@@ -614,19 +614,8 @@ export const EventsPage: React.FC = () => {
             });
           }
 
-          // Trigger real-time arrival visual & camera swivel
+          // Trigger real-time arrival visual
           setLatestArrival(newEvent);
-          
-          if (newEvent.latitude != null && newEvent.longitude != null) {
-            const targetPhi = -(newEvent.longitude * Math.PI) / 180 + Math.PI;
-            const targetTheta = (newEvent.latitude * Math.PI) / 180;
-
-            focusTargetRef.current = {
-              phi: targetPhi,
-              theta: Math.max(-0.4, Math.min(0.4, targetTheta)),
-              expiresAt: Date.now() + 4500,
-            };
-          }
 
           // Check if new live event matches currently active filters
           const matches =
@@ -666,12 +655,12 @@ export const EventsPage: React.FC = () => {
     };
   }, [isLive, page, pageSize, selectedDevice, selectedCountry, linkHashParam, selectedCampaign, debouncedSearch]);
 
-  // Auto-dismiss the arrival HUD chip after 4 seconds
+  // Auto-dismiss the arrival HUD chip / live pulse after 6 seconds
   useEffect(() => {
     if (!latestArrival) return;
     const timer = setTimeout(() => {
       setLatestArrival(null);
-    }, 4000);
+    }, 6000);
     return () => clearTimeout(timer);
   }, [latestArrival]);
 
@@ -777,10 +766,15 @@ export const EventsPage: React.FC = () => {
     }
 
     // Pass markers to createGlobe
-    const markers = sortedLocations.map(loc => ({
-      location: [loc.lat, loc.lon] as [number, number],
-      size: 0.045,
-    }));
+    // In 'live' mode, highlight live arrival markers prominently.
+    // In 'visits' mode, standard pin sizes.
+    const markers = sortedLocations.map(loc => {
+      const size = globeBadgeOption === 'live' ? 0.035 : 0.045;
+      return {
+        location: [loc.lat, loc.lon] as [number, number],
+        size,
+      };
+    });
 
     if (latestArrival) {
       let lat = latestArrival.latitude;
@@ -800,8 +794,16 @@ export const EventsPage: React.FC = () => {
       }
     }
 
-    return { topBadges: topList, globeMarkers: markers };
-  }, [filteredLiveEvents, events, latestArrival]);
+    // Filter displayed topBadges based on globeBadgeOption:
+    // 1) 'live': ONLY show the latest live arrival pulse / active ping badge
+    // 2) 'visits': Show comprehensive visit badges for all active visitor locations
+    let displayList = topList;
+    if (globeBadgeOption === 'live') {
+      displayList = topList.filter(b => b.isPulse || b.isLive);
+    }
+
+    return { topBadges: displayList, globeMarkers: markers };
+  }, [filteredLiveEvents, events, latestArrival, globeBadgeOption]);
 
   // Keep topBadgesRef synchronized for 60fps animation loop
   topBadgesRef.current = topBadges;
@@ -2206,26 +2208,19 @@ export const EventsPage: React.FC = () => {
                       title={badge.isLive ? `Live ping from ${badge.name}` : `Filter by ${badge.country} (${badge.count} visits)`}
                     >
                       {badge.isPulse ? (
-                        /* Incoming Visitor Arrival: Signature Concentric Pulse Rings + COBE Badge */
-                        <div className="flex flex-col items-center">
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] bg-[#000000d9] backdrop-blur-md border border-cyan-400 text-white shadow-2xl mb-1">
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-80" />
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
-                            </span>
-                            <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider">PULSE</span>
-                            <span className="text-white/40">·</span>
-                            <span className="text-[11px] font-bold text-white uppercase">{badge.name}</span>
-                          </div>
-                          {/* Concentric expanding pulse wave */}
-                          <div className="relative flex items-center justify-center w-10 h-10">
-                            <span className="absolute inline-flex h-10 w-10 rounded-full bg-cyan-400/40 animate-ping" />
-                            <span className="absolute inline-flex h-6 w-6 rounded-full border border-cyan-400/70 animate-pulse" />
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white ring-2 ring-cyan-500 shadow-[0_0_10px_#0099ff]" />
-                          </div>
+                        /* Incoming Visitor Arrival: Signature COBE Concentric Pulse Rings */
+                        <div className="relative flex items-center justify-center w-16 h-16 pointer-events-none">
+                          {/* Outermost soft ripple */}
+                          <span className="absolute inline-flex w-16 h-16 rounded-full border border-[#0066ff]/25 animate-ping" />
+                          {/* Middle expanding pulse ring */}
+                          <span className="absolute inline-flex w-10 h-10 rounded-full border border-[#0066ff]/60 animate-pulse" />
+                          {/* Inner radiant halo */}
+                          <span className="absolute inline-flex w-6 h-6 rounded-full bg-[#0066ff]/30 blur-[2px]" />
+                          {/* Core radiant blue beacon with white outline */}
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-[#0066ff] ring-2 ring-white shadow-[0_0_12px_#0066ff]" />
                         </div>
-                      ) : globeBadgeOption === 'analytics' ? (
-                        /* VIEW OPTION 1: "Analytics" (COBE Official Default Look - cobe.vercel.app) */
+                      ) : globeBadgeOption === 'visits' ? (
+                        /* VIEW OPTION 1: "Visits" (COBE Official Default Analytics Look) */
                         <div className="flex flex-col items-center">
                           <div className="flex flex-col px-2.5 py-1 rounded-[4px] bg-[#000000d9] backdrop-blur-md border border-white/15 hover:border-white/30 text-white shadow-2xl transition-all group-hover:scale-105 min-w-[90px]">
                             <span className="text-[9px] font-semibold uppercase tracking-wider text-white/70 truncate">
@@ -2236,7 +2231,7 @@ export const EventsPage: React.FC = () => {
                                 {badge.count} {badge.count === 1 ? 'visit' : 'visits'}
                               </span>
                               <span className="inline-flex items-center text-[10px] font-semibold text-[#34d399] font-mono">
-                                ↑ {badge.pct}%
+                                {badge.pct}%
                               </span>
                             </div>
                           </div>
@@ -2244,34 +2239,10 @@ export const EventsPage: React.FC = () => {
                           <div className="w-[1.5px] h-2.5 bg-white/40 mx-auto" />
                           <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 ring-2 ring-black shadow-[0_0_8px_#0099ff] mx-auto -mt-0.5" />
                         </div>
-                      ) : globeBadgeOption === 'bars' ? (
-                        /* VIEW OPTION 2: "Bars" (Count shown as percentage - COBE Official Default Look) */
-                        <div className="flex flex-col items-center">
-                          <div className="flex flex-col min-w-[110px] max-w-[150px] px-2.5 py-1.5 rounded-[4px] bg-[#000000d9] backdrop-blur-md border border-[#0099ff]/70 hover:border-[#0099ff] text-white shadow-2xl transition-all group-hover:scale-105">
-                            <div className="flex items-center justify-between gap-2 mb-1">
-                              <span className="font-bold text-[9px] uppercase tracking-wider text-white truncate">
-                                {badge.name}
-                              </span>
-                              <span className="font-mono text-[10px] font-bold text-[#0099ff] shrink-0">
-                                {badge.pct}%
-                              </span>
-                            </div>
-                            {/* Mini progress bar */}
-                            <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-[#0099ff] rounded-full transition-all duration-300"
-                                style={{ width: `${Math.max(8, badge.pct)}%` }}
-                              />
-                            </div>
-                          </div>
-                          {/* Connector needle pin */}
-                          <div className="w-[1.5px] h-2.5 bg-[#0099ff]/60 mx-auto" />
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#0099ff] ring-2 ring-black shadow-[0_0_8px_#0099ff] mx-auto -mt-0.5" />
-                        </div>
                       ) : (
-                        /* VIEW OPTION 3: "Live Badge" (COBE Official Default Look) */
+                        /* VIEW OPTION 2: "Live Stream" (Signature COBE Pulse with subtle location pill) */
                         <div className="flex flex-col items-center">
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] bg-[#000000d9] backdrop-blur-md border border-white/20 hover:border-white/40 text-white shadow-2xl transition-all group-hover:scale-105">
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] bg-[#000000d9] backdrop-blur-md border border-cyan-400/80 hover:border-cyan-400 text-white shadow-2xl transition-all group-hover:scale-105 mb-1">
                             <span className="relative flex h-2 w-2">
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-80" />
                               <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
@@ -2279,11 +2250,13 @@ export const EventsPage: React.FC = () => {
                             <span className="text-[9px] uppercase font-bold tracking-wider text-cyan-400">LIVE</span>
                             <span className="text-white/40">·</span>
                             <span className="truncate max-w-[120px] font-semibold text-white text-xs">{badge.name}</span>
-                            <span className="font-mono text-[10px] text-white/60">· {badge.count}</span>
                           </div>
-                          {/* Connector needle pin */}
-                          <div className="w-[1.5px] h-2.5 bg-cyan-400/60 mx-auto" />
-                          <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 ring-2 ring-black shadow-[0_0_8px_#0099ff] mx-auto -mt-0.5" />
+                          {/* Concentric COBE pulse ripple */}
+                          <div className="relative flex items-center justify-center w-10 h-10">
+                            <span className="absolute inline-flex w-10 h-10 rounded-full border border-[#0066ff]/40 animate-ping" />
+                            <span className="absolute inline-flex w-6 h-6 rounded-full border border-[#0066ff]/70 animate-pulse" />
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#0066ff] ring-2 ring-white shadow-[0_0_10px_#0066ff]" />
+                          </div>
                         </div>
                       )}
                     </div>
@@ -2291,15 +2264,14 @@ export const EventsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Under-Globe Control Dock: 3 View Options (Analytics | Bars | Live Badge) + Zoom Controls */}
+              {/* Under-Globe Control Dock: 2 View Options (Visits | Live Stream) + Zoom Controls */}
               <div className="absolute bottom-3 inset-x-0 mx-auto max-w-fit z-20 flex items-center gap-2 bg-card/95 backdrop-blur-md border border-border p-1.5 rounded-2xl shadow-2xl">
                 
-                {/* 3 View Options Segmented Selector (Matching Stream vs Globe 3D & Overview vs Compare style) */}
+                {/* 2 View Options Segmented Selector */}
                 <div className="relative flex items-center bg-secondary/50 dark:bg-[#121215] p-0.5 rounded-lg border border-border gap-0.5">
                   {[
-                    { key: 'analytics' as const, label: 'Analytics', icon: TrendingUp, iconColor: 'text-[#0099ff]' },
-                    { key: 'bars' as const, label: 'Bars', icon: BarChart2, iconColor: 'text-[#0099ff]' },
-                    { key: 'live' as const, label: 'Live Badge', icon: Radio, iconColor: 'text-[#0099ff]' },
+                    { key: 'visits' as const, label: 'Visits', icon: TrendingUp, iconColor: 'text-[#0099ff]' },
+                    { key: 'live' as const, label: 'Live Stream', icon: Radio, iconColor: 'text-cyan-400' },
                   ].map(({ key, label, icon: Icon, iconColor }) => {
                     const isActive = globeBadgeOption === key;
                     return (

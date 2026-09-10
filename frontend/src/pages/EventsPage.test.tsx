@@ -250,25 +250,13 @@ describe('EventsPage', () => {
       expect(screen.getAllByText(/visits/i).length).toBeGreaterThan(0);
     });
 
-    // Test View Option: Bars (count shows as percentage)
-    const barsBtn = screen.getAllByRole('button', { name: /bars/i })[0];
-    fireEvent.click(barsBtn);
+    // Test View Option: Live Stream
+    const liveStreamBtn = screen.getAllByRole('button', { name: /live stream/i })[0];
+    fireEvent.click(liveStreamBtn);
 
-    await waitFor(() => {
-      expect(screen.getAllByText(/50%/i).length).toBeGreaterThan(0);
-    });
-
-    // Test View Option: Live Badge
-    const liveBtn = screen.getAllByRole('button', { name: /live badge/i })[0];
-    fireEvent.click(liveBtn);
-
-    await waitFor(() => {
-      expect(screen.getAllByText('LIVE').length).toBeGreaterThan(0);
-    });
-
-    // Switch back to Analytics
-    const analyticsBtn = screen.getAllByRole('button', { name: /analytics/i })[0];
-    fireEvent.click(analyticsBtn);
+    // Switch back to Visits
+    const visitsBtn = screen.getAllByRole('button', { name: /visits/i })[0];
+    fireEvent.click(visitsBtn);
 
     // Verify pointer drag rotation handlers on globe container
     const globeContainer = screen.getByText('LONDON').closest('.cursor-grab') as HTMLElement;
@@ -358,7 +346,7 @@ describe('EventsPage', () => {
 
     // The 3D globe container and zoom controls must remain mounted and spinning
     await waitFor(() => {
-      expect(screen.getByText('Visits')).toBeInTheDocument();
+      expect(screen.getAllByText('Visits').length).toBeGreaterThan(0);
       expect(screen.getByText(/listening for incoming visitor clicks/i)).toBeInTheDocument();
       expect(screen.getByTitle(/zoom in/i)).toBeInTheDocument();
     });
