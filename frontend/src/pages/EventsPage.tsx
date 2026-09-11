@@ -23,6 +23,7 @@ import {
   MapPin, 
   Compass, 
   Radio,
+  Info,
   Filter,
   Check,
   ZoomIn,
@@ -272,8 +273,32 @@ export const EventsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { theme } = useTheme();
 
-  // Mode: 'stream' (Dub Table) vs 'globe' (Sink 3D Visualizer)
-  const [viewMode, setViewMode] = useState<'stream' | 'globe'>('stream');
+  // Mode: 'stream' (Dub Table) vs 'globe' (Sink 3D Visualizer) with localStorage persistence
+  const [viewMode, setViewMode] = useState<'stream' | 'globe'>(() => {
+    const fromUrl = searchParams.get('view');
+    if (fromUrl === 'globe' || fromUrl === 'stream') return fromUrl;
+    try {
+      const saved = localStorage.getItem('trim_events_view_mode');
+      if (saved === 'globe' || saved === 'stream') return saved;
+    } catch {}
+    return 'stream';
+  });
+
+  const handleViewModeChange = (mode: 'stream' | 'globe') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('trim_events_view_mode', mode);
+    } catch {}
+    setSearchParams(prev => {
+      const updated = new URLSearchParams(prev);
+      if (mode === 'globe') {
+        updated.set('view', 'globe');
+      } else {
+        updated.delete('view');
+      }
+      return updated;
+    }, { replace: true });
+  };
 
   // 2 Globe View Options: 'visits' (default) or 'live' (real-time stream)
   const [globeBadgeOption, setGlobeBadgeOption] = useState<GlobeViewOption>('visits');
@@ -296,6 +321,7 @@ export const EventsPage: React.FC = () => {
   const [totalElements, setTotalElements] = useState<number>(0);
   const [page, setPage] = useState<number>(0);
   const [pageSize] = useState<number>(30);
+  const liveAddedIds = useRef<Set<string | number>>(new Set());
 
   // Master known filter choices (preserved across selections so all options remain visible)
   const [knownCountries, setKnownCountries] = useState<string[]>(DEFAULT_COUNTRIES);
@@ -370,10 +396,15 @@ export const EventsPage: React.FC = () => {
   const globeRef = useRef<any>(null);
   const phiRef = useRef<number>(0);
   const thetaRef = useRef<number>(0.22);
+  // Focus & Highlight References
+  const [focusedLocationKey, setFocusedLocationKey] = useState<string | null>(null);
+  const focusedLocationKeyRef = useRef<string | null>(null);
+  focusedLocationKeyRef.current = focusedLocationKey;
   const focusTargetRef = useRef<{ phi: number; theta: number; expiresAt: number } | null>(null);
 
   // Mouse Drag & Touch Rotation References
   const isPointerDragging = useRef<boolean>(false);
+  const isHoveringGlobe = useRef<boolean>(false);
   const pointerStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const pointerVelocity = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
@@ -735,6 +766,7 @@ export const EventsPage: React.FC = () => {
 
           // Prepend to historical table if on first page and matches active filters
           if (page === 0 && matches) {
+            liveAddedIds.current.add(newEvent.id);
             setEvents((prev) => [newEvent, ...prev.slice(0, pageSize - 1)]);
             setTotalElements((prev) => prev + 1);
           }
@@ -855,51 +887,7 @@ export const EventsPage: React.FC = () => {
       lon: item.lon,
     }));
 
-    // If live visitors arrived within their 6s window, render all active radars simultaneously
-    if (activeRadars.length > 0) {
-      const radarBadges: GlobeBadge[] = activeRadars.map((radar) => ({
-        id: `radar-arrival-${radar.id}`,
-        name: (radar.city && radar.city !== 'Unknown' ? radar.city : radar.country || 'Live Visitor').toUpperCase(),
-        country: radar.country || 'Global',
-        count: 1,
-        pct: 100,
-        lat: radar.lat,
-        lon: radar.lon,
-        isLive: true,
-        isPulse: true,
-      }));
-      topList.unshift(...radarBadges);
-    } else if (latestArrival) {
-      // Fallback single pulse if latestArrival is set
-      let lat = latestArrival.latitude;
-      let lon = latestArrival.longitude;
-      if ((lat == null || lon == null || isNaN(lat) || isNaN(lon)) && latestArrival.country) {
-        const fallback = COUNTRY_COORDINATES[latestArrival.country];
-        if (fallback) {
-          lat = fallback[0];
-          lon = fallback[1];
-        }
-      }
-      if (lat != null && lon != null) {
-        topList.unshift({
-          id: `live-arrival-${latestArrival.id}`,
-          name: (latestArrival.city && latestArrival.city !== 'Unknown' ? latestArrival.city : latestArrival.country || 'Live Visitor').toUpperCase(),
-          country: latestArrival.country || 'Global',
-          count: 1,
-          pct: 100,
-          lat,
-          lon,
-          isLive: true,
-          isPulse: true,
-        });
-      }
-    }
-
-    // Pass markers to createGlobe
-    // In 'live' mode: true radar mode — remove normal solid dots underneath! Only the HTML concentric radar rings display.
-    // In 'visits' mode: standard comprehensive traffic markers for all visitor locations.
     let markers: { location: [number, number]; size: number }[] = [];
-
     if (globeBadgeOption === 'visits') {
       markers = sortedLocations.map(loc => ({
         location: [loc.lat, loc.lon] as [number, number],
@@ -909,10 +897,48 @@ export const EventsPage: React.FC = () => {
 
     // Filter displayed topBadges based on globeBadgeOption:
     // 1) 'live': ONLY show active live arrival pulses / radar rings (pure radar mode, no solid dots underneath)
-    // 2) 'visits': Show comprehensive visit badges for all active visitor locations
-    let displayList = topList;
+    // 2) 'visits': Show comprehensive visit badges for all active visitor locations (no radar rings)
+    let displayList: GlobeBadge[] = [];
     if (globeBadgeOption === 'live') {
-      displayList = topList.filter(b => b.isPulse || b.isLive);
+      if (activeRadars.length > 0) {
+        displayList = activeRadars.map((radar) => ({
+          id: `radar-arrival-${radar.id}`,
+          name: (radar.city && radar.city !== 'Unknown' ? radar.city : radar.country || 'Live Visitor').toUpperCase(),
+          country: radar.country || 'Global',
+          count: 1,
+          pct: 100,
+          lat: radar.lat,
+          lon: radar.lon,
+          isLive: true,
+          isPulse: true,
+        }));
+      } else if (latestArrival) {
+        let lat = latestArrival.latitude;
+        let lon = latestArrival.longitude;
+        if ((lat == null || lon == null || isNaN(lat) || isNaN(lon)) && latestArrival.country) {
+          const fallback = COUNTRY_COORDINATES[latestArrival.country];
+          if (fallback) {
+            lat = fallback[0];
+            lon = fallback[1];
+          }
+        }
+        if (lat != null && lon != null) {
+          displayList = [{
+            id: `live-arrival-${latestArrival.id}`,
+            name: (latestArrival.city && latestArrival.city !== 'Unknown' ? latestArrival.city : latestArrival.country || 'Live Visitor').toUpperCase(),
+            country: latestArrival.country || 'Global',
+            count: 1,
+            pct: 100,
+            lat,
+            lon,
+            isLive: true,
+            isPulse: true,
+          }];
+        }
+      }
+    } else {
+      // 'visits' mode: only show traffic volume location cards
+      displayList = topList;
     }
 
     return { topBadges: displayList, globeMarkers: markers };
@@ -1046,13 +1072,13 @@ export const EventsPage: React.FC = () => {
         pointerVelocity.current.x *= 0.92;
         pointerVelocity.current.y *= 0.92;
       } else if (focusTargetRef.current && Date.now() < focusTargetRef.current.expiresAt) {
-        // Swivel to incoming visitor
+        // Swivel to incoming or clicked visitor location
         let diffPhi = focusTargetRef.current.phi - phiRef.current;
         diffPhi = ((diffPhi + Math.PI) % (2 * Math.PI)) - Math.PI;
         phiRef.current += diffPhi * 0.05;
         thetaRef.current += (focusTargetRef.current.theta - thetaRef.current) * 0.05;
-      } else if (isLive) {
-        // Subtle constant ambient auto-rotation
+      } else if (isLive && !isHoveringGlobe.current) {
+        // Subtle constant ambient auto-rotation (pauses when hovering over the globe to inspect/click)
         phiRef.current += 0.002;
         thetaRef.current += (0.22 - thetaRef.current) * 0.02;
       }
@@ -1060,15 +1086,22 @@ export const EventsPage: React.FC = () => {
       globe.update({ phi: phiRef.current, theta: thetaRef.current });
 
       // Update projected 2D screen positions of floating cards
+      const curFocusKey = focusedLocationKeyRef.current;
       for (const badge of topBadgesRef.current) {
         const el = badgeRefs.current[badge.id];
         if (el) {
           const pos = projectCoordinate(badge.lat, badge.lon, phiRef.current, thetaRef.current);
+          const isFocused = Boolean(
+            curFocusKey &&
+            (badge.name === curFocusKey || (badge.country && badge.country.toUpperCase() === curFocusKey))
+          );
           el.style.left = `${pos.xPct * 100}%`;
           el.style.top = `${pos.yPct * 100}%`;
           el.style.opacity = pos.isVisible ? `${pos.opacity}` : '0';
           el.style.pointerEvents = pos.isVisible ? 'auto' : 'none';
-          el.style.transform = `translate(-50%, -100%) translateY(-10px) scale(${pos.isVisible ? 1 : 0.85})`;
+          el.style.zIndex = isFocused ? '50' : '10';
+          const baseScale = pos.isVisible ? (isFocused ? 1.15 : 1) : 0.85;
+          el.style.transform = `translate(-50%, -100%) translateY(-10px) scale(${baseScale})`;
         }
       }
 
@@ -1092,6 +1125,33 @@ export const EventsPage: React.FC = () => {
     focusTargetRef.current = null;
     pointerVelocity.current = { x: 0, y: 0 };
   };
+
+  // Helper to smoothly rotate globe to an event's lat/lon coordinates
+  const rotateToEvent = useCallback((ev: ClickEventDto) => {
+    let lat = ev.latitude;
+    let lon = ev.longitude;
+    if ((lat == null || lon == null || isNaN(lat) || isNaN(lon)) && ev.country) {
+      const fallback = COUNTRY_COORDINATES[ev.country];
+      if (fallback) {
+        lat = fallback[0];
+        lon = fallback[1];
+      }
+    }
+    if (lat != null && lon != null && !isNaN(lat) && !isNaN(lon)) {
+      const targetPhi = Math.PI * 1.5 - (lon * Math.PI) / 180;
+      const targetTheta = (lat * Math.PI) / 180 * 0.6;
+      focusTargetRef.current = {
+        phi: targetPhi,
+        theta: Math.max(-0.55, Math.min(0.55, targetTheta)),
+        expiresAt: Date.now() + 2500,
+      };
+      pointerVelocity.current = { x: 0, y: 0 };
+      const locKey = (ev.city && ev.city !== 'Unknown' ? ev.city : ev.country || '').toUpperCase();
+      if (locKey) {
+        setFocusedLocationKey(locKey);
+      }
+    }
+  }, []);
 
   return (
     <div className="flex-1 flex flex-col min-w-0 h-full bg-background text-foreground">
@@ -1690,7 +1750,7 @@ export const EventsPage: React.FC = () => {
                 <button
                   key={mode}
                   type="button"
-                  onClick={() => setViewMode(mode)}
+                  onClick={() => handleViewModeChange(mode)}
                   className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                     isActive
                       ? 'text-foreground font-semibold'
@@ -2216,15 +2276,19 @@ export const EventsPage: React.FC = () => {
                         </td>
                       </tr>
                     ) : (
-                      sortedEvents.map((ev, index) => (
-                        <motion.tr
-                          key={ev.id}
-                          initial={{ opacity: 0, y: 3 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.15, delay: Math.min(index * 0.015, 0.2) }}
-                          onClick={() => setActiveEvent(ev)}
-                          className="group border-b border-dashed border-border last:border-b-0 hover:bg-neutral-100/70 dark:hover:bg-[#111114] cursor-pointer transition-colors"
-                        >
+                      sortedEvents.map((ev) => {
+                        const isNewLiveArrival = liveAddedIds.current.has(ev.id);
+                        return (
+                          <motion.tr
+                            key={ev.id}
+                            initial={isNewLiveArrival ? { opacity: 0, y: -6 } : false}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={isNewLiveArrival ? { duration: 0.25, ease: 'easeOut' } : { duration: 0 }}
+                            onClick={() => setActiveEvent(ev)}
+                            className={`group border-b border-dashed border-border last:border-b-0 hover:bg-neutral-100/70 dark:hover:bg-[#111114] cursor-pointer transition-colors ${
+                              isNewLiveArrival ? 'bg-primary/5' : ''
+                            }`}
+                          >
                           {/* 1. Date */}
                           {visibleColumns.date && (
                             <td className="py-3 px-4 whitespace-nowrap text-muted-foreground font-mono text-[11px] border-r border-border last:border-r-0">
@@ -2306,7 +2370,8 @@ export const EventsPage: React.FC = () => {
                             </td>
                           )}
                         </motion.tr>
-                      ))
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -2350,23 +2415,23 @@ export const EventsPage: React.FC = () => {
             exit={{ opacity: 0, y: -4 }}
             className="flex-1 flex flex-col lg:flex-row w-full h-full overflow-hidden bg-background relative"
             style={{
-              height: activeFilterCount > 0 ? 'calc(100vh - 250px)' : 'calc(100vh - 210px)',
-              minHeight: '560px',
-              maxHeight: '860px',
+              height: activeFilterCount > 0 ? 'calc(100vh - 200px)' : 'calc(100vh - 160px)',
+              minHeight: '620px',
+              maxHeight: '920px',
             }}
           >
             {/* Left/Center: 3D WebGL Canvas Globe Area */}
             <div className="flex-1 relative flex items-center justify-center p-4 overflow-hidden h-full">
               
-              {/* Live Visitor Arrival HUD Chip (Slides down on new arrival) */}
+              {/* Live Visitor Arrival HUD Chip (Slides up from bottom on new arrival, avoiding top controls) */}
               <AnimatePresence>
                 {latestArrival && (
                   <motion.div
-                    initial={{ opacity: 0, y: -16, scale: 0.96 }}
+                    initial={{ opacity: 0, y: 16, scale: 0.96 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -16, scale: 0.96 }}
+                    exit={{ opacity: 0, y: 16, scale: 0.96 }}
                     transition={{ type: 'spring', stiffness: 450, damping: 30 }}
-                    className="absolute top-4 inset-x-0 mx-auto max-w-fit z-20 flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-popover/90 backdrop-blur-md border border-primary/40 shadow-xl text-xs font-medium"
+                    className="absolute bottom-6 inset-x-0 mx-auto max-w-fit z-30 flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-popover/90 backdrop-blur-md border border-primary/40 shadow-xl text-xs font-medium pointer-events-auto"
                   >
                     <span className="flex h-2 w-2 relative shrink-0">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
@@ -2410,14 +2475,16 @@ export const EventsPage: React.FC = () => {
                 </div>
               </motion.div>
 
-              {/* Canvas Globe with Scale Animation, Drag Rotation & Interactive Floating Badges */}
+              {/* Canvas Globe with Scale Animation, Drag Rotation, Hover Pause & Interactive Floating Badges */}
               <div 
-                className="relative w-full max-w-[480px] aspect-square flex items-center justify-center translate-y-16 transition-transform duration-200 select-none touch-none cursor-grab active:cursor-grabbing"
-                style={{ transform: `translateY(64px) scale(${zoomLevel})` }}
+                className="relative w-full max-w-[480px] aspect-square flex items-center justify-center transition-transform duration-200 select-none touch-none cursor-grab active:cursor-grabbing"
+                style={{ transform: `translateY(44px) scale(${zoomLevel})` }}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
+                onMouseEnter={() => { isHoveringGlobe.current = true; }}
+                onMouseLeave={() => { isHoveringGlobe.current = false; }}
               >
                 <canvas
                   ref={canvasRef}
@@ -2426,99 +2493,119 @@ export const EventsPage: React.FC = () => {
                 />
 
                   {/* Floating Site Visitor Badges (COBE Official Default Look - cobe.vercel.app) */}
-                  <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                    {topBadges.map((badge) => (
-                      <div
-                        key={badge.id}
-                        ref={(el) => { badgeRefs.current[badge.id] = el; }}
-                        onPointerDown={(e) => {
-                          e.stopPropagation();
-                        }}
-                        onPointerUp={(e) => {
-                          e.stopPropagation();
-                          if (badge.country) {
-                            setSelectedCountry(badge.country);
-                            setPage(0);
-                          }
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (badge.country) {
-                            setSelectedCountry(badge.country);
-                            setPage(0);
-                          }
-                        }}
-                        style={{
-                          position: 'absolute',
-                          left: '50%',
-                          top: '50%',
-                          opacity: 0,
-                          pointerEvents: 'auto',
-                          transform: 'translate(-50%, -100%) translateY(-10px)',
-                          transition: 'opacity 0.15s ease-out, transform 0.15s ease-out',
-                        }}
-                        className="group cursor-pointer select-none pointer-events-auto"
-                        title={badge.isLive ? `Live ping from ${badge.name}` : `Filter by ${badge.country} (${badge.count} visits)`}
-                      >
-                        {badge.isPulse ? (
-                          /* Incoming Visitor Arrival: Signature COBE Concentric Pulse Rings */
-                          <div className="relative flex items-center justify-center w-16 h-16 pointer-events-none">
-                            {/* Outermost soft ripple */}
-                            <span className="absolute inline-flex w-16 h-16 rounded-full border border-[#0066ff]/25 animate-ping" />
-                            {/* Middle expanding pulse ring */}
-                            <span className="absolute inline-flex w-10 h-10 rounded-full border border-[#0066ff]/60 animate-pulse" />
-                            {/* Inner radiant halo */}
-                            <span className="absolute inline-flex w-6 h-6 rounded-full bg-[#0066ff]/30 blur-[2px]" />
-                            {/* Core radiant blue beacon with white outline */}
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-[#0066ff] ring-2 ring-white shadow-[0_0_12px_#0066ff]" />
-                          </div>
-                        ) : globeBadgeOption === 'visits' ? (
-                          /* VIEW OPTION 1: "Visits" (COBE Official Default Analytics Look with Quick-Filter action) */
-                          <div className="flex flex-col items-center">
-                            <div className="relative flex flex-col px-2.5 py-1 rounded-[6px] bg-[#000000d9] backdrop-blur-md border border-white/15 group-hover:border-[#0099ff]/80 text-white shadow-2xl transition-all group-hover:scale-110 min-w-[96px]">
-                              <div className="flex items-center justify-between gap-1">
-                                <span className="text-[9px] font-semibold uppercase tracking-wider text-white/70 truncate group-hover:text-cyan-300 transition-colors">
-                                  {badge.name}
-                                </span>
-                                <span className="text-[8px] font-mono opacity-0 group-hover:opacity-100 text-[#0099ff] transition-opacity font-bold">
-                                  FILTER ↗
-                                </span>
+                  <div className="absolute inset-0 pointer-events-none overflow-visible">
+                    {topBadges.map((badge) => {
+                      const isFocused = Boolean(
+                        focusedLocationKey &&
+                        (badge.name === focusedLocationKey || (badge.country && badge.country.toUpperCase() === focusedLocationKey))
+                      );
+
+                      return (
+                        <div
+                          key={badge.id}
+                          ref={(el) => { badgeRefs.current[badge.id] = el; }}
+                          onPointerDown={(e) => {
+                            e.stopPropagation();
+                          }}
+                          onPointerUp={(e) => {
+                            e.stopPropagation();
+                            if (badge.country) {
+                              setSelectedCountry(badge.country);
+                              setPage(0);
+                            }
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (badge.country) {
+                              setSelectedCountry(badge.country);
+                              setPage(0);
+                            }
+                          }}
+                          style={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: '50%',
+                            opacity: 0,
+                            pointerEvents: 'auto',
+                            zIndex: isFocused ? 50 : 10,
+                            transform: `translate(-50%, -100%) translateY(-10px) ${isFocused ? 'scale(1.15)' : ''}`,
+                            transition: 'opacity 0.15s ease-out, transform 0.15s ease-out',
+                          }}
+                          className={`group cursor-pointer select-none pointer-events-auto ${isFocused ? 'z-50' : 'z-10'}`}
+                          title={badge.isLive ? `Live ping from ${badge.name}` : `Filter by ${badge.country} (${badge.count} visits)`}
+                        >
+                          {badge.isPulse ? (
+                            /* Incoming Visitor Arrival: Signature COBE Concentric Pulse Rings */
+                            <div className="relative flex items-center justify-center w-16 h-16 pointer-events-none">
+                              {/* Outermost soft ripple */}
+                              <span className="absolute inline-flex w-16 h-16 rounded-full border border-[#0066ff]/25 animate-ping" />
+                              {/* Middle expanding pulse ring */}
+                              <span className="absolute inline-flex w-10 h-10 rounded-full border border-[#0066ff]/60 animate-pulse" />
+                              {/* Inner radiant halo */}
+                              <span className="absolute inline-flex w-6 h-6 rounded-full bg-[#0066ff]/30 blur-[2px]" />
+                              {/* Core radiant blue beacon with white outline */}
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-[#0066ff] ring-2 ring-white shadow-[0_0_12px_#0066ff]" />
+                            </div>
+                          ) : globeBadgeOption === 'visits' ? (
+                            /* VIEW OPTION 1: "Visits" (COBE Official Default Analytics Look with Quick-Filter action) */
+                            <div className="flex flex-col items-center">
+                              <div className={`relative flex flex-col px-2.5 py-1 rounded-[6px] bg-[#000000d9] backdrop-blur-md border text-white shadow-2xl transition-all min-w-[96px] ${
+                                isFocused
+                                  ? 'border-[#0099ff] ring-2 ring-[#0099ff]/70 shadow-[0_0_20px_rgba(0,153,255,0.4)] scale-110'
+                                  : 'border-white/15 group-hover:border-[#0099ff]/80 group-hover:scale-110'
+                              }`}>
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className={`text-[9px] font-semibold uppercase tracking-wider truncate transition-colors ${
+                                    isFocused ? 'text-[#0099ff]' : 'text-white/70 group-hover:text-cyan-300'
+                                  }`}>
+                                    {badge.name}
+                                  </span>
+                                  <span className={`text-[8px] font-mono font-bold transition-opacity ${
+                                    isFocused ? 'opacity-100 text-[#0099ff]' : 'opacity-0 group-hover:opacity-100 text-[#0099ff]'
+                                  }`}>
+                                    FILTER ↗
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <span className="font-mono text-xs font-bold text-white">
+                                    {badge.count} {badge.count === 1 ? 'visit' : 'visits'}
+                                  </span>
+                                  <span className="inline-flex items-center text-[10px] font-semibold text-[#34d399] font-mono">
+                                    {badge.pct}%
+                                  </span>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                <span className="font-mono text-xs font-bold text-white">
-                                  {badge.count} {badge.count === 1 ? 'visit' : 'visits'}
+                              {/* Connector needle pin */}
+                              <div className={`w-[1.5px] h-2.5 transition-colors mx-auto ${isFocused ? 'bg-[#0099ff]' : 'bg-white/40 group-hover:bg-[#0099ff]'}`} />
+                              <div className={`w-1.5 h-1.5 rounded-full ring-2 ring-black shadow-[0_0_8px_#0099ff] mx-auto -mt-0.5 ${isFocused ? 'bg-white ring-[#0099ff]' : 'bg-cyan-400'}`} />
+                            </div>
+                          ) : (
+                            /* VIEW OPTION 2: "Live Stream" (Signature COBE Pulse with subtle location pill) */
+                            <div className="flex flex-col items-center">
+                              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] bg-[#000000d9] backdrop-blur-md border text-white shadow-2xl transition-all mb-1 ${
+                                isFocused
+                                  ? 'border-cyan-400 ring-2 ring-cyan-400/70 shadow-[0_0_20px_rgba(34,211,238,0.5)] scale-110'
+                                  : 'border-cyan-400/80 hover:border-cyan-400 group-hover:scale-105'
+                              }`}>
+                                <span className="relative flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-80" />
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
                                 </span>
-                                <span className="inline-flex items-center text-[10px] font-semibold text-[#34d399] font-mono">
-                                  {badge.pct}%
-                                </span>
+                                <span className="text-[9px] uppercase font-bold tracking-wider text-cyan-400">LIVE</span>
+                                <span className="text-white/40">·</span>
+                                <span className="truncate max-w-[120px] font-semibold text-white text-xs">{badge.name}</span>
+                              </div>
+                              {/* Concentric COBE pulse ripple */}
+                              <div className="relative flex items-center justify-center w-10 h-10">
+                                <span className="absolute inline-flex w-10 h-10 rounded-full border border-[#0066ff]/40 animate-ping" />
+                                <span className="absolute inline-flex w-6 h-6 rounded-full border border-[#0066ff]/70 animate-pulse" />
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#0066ff] ring-2 ring-white shadow-[0_0_10px_#0066ff]" />
                               </div>
                             </div>
-                            {/* Connector needle pin */}
-                            <div className="w-[1.5px] h-2.5 bg-white/40 group-hover:bg-[#0099ff] transition-colors mx-auto" />
-                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 ring-2 ring-black shadow-[0_0_8px_#0099ff] mx-auto -mt-0.5" />
-                          </div>
-                        ) : (
-                          /* VIEW OPTION 2: "Live Stream" (Signature COBE Pulse with subtle location pill) */
-                          <div className="flex flex-col items-center">
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] bg-[#000000d9] backdrop-blur-md border border-cyan-400/80 hover:border-cyan-400 text-white shadow-2xl transition-all group-hover:scale-105 mb-1">
-                              <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-80" />
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
-                              </span>
-                              <span className="text-[9px] uppercase font-bold tracking-wider text-cyan-400">LIVE</span>
-                              <span className="text-white/40">·</span>
-                              <span className="truncate max-w-[120px] font-semibold text-white text-xs">{badge.name}</span>
-                            </div>
-                            {/* Concentric COBE pulse ripple */}
-                            <div className="relative flex items-center justify-center w-10 h-10">
-                              <span className="absolute inline-flex w-10 h-10 rounded-full border border-[#0066ff]/40 animate-ping" />
-                              <span className="absolute inline-flex w-6 h-6 rounded-full border border-[#0066ff]/70 animate-pulse" />
-                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#0066ff] ring-2 ring-white shadow-[0_0_10px_#0066ff]" />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -2637,20 +2724,33 @@ export const EventsPage: React.FC = () => {
                         <motion.div
                           whileHover={{ scale: 1.01, y: -1 }}
                           transition={{ duration: 0.15 }}
-                          onClick={() => setActiveEvent(ev)}
-                          className={`p-3 rounded-xl border transition-colors cursor-pointer text-xs ${
+                          onClick={() => rotateToEvent(ev)}
+                          className={`group/pulse p-3 rounded-xl border transition-colors cursor-pointer text-xs relative ${
                             isIncoming
                               ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/40 shadow-sm'
                               : 'border-border bg-card hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
                           }`}
                         >
                           <div className="flex items-center justify-between mb-1.5">
-                            <span className="font-mono font-semibold text-foreground">
+                            <span className="font-mono font-semibold text-foreground group-hover/pulse:text-[#0099ff] transition-colors">
                               /{ev.shortUrlHash}
                             </span>
-                            <span className="text-[10px] text-muted-foreground font-mono">
-                              {formatRelativeTime(ev.timestamp)}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                {formatRelativeTime(ev.timestamp)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveEvent(ev);
+                                }}
+                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer opacity-70 hover:opacity-100"
+                                title="Open full event details"
+                              >
+                                <Info className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
 
                           <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
@@ -2827,6 +2927,20 @@ export const EventsPage: React.FC = () => {
                             <span className="text-[10px] font-mono text-muted-foreground/70">
                               [{activeEvent.latitude.toFixed(2)}°, {activeEvent.longitude.toFixed(2)}°]
                             </span>
+                          )}
+                          {viewMode === 'globe' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                rotateToEvent(activeEvent);
+                                setActiveEvent(null);
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-medium transition-colors cursor-pointer"
+                              title="Center and rotate 3D globe to this location"
+                            >
+                              <Compass className="w-3 h-3" />
+                              <span>View on Globe</span>
+                            </button>
                           )}
                         </div>
                       </div>

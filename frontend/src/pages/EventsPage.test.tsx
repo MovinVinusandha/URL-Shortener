@@ -21,6 +21,7 @@ vi.mock('cobe', () => {
 describe('EventsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it('renders the events page toolbar and empty state properly', async () => {
