@@ -40,11 +40,14 @@ import {
   Shield,
   SlidersHorizontal,
   ArrowUpDown,
-  ArrowDownWideNarrow
+  ArrowDownWideNarrow,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 import createGlobe from 'cobe';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
+import { toast } from 'react-hot-toast';
 import axiosInstance, { BASE_URL } from '../api/axiosInstance';
 import { useTheme } from '../context/ThemeContext';
 import { DateRangePicker, type DateRangeValue } from '../components/DateRangePicker';
@@ -283,6 +286,9 @@ export const EventsPage: React.FC = () => {
   const [liveConnected, setLiveConnected] = useState<boolean>(false);
   const [recentLiveEvents, setRecentLiveEvents] = useState<ClickEventDto[]>([]);
   const [latestArrival, setLatestArrival] = useState<ClickEventDto | null>(null);
+  const [activeRadars, setActiveRadars] = useState<
+    { id: string | number; lat: number; lon: number; city?: string; country?: string; expiresAt: number }[]
+  >([]);
 
   // Historical table state
   const [events, setEvents] = useState<ClickEventDto[]>([]);
@@ -427,11 +433,64 @@ export const EventsPage: React.FC = () => {
       if (campaignPillRef.current && !campaignPillRef.current.contains(target)) {
         setIsCampaignPillOpen(false);
       }
+
+      if (exportRef.current && !exportRef.current.contains(target)) {
+        setIsExportOpen(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
+
+  const handleExportData = (exportType: 'csv' | 'json') => {
+    const dataToExport = sortedEvents.length > 0 ? sortedEvents : events;
+    if (dataToExport.length === 0) {
+      toast.error('No events available to export');
+      return;
+    }
+
+    if (exportType === 'json') {
+      const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `events-export-${format(new Date(), 'yyyy-MM-dd_HHmm')}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${dataToExport.length} events as JSON`);
+    } else {
+      const headers = ['ID', 'Timestamp', 'Short Link', 'Destination URL', 'Country', 'City', 'Device', 'Browser', 'OS', 'Referer', 'Campaign', 'IP'];
+      const rows = dataToExport.map(e => [
+        e.id,
+        e.timestamp,
+        e.shortUrlHash || '',
+        `"${(e.originalUrl || '').replace(/"/g, '""')}"`,
+        `"${(e.country || '').replace(/"/g, '""')}"`,
+        `"${(e.city || '').replace(/"/g, '""')}"`,
+        `"${(e.device || '').replace(/"/g, '""')}"`,
+        `"${(e.browser || '').replace(/"/g, '""')}"`,
+        `"${(e.os || '').replace(/"/g, '""')}"`,
+        `"${(e.referer || '').replace(/"/g, '""')}"`,
+        `"${(e.utmCampaign || '').replace(/"/g, '""')}"`,
+        `"${(e.ipAddress || '').replace(/"/g, '""')}"`,
+      ]);
+
+      const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `events-export-${format(new Date(), 'yyyy-MM-dd_HHmm')}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${dataToExport.length} events as CSV`);
+    }
+    setIsExportOpen(false);
+  };
 
   const toggleColumnVisibility = (key: keyof TableColumnsVisibility) => {
     // Short link and Created Date are essential identifying columns and cannot be hidden
@@ -637,6 +696,30 @@ export const EventsPage: React.FC = () => {
           // Trigger real-time arrival visual
           setLatestArrival(newEvent);
 
+          // Add to activeRadars list so each live visitor radar shows for its full 6 seconds simultaneously
+          let rLat = newEvent.latitude;
+          let rLon = newEvent.longitude;
+          if ((rLat == null || rLon == null || isNaN(rLat) || isNaN(rLon)) && newEvent.country) {
+            const fb = COUNTRY_COORDINATES[newEvent.country];
+            if (fb) {
+              rLat = fb[0];
+              rLon = fb[1];
+            }
+          }
+          if (rLat != null && rLon != null && !isNaN(rLat) && !isNaN(rLon)) {
+            setActiveRadars((prev) => [
+              ...prev,
+              {
+                id: `radar-${newEvent.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+                lat: rLat!,
+                lon: rLon!,
+                city: newEvent.city,
+                country: newEvent.country,
+                expiresAt: Date.now() + 6000,
+              },
+            ]);
+          }
+
           // Check if new live event matches currently active filters
           const matches =
             (selectedDevice === 'all' || (newEvent.device || 'Desktop').toLowerCase() === selectedDevice.toLowerCase()) &&
@@ -683,6 +766,19 @@ export const EventsPage: React.FC = () => {
     }, 6000);
     return () => clearTimeout(timer);
   }, [latestArrival]);
+
+  // Clean up expired concurrent radars (each radar lives exactly 6 seconds)
+  useEffect(() => {
+    if (activeRadars.length === 0) return;
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setActiveRadars((prev) => {
+        const remaining = prev.filter((r) => r.expiresAt > now);
+        return remaining.length === prev.length ? prev : remaining;
+      });
+    }, 500);
+    return () => clearInterval(interval);
+  }, [activeRadars.length]);
 
   // Filter in-memory live events to strictly respect active timeframe and filter pills
   const filteredLiveEvents = useMemo(() => {
@@ -759,8 +855,22 @@ export const EventsPage: React.FC = () => {
       lon: item.lon,
     }));
 
-    // If a live visitor just arrived, render it firstly as signature "Pulse"
-    if (latestArrival) {
+    // If live visitors arrived within their 6s window, render all active radars simultaneously
+    if (activeRadars.length > 0) {
+      const radarBadges: GlobeBadge[] = activeRadars.map((radar) => ({
+        id: `radar-arrival-${radar.id}`,
+        name: (radar.city && radar.city !== 'Unknown' ? radar.city : radar.country || 'Live Visitor').toUpperCase(),
+        country: radar.country || 'Global',
+        count: 1,
+        pct: 100,
+        lat: radar.lat,
+        lon: radar.lon,
+        isLive: true,
+        isPulse: true,
+      }));
+      topList.unshift(...radarBadges);
+    } else if (latestArrival) {
+      // Fallback single pulse if latestArrival is set
       let lat = latestArrival.latitude;
       let lon = latestArrival.longitude;
       if ((lat == null || lon == null || isNaN(lat) || isNaN(lon)) && latestArrival.country) {
@@ -786,36 +896,19 @@ export const EventsPage: React.FC = () => {
     }
 
     // Pass markers to createGlobe
-    // In 'live' mode, highlight live arrival markers prominently.
-    // In 'visits' mode, standard pin sizes.
-    const markers = sortedLocations.map(loc => {
-      const size = globeBadgeOption === 'live' ? 0.035 : 0.045;
-      return {
-        location: [loc.lat, loc.lon] as [number, number],
-        size,
-      };
-    });
+    // In 'live' mode: true radar mode — remove normal solid dots underneath! Only the HTML concentric radar rings display.
+    // In 'visits' mode: standard comprehensive traffic markers for all visitor locations.
+    let markers: { location: [number, number]; size: number }[] = [];
 
-    if (latestArrival) {
-      let lat = latestArrival.latitude;
-      let lon = latestArrival.longitude;
-      if ((lat == null || lon == null) && latestArrival.country) {
-        const fallback = COUNTRY_COORDINATES[latestArrival.country];
-        if (fallback) {
-          lat = fallback[0];
-          lon = fallback[1];
-        }
-      }
-      if (lat != null && lon != null) {
-        markers.push({
-          location: [lat, lon] as [number, number],
-          size: 0.08,
-        });
-      }
+    if (globeBadgeOption === 'visits') {
+      markers = sortedLocations.map(loc => ({
+        location: [loc.lat, loc.lon] as [number, number],
+        size: 0.045,
+      }));
     }
 
     // Filter displayed topBadges based on globeBadgeOption:
-    // 1) 'live': ONLY show the latest live arrival pulse / active ping badge
+    // 1) 'live': ONLY show active live arrival pulses / radar rings (pure radar mode, no solid dots underneath)
     // 2) 'visits': Show comprehensive visit badges for all active visitor locations
     let displayList = topList;
     if (globeBadgeOption === 'live') {
@@ -823,7 +916,7 @@ export const EventsPage: React.FC = () => {
     }
 
     return { topBadges: displayList, globeMarkers: markers };
-  }, [filteredLiveEvents, events, latestArrival, globeBadgeOption]);
+  }, [filteredLiveEvents, events, activeRadars, latestArrival, globeBadgeOption]);
 
   // Keep topBadgesRef synchronized for 60fps animation loop
   topBadgesRef.current = topBadges;
@@ -1532,6 +1625,56 @@ export const EventsPage: React.FC = () => {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-primary' : ''}`} />
           </button>
+
+          {/* Export Dropdown Button */}
+          <div className="relative" ref={exportRef}>
+            <button
+              type="button"
+              onClick={() => setIsExportOpen(!isExportOpen)}
+              title="Export filtered click events"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary text-xs font-medium transition-colors cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-muted-foreground" />
+              <span>Export</span>
+              <ChevronDown className="w-3 h-3 text-muted-foreground/80" />
+            </button>
+
+            <AnimatePresence>
+              {isExportOpen && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute right-0 top-full mt-1.5 w-48 bg-popover rounded-xl shadow-xl border border-border z-[70] overflow-hidden p-1.5 flex flex-col gap-1"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleExportData('csv')}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-foreground hover:bg-secondary rounded-lg transition-colors cursor-pointer text-left"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <div className="flex flex-col">
+                      <span>Export as CSV</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">Spreadsheet friendly</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleExportData('json')}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-foreground hover:bg-secondary rounded-lg transition-colors cursor-pointer text-left"
+                  >
+                    <Copy className="w-4 h-4 text-[#0099ff] shrink-0" />
+                    <div className="flex flex-col">
+                      <span>Export as JSON</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">Full raw event objects</span>
+                    </div>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
 
 
@@ -2288,6 +2431,16 @@ export const EventsPage: React.FC = () => {
                       <div
                         key={badge.id}
                         ref={(el) => { badgeRefs.current[badge.id] = el; }}
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onPointerUp={(e) => {
+                          e.stopPropagation();
+                          if (badge.country) {
+                            setSelectedCountry(badge.country);
+                            setPage(0);
+                          }
+                        }}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (badge.country) {
@@ -2300,11 +2453,11 @@ export const EventsPage: React.FC = () => {
                           left: '50%',
                           top: '50%',
                           opacity: 0,
-                          pointerEvents: 'none',
+                          pointerEvents: 'auto',
                           transform: 'translate(-50%, -100%) translateY(-10px)',
                           transition: 'opacity 0.15s ease-out, transform 0.15s ease-out',
                         }}
-                        className="group cursor-pointer select-none"
+                        className="group cursor-pointer select-none pointer-events-auto"
                         title={badge.isLive ? `Live ping from ${badge.name}` : `Filter by ${badge.country} (${badge.count} visits)`}
                       >
                         {badge.isPulse ? (
@@ -2320,12 +2473,17 @@ export const EventsPage: React.FC = () => {
                             <span className="relative inline-flex rounded-full h-3 w-3 bg-[#0066ff] ring-2 ring-white shadow-[0_0_12px_#0066ff]" />
                           </div>
                         ) : globeBadgeOption === 'visits' ? (
-                          /* VIEW OPTION 1: "Visits" (COBE Official Default Analytics Look) */
+                          /* VIEW OPTION 1: "Visits" (COBE Official Default Analytics Look with Quick-Filter action) */
                           <div className="flex flex-col items-center">
-                            <div className="flex flex-col px-2.5 py-1 rounded-[4px] bg-[#000000d9] backdrop-blur-md border border-white/15 hover:border-white/30 text-white shadow-2xl transition-all group-hover:scale-105 min-w-[90px]">
-                              <span className="text-[9px] font-semibold uppercase tracking-wider text-white/70 truncate">
-                                {badge.name}
-                              </span>
+                            <div className="relative flex flex-col px-2.5 py-1 rounded-[6px] bg-[#000000d9] backdrop-blur-md border border-white/15 group-hover:border-[#0099ff]/80 text-white shadow-2xl transition-all group-hover:scale-110 min-w-[96px]">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-[9px] font-semibold uppercase tracking-wider text-white/70 truncate group-hover:text-cyan-300 transition-colors">
+                                  {badge.name}
+                                </span>
+                                <span className="text-[8px] font-mono opacity-0 group-hover:opacity-100 text-[#0099ff] transition-opacity font-bold">
+                                  FILTER ↗
+                                </span>
+                              </div>
                               <div className="flex items-center gap-1.5 mt-0.5">
                                 <span className="font-mono text-xs font-bold text-white">
                                   {badge.count} {badge.count === 1 ? 'visit' : 'visits'}
@@ -2336,7 +2494,7 @@ export const EventsPage: React.FC = () => {
                               </div>
                             </div>
                             {/* Connector needle pin */}
-                            <div className="w-[1.5px] h-2.5 bg-white/40 mx-auto" />
+                            <div className="w-[1.5px] h-2.5 bg-white/40 group-hover:bg-[#0099ff] transition-colors mx-auto" />
                             <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 ring-2 ring-black shadow-[0_0_8px_#0099ff] mx-auto -mt-0.5" />
                           </div>
                         ) : (
