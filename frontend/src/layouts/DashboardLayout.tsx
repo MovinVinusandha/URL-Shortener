@@ -138,7 +138,7 @@ const DashboardLayout: React.FC = () => {
       }
     };
 
-    if (user && user.role !== 'ROOT' && user.role !== 'ROLE_ROOT') {
+    if (user) {
       loadTagsAndFolders(false);
 
       const intervalId = window.setInterval(() => {
@@ -179,7 +179,7 @@ const DashboardLayout: React.FC = () => {
       }
     };
 
-    if (user && user.role !== 'ROOT' && user.role !== 'ROLE_ROOT') {
+    if (user) {
       loadUsageStats(false);
 
       const intervalId = window.setInterval(() => {
@@ -413,6 +413,16 @@ const DashboardLayout: React.FC = () => {
                     <Gift className="w-3.5 h-3.5 text-muted-foreground" />
                     What's new
                   </button>
+                  {(user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN' || user?.role === 'ROOT' || user?.role === 'ROLE_ROOT') && (
+                    <Link
+                      to="/admin"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors font-medium"
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      Admin Portal
+                    </Link>
+                  )}
                   <div className="border-t border-border my-1"></div>
                   <button
                     onClick={() => {

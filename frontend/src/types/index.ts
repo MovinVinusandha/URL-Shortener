@@ -160,3 +160,99 @@ export interface PaginatedEvents {
   last: boolean;
   empty: boolean;
 }
+
+// ─── Admin Types ─────────────────────────────────────────────────────────────
+
+export interface SystemHealth {
+  redisStatus: string;
+  redisMemory: string;
+  sweeperStatus: string;
+  lastSweeperRun: string;
+  activeWorkerThreads: number;
+}
+
+export interface TopDomain {
+  domain: string;
+  count: number;
+}
+
+export interface AdminOverviewStats {
+  totalLinks: number;
+  activeLinks: number;
+  expiredLinks: number;
+  quarantinedLinks: number;
+  totalClicks: number;
+  clicksLast24Hours: number;
+  totalUsers: number;
+  activeUsers: number;
+  suspendedUsers: number;
+  systemHealth: SystemHealth;
+  topDomains: TopDomain[];
+}
+
+export interface AdminLink {
+  id: number;
+  shortUrl: string;
+  fullShortUrl: string;
+  longUrl: string;
+  createdAt: string;
+  expiresAt?: string | null;
+  isActive: boolean;
+  isQuarantined: boolean;
+  quarantineReason?: string | null;
+  isPasswordProtected: boolean;
+  totalClicks: number;
+  userEmail: string;
+  username: string;
+  userPublicId?: string | null;
+}
+
+export interface PaginatedAdminLinks {
+  content: AdminLink[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+
+export interface AdminUser {
+  id: number;
+  publicId: string;
+  username: string;
+  email: string;
+  role: 'USER' | 'ADMIN' | 'ROOT';
+  emailVerified: boolean;
+  isSuspended: boolean;
+  suspendedReason?: string | null;
+  linkCount: number;
+  totalClicks: number;
+  createdAt: string;
+}
+
+export interface PaginatedAdminUsers {
+  content: AdminUser[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+
+export interface BlacklistedDomainItem {
+  id: number;
+  domainPattern: string;
+  reason?: string | null;
+  createdAt: string;
+}
+
+export interface SystemSettingItem {
+  settingKey: string;
+  settingValue: string;
+  description?: string | null;
+  updatedAt?: string | null;
+}

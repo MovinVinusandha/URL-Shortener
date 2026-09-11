@@ -22,6 +22,14 @@ import SettingsPage from './pages/SettingsPage';
 import SecurityPage from './pages/SecurityPage';
 import EventsPage from './pages/EventsPage';
 import DashboardLayout from './layouts/DashboardLayout';
+import BlockedPage from './pages/BlockedPage';
+import AdminProtectedRoute from './components/AdminProtectedRoute';
+import AdminLayout from './layouts/AdminLayout';
+import AdminOverviewPage from './pages/admin/AdminOverviewPage';
+import AdminLinksPage from './pages/admin/AdminLinksPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminSecurityPage from './pages/admin/AdminSecurityPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
 
@@ -42,8 +50,10 @@ function AnimatedRoutes() {
             <Route path="/expired" element={<ExpiredPage />} />
             <Route path="/not-found" element={<NotFoundPage />} />
             <Route path="/secure/:hash" element={<SecurePage />} />
+            <Route path="/blocked/:hash" element={<BlockedPage />} />
+            <Route path="/blocked" element={<BlockedPage />} />
 
-            {/* ── Protected Routes ──────────────────────────────── */}
+            {/* ── Protected User Routes ─────────────────────────── */}
             <Route element={<ProtectedRoute />}>
               <Route element={<DashboardLayout />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
@@ -58,6 +68,17 @@ function AnimatedRoutes() {
                 <Route path="/utm" element={<Navigate to="/utm-templates" replace />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/settings/security" element={<SecurityPage />} />
+              </Route>
+            </Route>
+
+            {/* ── Protected Admin Routes ────────────────────────── */}
+            <Route element={<AdminProtectedRoute />}>
+              <Route element={<AdminLayout />}>
+                <Route path="/admin" element={<AdminOverviewPage />} />
+                <Route path="/admin/links" element={<AdminLinksPage />} />
+                <Route path="/admin/users" element={<AdminUsersPage />} />
+                <Route path="/admin/security" element={<AdminSecurityPage />} />
+                <Route path="/admin/settings" element={<AdminSettingsPage />} />
               </Route>
             </Route>
 
