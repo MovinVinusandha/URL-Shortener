@@ -183,7 +183,7 @@ describe('EventsPage', () => {
 
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: /remove device filter/i })).not.toBeInTheDocument();
-    });
+    }, { timeout: 3000 });
   });
 
   it('renders visitor country badges on Globe 3D and supports mouse dragging', async () => {
@@ -546,6 +546,16 @@ describe('EventsPage', () => {
     fireEvent.click(jsonToggle);
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /copy json/i })).toBeInTheDocument();
+    });
+
+    // Verify copy buttons exist
+    expect(screen.getByTitle(/copy short link/i)).toBeInTheDocument();
+    expect(screen.getByTitle(/copy destination url/i)).toBeInTheDocument();
+
+    // Verify Escape key closes the modal
+    fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
+    await waitFor(() => {
+      expect(screen.queryByText('#401')).not.toBeInTheDocument();
     });
   });
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { 
   Activity, 
@@ -341,6 +342,23 @@ export const EventsPage: React.FC = () => {
     } catch {}
   };
 
+  // Close Event Details modal on Escape key and lock body scroll
+  useEffect(() => {
+    if (!activeEvent) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveEvent(null);
+      }
+    };
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeEvent]);
+
   // Globe Canvas and Animation References
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const globeRef = useRef<any>(null);
@@ -357,17 +375,17 @@ export const EventsPage: React.FC = () => {
   const badgeRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const topBadgesRef = useRef<GlobeBadge[]>([]);
 
-  // Column customization state (Dub.co style)
+  // Column customization state (Dub.co style) - Link and Date are permanently visible
   const [visibleColumns, setVisibleColumns] = useState<TableColumnsVisibility>(() => {
     try {
       const saved = localStorage.getItem('trim_events_table_columns');
       if (saved) {
         const parsed = JSON.parse(saved);
         delete parsed.event;
-        return { ...DEFAULT_COLUMNS_VISIBILITY, ...parsed };
+        return { ...DEFAULT_COLUMNS_VISIBILITY, ...parsed, link: true, date: true };
       }
     } catch {}
-    return DEFAULT_COLUMNS_VISIBILITY;
+    return { ...DEFAULT_COLUMNS_VISIBILITY, link: true, date: true };
   });
   // Sorting and Display popover state (Matching Links tab Display function)
   const [sortBy, setSortBy] = useState<'timestamp' | 'country' | 'link' | 'device' | 'linkType'>('timestamp');
@@ -416,8 +434,10 @@ export const EventsPage: React.FC = () => {
   }, []);
 
   const toggleColumnVisibility = (key: keyof TableColumnsVisibility) => {
+    // Short link and Created Date are essential identifying columns and cannot be hidden
+    if (key === 'link' || key === 'date') return;
     setVisibleColumns((prev) => {
-      const updated = { ...prev, [key]: !prev[key] };
+      const updated = { ...prev, [key]: !prev[key], link: true, date: true };
       try {
         localStorage.setItem('trim_events_table_columns', JSON.stringify(updated));
       } catch {}
@@ -881,6 +901,16 @@ export const EventsPage: React.FC = () => {
     } catch {}
   }, []);
 
+  // Synchronize globe markers to active globe instance without rebuilding WebGL context
+  const globeMarkersRef = useRef(globeMarkers);
+  globeMarkersRef.current = globeMarkers;
+
+  useEffect(() => {
+    if (globeRef.current) {
+      globeRef.current.update({ markers: globeMarkers });
+    }
+  }, [globeMarkers]);
+
   // ── 5. Initialize Cobe 3D Globe with Trim Monochrome Aesthetic ───────────────
   useEffect(() => {
     if (viewMode !== 'globe' || !canvasRef.current) return;
@@ -908,7 +938,7 @@ export const EventsPage: React.FC = () => {
       baseColor,
       markerColor,
       glowColor,
-      markers: globeMarkers,
+      markers: globeMarkersRef.current,
     });
 
     globeRef.current = globe;
@@ -957,8 +987,9 @@ export const EventsPage: React.FC = () => {
     return () => {
       cancelAnimationFrame(animId);
       globe.destroy();
+      globeRef.current = null;
     };
-  }, [viewMode, theme, globeMarkers, isLive]);
+  }, [viewMode, theme, isLive]);
 
   const handleZoomIn = () => setZoomLevel(prev => Math.min(1.4, prev + 0.15));
   const handleZoomOut = () => setZoomLevel(prev => Math.max(0.75, prev - 0.15));
@@ -970,10 +1001,10 @@ export const EventsPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-background text-foreground">
+    <div className="flex-1 flex flex-col min-w-0 h-full bg-background text-foreground">
       
       {/* ── Top Filter & Control Toolbar ────────────────────────────────────── */}
-      <div className="bg-background px-6 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <div className="relative z-40 bg-background px-6 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
         
         {/* Left: Search, Filter Popover, Date Range */}
         <div className="flex items-center flex-wrap gap-2 flex-1 min-w-[280px]">
@@ -1278,7 +1309,7 @@ export const EventsPage: React.FC = () => {
                               <Search className="w-3 h-3 text-muted-foreground shrink-0" />
                               <input 
                                 type="text" 
-                                autoFocus={true}
+                                autoFocus={true} 
                                 value={campaignPillSearch}
                                 onChange={e => setCampaignPillSearch(e.target.value)}
                                 placeholder="Search campaigns..." 
@@ -1333,134 +1364,141 @@ export const EventsPage: React.FC = () => {
           {/* Date Range Picker Component */}
           <DateRangePicker value={dateRange} onChange={(val) => { setDateRange(val); setPage(0); }} />
 
-          {/* Display Popover (Matching Links tab Display function) */}
-          <div className="relative" ref={displayRef}>
-            <button 
-              type="button"
-              onClick={() => setIsDisplayOpen(!isDisplayOpen)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border rounded-lg text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer shadow-xs"
-              aria-label="Display settings"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
-              <span>Display</span>
-              <ChevronDown className="w-3 h-3 text-muted-foreground" />
-            </button>
-            
-            <AnimatePresence>
-              {isDisplayOpen && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.1, ease: 'easeOut' }}
-                  className="absolute top-full left-0 mt-1.5 bg-popover rounded-xl shadow-xl border border-border w-[310px] z-50 flex flex-col"
-                >
-                  {/* Ordering Section */}
-                  <div className="p-3 border-b border-border flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-foreground text-xs font-medium">
-                      <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span>Ordering</span>
-                    </div>
-                    <div className="relative flex items-center gap-1.5">
-                      <button 
-                        type="button"
-                        onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                        className="p-1.5 bg-secondary border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                        title={sortOrder === 'asc' ? 'Sort Ascending' : 'Sort Descending'}
-                      >
-                        <ArrowUpDown className={`h-3.5 w-3.5 transform transition-transform ${sortOrder === 'asc' ? 'rotate-180' : ''}`} />
-                      </button>
-                      
-                      <div className="relative" ref={sortMenuRef}>
+          {/* Display Popover (Matching Links tab Display function) - Only for Stream Table view */}
+          {viewMode === 'stream' && (
+            <div className="relative" ref={displayRef}>
+              <button 
+                type="button"
+                onClick={() => setIsDisplayOpen(!isDisplayOpen)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border rounded-lg text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer shadow-xs"
+                aria-label="Display settings"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
+                <span>Display</span>
+                <ChevronDown className="w-3 h-3 text-muted-foreground" />
+              </button>
+              
+              <AnimatePresence>
+                {isDisplayOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.1, ease: 'easeOut' }}
+                    className="absolute top-full left-0 mt-1.5 bg-popover rounded-xl shadow-xl border border-border w-[310px] z-50 flex flex-col"
+                  >
+                    {/* Ordering Section */}
+                    <div className="p-3 border-b border-border flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-foreground text-xs font-medium">
+                        <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>Ordering</span>
+                      </div>
+                      <div className="relative flex items-center gap-1.5">
                         <button 
                           type="button"
-                          onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
-                          className="flex items-center justify-between w-32 px-2.5 py-1 bg-background border border-border rounded-lg text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                          onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                          className="p-1.5 bg-secondary border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                          title={sortOrder === 'asc' ? 'Sort Ascending' : 'Sort Descending'}
                         >
-                          <span className="truncate">
-                            {sortBy === 'timestamp' ? 'Date created' : sortBy === 'country' ? 'Country' : sortBy === 'device' ? 'Device' : 'Link'}
-                          </span>
-                          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                          <ArrowUpDown className={`h-3.5 w-3.5 transform transition-transform ${sortOrder === 'asc' ? 'rotate-180' : ''}`} />
                         </button>
                         
-                        <AnimatePresence>
-                          {isSortMenuOpen && (
-                            <motion.div 
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              transition={{ duration: 0.1, ease: 'easeOut' }}
-                              className="absolute right-0 top-full mt-1 w-44 bg-popover rounded-xl shadow-lg border border-border z-[60] overflow-hidden py-1"
-                            >
-                              {[
-                                { key: 'timestamp' as const, label: 'Date created' },
-                                { key: 'country' as const, label: 'Country' },
-                                { key: 'device' as const, label: 'Device' },
-                                { key: 'link' as const, label: 'Link' },
-                              ].map(({ key, label }) => (
-                                <button
-                                  key={key}
-                                  type="button"
-                                  onClick={() => {
-                                    setSortBy(key);
-                                    setIsSortMenuOpen(false);
-                                  }}
-                                  className={`w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors cursor-pointer ${
-                                    sortBy === key 
-                                      ? 'bg-primary/10 text-primary font-medium' 
-                                      : 'text-foreground hover:bg-secondary'
-                                  }`}
-                                >
-                                  <span>{label}</span>
-                                  {sortBy === key && <Check className="w-3.5 h-3.5 text-primary" />}
-                                </button>
-                              ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                        <div className="relative" ref={sortMenuRef}>
+                          <button 
+                            type="button"
+                            onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
+                            className="flex items-center justify-between w-32 px-2.5 py-1 bg-background border border-border rounded-lg text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                          >
+                            <span className="truncate">
+                              {sortBy === 'timestamp' ? 'Date created' : sortBy === 'country' ? 'Country' : sortBy === 'device' ? 'Device' : 'Link'}
+                            </span>
+                            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                          </button>
+                          
+                          <AnimatePresence>
+                            {isSortMenuOpen && (
+                              <motion.div 
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ duration: 0.1, ease: 'easeOut' }}
+                                className="absolute right-0 top-full mt-1 w-44 bg-popover rounded-xl shadow-lg border border-border z-[60] overflow-hidden py-1"
+                              >
+                                {[
+                                  { key: 'timestamp' as const, label: 'Date created' },
+                                  { key: 'country' as const, label: 'Country' },
+                                  { key: 'device' as const, label: 'Device' },
+                                  { key: 'link' as const, label: 'Link' },
+                                ].map(({ key, label }) => (
+                                  <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => {
+                                      setSortBy(key);
+                                      setIsSortMenuOpen(false);
+                                    }}
+                                    className={`w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors cursor-pointer ${
+                                      sortBy === key 
+                                        ? 'bg-primary/10 text-primary font-medium' 
+                                        : 'text-foreground hover:bg-secondary'
+                                    }`}
+                                  >
+                                    <span>{label}</span>
+                                    {sortBy === key && <Check className="w-3.5 h-3.5 text-primary" />}
+                                  </button>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* Display Properties Section */}
-                  <div className="p-3 flex flex-col gap-2">
-                    <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      Display Properties
-                    </h3>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[
-                        { key: 'link' as const, label: 'Short link' },
-                        { key: 'date' as const, label: 'Created Date' },
-                        { key: 'referer' as const, label: 'Referrer' },
-                        { key: 'country' as const, label: 'Country' },
-                        { key: 'city' as const, label: 'City' },
-                        { key: 'device' as const, label: 'Device' },
-                        { key: 'browser' as const, label: 'Browser' },
-                        { key: 'os' as const, label: 'OS' },
-                        { key: 'campaign' as const, label: 'Campaign' },
-                      ].map(({ key, label }) => {
-                        const isChecked = visibleColumns[key];
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            onClick={() => toggleColumnVisibility(key)}
-                            className={`px-2.5 py-1 text-xs border rounded-lg font-medium transition-all cursor-pointer ${
-                              isChecked 
-                                ? 'border-neutral-300 dark:border-neutral-800 bg-neutral-100 dark:bg-[#18181B] text-foreground shadow-xs' 
-                                : 'border-border bg-background/50 text-muted-foreground hover:bg-secondary hover:text-foreground'
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
+                    
+                    {/* Display Properties Section */}
+                    <div className="p-3 flex flex-col gap-2">
+                      <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        Display Properties
+                      </h3>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { key: 'link' as const, label: 'Short link' },
+                          { key: 'date' as const, label: 'Created Date' },
+                          { key: 'referer' as const, label: 'Referrer' },
+                          { key: 'country' as const, label: 'Country' },
+                          { key: 'city' as const, label: 'City' },
+                          { key: 'device' as const, label: 'Device' },
+                          { key: 'browser' as const, label: 'Browser' },
+                          { key: 'os' as const, label: 'OS' },
+                          { key: 'campaign' as const, label: 'Campaign' },
+                        ].map(({ key, label }) => {
+                          const isAlwaysVisible = key === 'link' || key === 'date';
+                          const isChecked = isAlwaysVisible ? true : visibleColumns[key];
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              disabled={isAlwaysVisible}
+                              onClick={() => !isAlwaysVisible && toggleColumnVisibility(key)}
+                              title={isAlwaysVisible ? `${label} is always visible and cannot be hidden` : undefined}
+                              className={`px-2.5 py-1 text-xs border rounded-lg font-medium transition-all ${
+                                isAlwaysVisible
+                                  ? 'border-neutral-300/80 dark:border-neutral-800/80 bg-neutral-100/70 dark:bg-[#18181B]/70 text-foreground cursor-default opacity-85 shadow-xs'
+                                  : isChecked 
+                                  ? 'border-neutral-300 dark:border-neutral-800 bg-neutral-100 dark:bg-[#18181B] text-foreground shadow-xs cursor-pointer' 
+                                  : 'border-border bg-background/50 text-muted-foreground hover:bg-secondary hover:text-foreground cursor-pointer'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
 
         {/* Right: Globe Map Style Selector, Live Indicator, View Switcher */}
@@ -1540,7 +1578,7 @@ export const EventsPage: React.FC = () => {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="px-6 py-2 bg-muted/10 flex flex-wrap items-center gap-2 shrink-0 overflow-hidden"
+            className="relative z-30 px-6 py-2 bg-muted/10 flex flex-wrap items-center gap-2 shrink-0"
           >
             {/* Device Pill */}
             {selectedDevice !== 'all' && (
@@ -1909,7 +1947,7 @@ export const EventsPage: React.FC = () => {
     </AnimatePresence>
 
       {/* ── Main Viewport Area ─────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-hidden relative flex">
+      <div className="flex-1 min-h-0 relative z-10 flex flex-col overflow-y-auto">
 
         {/* MODE A: Stream Table View (Dub.co style boxed in page with Fixed Header) */}
         {viewMode === 'stream' ? (
@@ -1919,11 +1957,11 @@ export const EventsPage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="flex-1 flex flex-col min-h-0 h-full p-4 sm:p-6 max-w-7xl mx-auto w-full overflow-hidden"
+            className="p-4 sm:p-6 max-w-7xl mx-auto w-full"
           >
             {/* Table inside Box-like Structure */}
-            <div className="bg-background border border-border rounded-xl shadow-xs overflow-hidden flex flex-col flex-1 min-h-0">
-              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto relative">
+            <div className="bg-background border border-border rounded-xl shadow-xs overflow-hidden flex flex-col max-h-[calc(100vh-230px)]">
+              <div className="overflow-y-auto overflow-x-auto relative">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead className="sticky top-0 z-20 bg-background border-b border-border text-foreground font-semibold text-xs shadow-xs">
                     <tr>
@@ -2167,11 +2205,15 @@ export const EventsPage: React.FC = () => {
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="flex-1 flex flex-col lg:flex-row h-[calc(100vh-210px)] min-h-[580px] max-h-[850px] overflow-hidden bg-background"
+            className="flex-1 flex flex-col lg:flex-row w-full h-full overflow-hidden bg-background relative"
+            style={{
+              height: activeFilterCount > 0 ? 'calc(100vh - 250px)' : 'calc(100vh - 210px)',
+              minHeight: '560px',
+              maxHeight: '860px',
+            }}
           >
             {/* Left/Center: 3D WebGL Canvas Globe Area */}
-            <div className="flex-1 relative flex items-center justify-center p-4 overflow-hidden">
+            <div className="flex-1 relative flex items-center justify-center p-4 overflow-hidden h-full">
               
               {/* Live Visitor Arrival HUD Chip (Slides down on new arrival) */}
               <AnimatePresence>
@@ -2227,8 +2269,8 @@ export const EventsPage: React.FC = () => {
 
               {/* Canvas Globe with Scale Animation, Drag Rotation & Interactive Floating Badges */}
               <div 
-                className="relative w-full max-w-[500px] aspect-square flex items-center justify-center transition-transform duration-200 select-none touch-none cursor-grab active:cursor-grabbing"
-                style={{ transform: `scale(${zoomLevel})` }}
+                className="relative w-full max-w-[480px] aspect-square flex items-center justify-center translate-y-16 transition-transform duration-200 select-none touch-none cursor-grab active:cursor-grabbing"
+                style={{ transform: `translateY(64px) scale(${zoomLevel})` }}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
@@ -2240,94 +2282,94 @@ export const EventsPage: React.FC = () => {
                   className="pointer-events-none"
                 />
 
-                {/* Floating Site Visitor Badges (COBE Official Default Look - cobe.vercel.app) */}
-                <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                  {topBadges.map((badge) => (
-                    <div
-                      key={badge.id}
-                      ref={(el) => { badgeRefs.current[badge.id] = el; }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (badge.country) {
-                          setSelectedCountry(badge.country);
-                          setPage(0);
-                        }
-                      }}
-                      style={{
-                        position: 'absolute',
-                        left: '50%',
-                        top: '50%',
-                        opacity: 0,
-                        pointerEvents: 'none',
-                        transform: 'translate(-50%, -100%) translateY(-10px)',
-                        transition: 'opacity 0.15s ease-out, transform 0.15s ease-out',
-                      }}
-                      className="group cursor-pointer select-none"
-                      title={badge.isLive ? `Live ping from ${badge.name}` : `Filter by ${badge.country} (${badge.count} visits)`}
-                    >
-                      {badge.isPulse ? (
-                        /* Incoming Visitor Arrival: Signature COBE Concentric Pulse Rings */
-                        <div className="relative flex items-center justify-center w-16 h-16 pointer-events-none">
-                          {/* Outermost soft ripple */}
-                          <span className="absolute inline-flex w-16 h-16 rounded-full border border-[#0066ff]/25 animate-ping" />
-                          {/* Middle expanding pulse ring */}
-                          <span className="absolute inline-flex w-10 h-10 rounded-full border border-[#0066ff]/60 animate-pulse" />
-                          {/* Inner radiant halo */}
-                          <span className="absolute inline-flex w-6 h-6 rounded-full bg-[#0066ff]/30 blur-[2px]" />
-                          {/* Core radiant blue beacon with white outline */}
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-[#0066ff] ring-2 ring-white shadow-[0_0_12px_#0066ff]" />
-                        </div>
-                      ) : globeBadgeOption === 'visits' ? (
-                        /* VIEW OPTION 1: "Visits" (COBE Official Default Analytics Look) */
-                        <div className="flex flex-col items-center">
-                          <div className="flex flex-col px-2.5 py-1 rounded-[4px] bg-[#000000d9] backdrop-blur-md border border-white/15 hover:border-white/30 text-white shadow-2xl transition-all group-hover:scale-105 min-w-[90px]">
-                            <span className="text-[9px] font-semibold uppercase tracking-wider text-white/70 truncate">
-                              {badge.name}
-                            </span>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="font-mono text-xs font-bold text-white">
-                                {badge.count} {badge.count === 1 ? 'visit' : 'visits'}
+                  {/* Floating Site Visitor Badges (COBE Official Default Look - cobe.vercel.app) */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                    {topBadges.map((badge) => (
+                      <div
+                        key={badge.id}
+                        ref={(el) => { badgeRefs.current[badge.id] = el; }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (badge.country) {
+                            setSelectedCountry(badge.country);
+                            setPage(0);
+                          }
+                        }}
+                        style={{
+                          position: 'absolute',
+                          left: '50%',
+                          top: '50%',
+                          opacity: 0,
+                          pointerEvents: 'none',
+                          transform: 'translate(-50%, -100%) translateY(-10px)',
+                          transition: 'opacity 0.15s ease-out, transform 0.15s ease-out',
+                        }}
+                        className="group cursor-pointer select-none"
+                        title={badge.isLive ? `Live ping from ${badge.name}` : `Filter by ${badge.country} (${badge.count} visits)`}
+                      >
+                        {badge.isPulse ? (
+                          /* Incoming Visitor Arrival: Signature COBE Concentric Pulse Rings */
+                          <div className="relative flex items-center justify-center w-16 h-16 pointer-events-none">
+                            {/* Outermost soft ripple */}
+                            <span className="absolute inline-flex w-16 h-16 rounded-full border border-[#0066ff]/25 animate-ping" />
+                            {/* Middle expanding pulse ring */}
+                            <span className="absolute inline-flex w-10 h-10 rounded-full border border-[#0066ff]/60 animate-pulse" />
+                            {/* Inner radiant halo */}
+                            <span className="absolute inline-flex w-6 h-6 rounded-full bg-[#0066ff]/30 blur-[2px]" />
+                            {/* Core radiant blue beacon with white outline */}
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-[#0066ff] ring-2 ring-white shadow-[0_0_12px_#0066ff]" />
+                          </div>
+                        ) : globeBadgeOption === 'visits' ? (
+                          /* VIEW OPTION 1: "Visits" (COBE Official Default Analytics Look) */
+                          <div className="flex flex-col items-center">
+                            <div className="flex flex-col px-2.5 py-1 rounded-[4px] bg-[#000000d9] backdrop-blur-md border border-white/15 hover:border-white/30 text-white shadow-2xl transition-all group-hover:scale-105 min-w-[90px]">
+                              <span className="text-[9px] font-semibold uppercase tracking-wider text-white/70 truncate">
+                                {badge.name}
                               </span>
-                              <span className="inline-flex items-center text-[10px] font-semibold text-[#34d399] font-mono">
-                                {badge.pct}%
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="font-mono text-xs font-bold text-white">
+                                  {badge.count} {badge.count === 1 ? 'visit' : 'visits'}
+                                </span>
+                                <span className="inline-flex items-center text-[10px] font-semibold text-[#34d399] font-mono">
+                                  {badge.pct}%
+                                </span>
+                              </div>
+                            </div>
+                            {/* Connector needle pin */}
+                            <div className="w-[1.5px] h-2.5 bg-white/40 mx-auto" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 ring-2 ring-black shadow-[0_0_8px_#0099ff] mx-auto -mt-0.5" />
+                          </div>
+                        ) : (
+                          /* VIEW OPTION 2: "Live Stream" (Signature COBE Pulse with subtle location pill) */
+                          <div className="flex flex-col items-center">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] bg-[#000000d9] backdrop-blur-md border border-cyan-400/80 hover:border-cyan-400 text-white shadow-2xl transition-all group-hover:scale-105 mb-1">
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-80" />
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
                               </span>
+                              <span className="text-[9px] uppercase font-bold tracking-wider text-cyan-400">LIVE</span>
+                              <span className="text-white/40">·</span>
+                              <span className="truncate max-w-[120px] font-semibold text-white text-xs">{badge.name}</span>
+                            </div>
+                            {/* Concentric COBE pulse ripple */}
+                            <div className="relative flex items-center justify-center w-10 h-10">
+                              <span className="absolute inline-flex w-10 h-10 rounded-full border border-[#0066ff]/40 animate-ping" />
+                              <span className="absolute inline-flex w-6 h-6 rounded-full border border-[#0066ff]/70 animate-pulse" />
+                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#0066ff] ring-2 ring-white shadow-[0_0_10px_#0066ff]" />
                             </div>
                           </div>
-                          {/* Connector needle pin */}
-                          <div className="w-[1.5px] h-2.5 bg-white/40 mx-auto" />
-                          <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 ring-2 ring-black shadow-[0_0_8px_#0099ff] mx-auto -mt-0.5" />
-                        </div>
-                      ) : (
-                        /* VIEW OPTION 2: "Live Stream" (Signature COBE Pulse with subtle location pill) */
-                        <div className="flex flex-col items-center">
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] bg-[#000000d9] backdrop-blur-md border border-cyan-400/80 hover:border-cyan-400 text-white shadow-2xl transition-all group-hover:scale-105 mb-1">
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-80" />
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
-                            </span>
-                            <span className="text-[9px] uppercase font-bold tracking-wider text-cyan-400">LIVE</span>
-                            <span className="text-white/40">·</span>
-                            <span className="truncate max-w-[120px] font-semibold text-white text-xs">{badge.name}</span>
-                          </div>
-                          {/* Concentric COBE pulse ripple */}
-                          <div className="relative flex items-center justify-center w-10 h-10">
-                            <span className="absolute inline-flex w-10 h-10 rounded-full border border-[#0066ff]/40 animate-ping" />
-                            <span className="absolute inline-flex w-6 h-6 rounded-full border border-[#0066ff]/70 animate-pulse" />
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#0066ff] ring-2 ring-white shadow-[0_0_10px_#0066ff]" />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Under-Globe Control Dock: 2 View Options (Visits | Live Stream) + Zoom Controls */}
+              {/* Top-Right Control Overlay: 2 View Options (Visits | Live Stream) + Zoom Controls */}
               <motion.div 
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: 0.15 }}
-                className="absolute bottom-3 inset-x-0 mx-auto max-w-fit z-20 flex items-center gap-2 bg-card/95 backdrop-blur-md border border-border p-1.5 rounded-2xl shadow-2xl"
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2, delay: 0.1 }}
+                className="absolute top-4 right-6 z-10 flex items-center gap-2 bg-card/85 backdrop-blur-md border border-border p-1.5 rounded-xl shadow-xs"
               >
                 
                 {/* 2 View Options Segmented Selector */}
@@ -2393,7 +2435,7 @@ export const EventsPage: React.FC = () => {
                 </div>
               </motion.div>
             </div>{/* Right: Live Event Ticker Feed with INDEPENDENT SCROLL */}
-            <div className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-border bg-card/40 flex flex-col h-full overflow-hidden">
+            <div className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-border bg-card/40 flex flex-col h-full overflow-hidden shrink-0">
               
               {/* Ticker Header */}
               <div className="p-3.5 border-b border-border flex items-center justify-between shrink-0 bg-muted/20">
@@ -2486,228 +2528,301 @@ export const EventsPage: React.FC = () => {
           </motion.div>
         )}
 
-        {/* ── Event Details Modal Popup Box (Centered Dialog with Trim Minimalist Design) ── */}
-        <AnimatePresence>
-          {activeEvent && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-              {/* Dimmed backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/60 backdrop-blur-xs"
-                onClick={() => setActiveEvent(null)}
-              />
+        {/* ── Event Details Modal Popup Box (Portalled to document.body for clean z-index & centering) ── */}
+        {typeof document !== 'undefined' && createPortal(
+          <AnimatePresence>
+            {activeEvent && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+                {/* Full-screen dimmed backdrop */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black/65 backdrop-blur-xs"
+                  onClick={() => setActiveEvent(null)}
+                />
 
-              {/* Centered Modal Popup Box */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                transition={{ type: 'spring', duration: 0.2, bounce: 0 }}
-                onClick={(e) => e.stopPropagation()}
-                className="relative w-full max-w-xl bg-background border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh] z-10"
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between px-6 py-4 border-b border-border shrink-0 bg-muted/20 dark:bg-[#121215]/50">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-semibold text-foreground tracking-tight">Event Details</h3>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-secondary text-foreground border border-neutral-300 dark:border-neutral-800">
-                        #{activeEvent.id}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground font-mono mt-1">
-                      {format(new Date(activeEvent.timestamp), 'PPpp')} ({formatRelativeTime(activeEvent.timestamp)})
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveEvent(null)}
-                    className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Modal Body: Target Link Card, Event Properties, and Raw JSON */}
-                <div className="p-6 overflow-y-auto space-y-6">
-                  {/* Target Link Card */}
-                  <div className="rounded-xl border border-border bg-secondary/30 dark:bg-card/60 p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Target Link
-                      </span>
+                {/* Centered Modal Popup Box */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 12 }}
+                  transition={{ type: 'spring', duration: 0.2, bounce: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="relative w-full max-w-lg bg-background border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh] z-10"
+                >
+                  {/* Header */}
+                  <div className="flex items-start justify-between px-6 py-4 border-b border-border shrink-0 bg-muted/20 dark:bg-[#121215]/60">
+                    <div>
                       <div className="flex items-center gap-2">
+                        <h3 className="text-base font-semibold text-foreground tracking-tight">Event Details</h3>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-secondary text-foreground border border-neutral-300 dark:border-neutral-800">
+                          #{activeEvent.id}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground font-mono mt-1">
+                        {format(new Date(activeEvent.timestamp), 'PPpp')} ({formatRelativeTime(activeEvent.timestamp)})
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveEvent(null)}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                      aria-label="Close details"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Modal Body */}
+                  <div className="p-6 overflow-y-auto space-y-5">
+                    {/* Target Link Card */}
+                    <div className="rounded-xl border border-border bg-secondary/30 dark:bg-card/60 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          Target Link
+                        </span>
+                      </div>
+
+                      {/* Short Link */}
+                      <div className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-background border border-border">
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider block">Short Link</span>
+                          <div className="font-mono text-xs font-semibold text-foreground truncate mt-0.5">
+                            {window.location.origin}/{activeEvent.shortUrlHash}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyText(`${window.location.origin}/${activeEvent.shortUrlHash}`, 'shortUrl')}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                            title="Copy short link"
+                          >
+                            {copiedField === 'shortUrl' ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                          <a
+                            href={`/${activeEvent.shortUrlHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors"
+                            title="Visit short link"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Destination / Original URL */}
+                      <div className="flex items-start justify-between gap-3 p-2.5 rounded-lg bg-background border border-border">
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider block">Destination URL</span>
+                          <p className="text-xs text-muted-foreground break-all leading-relaxed font-mono mt-0.5">
+                            {activeEvent.originalUrl}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyText(activeEvent.originalUrl, 'targetUrl')}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                            title="Copy destination URL"
+                          >
+                            {copiedField === 'targetUrl' ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                          <a
+                            href={activeEvent.originalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors"
+                            title="Visit destination URL"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Event Properties */}
+                    <div className="space-y-1">
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Event Properties
+                      </div>
+
+                      {/* Location Row */}
+                      <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border text-xs">
+                        <span className="text-muted-foreground">Location</span>
+                        <div className="flex items-center gap-2 text-right">
+                          {getCountryBadge(activeEvent.country, activeEvent.city)}
+                          {activeEvent.region && activeEvent.region !== 'Unknown' && (
+                            <span className="text-xs text-muted-foreground">({activeEvent.region})</span>
+                          )}
+                          {activeEvent.latitude != null && activeEvent.longitude != null && (
+                            <span className="text-[10px] font-mono text-muted-foreground/70">
+                              [{activeEvent.latitude.toFixed(2)}°, {activeEvent.longitude.toFixed(2)}°]
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Device Row */}
+                      <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border text-xs">
+                        <span className="text-muted-foreground">Device & Client</span>
+                        <div className="flex items-center gap-1.5 font-medium text-foreground">
+                          {getDeviceIcon(activeEvent.device)}
+                          <span>{activeEvent.device || 'Desktop'}</span>
+                          <span className="text-muted-foreground/50">·</span>
+                          <span className="text-muted-foreground">{activeEvent.browser || 'Unknown'}</span>
+                          {activeEvent.os && (
+                            <>
+                              <span className="text-muted-foreground/50">·</span>
+                              <span className="text-muted-foreground">{activeEvent.os}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Referrer Row */}
+                      <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border text-xs">
+                        <span className="text-muted-foreground">Referrer</span>
+                        <span className="font-mono text-foreground font-medium truncate max-w-[220px]" title={activeEvent.referer || 'Direct'}>
+                          {activeEvent.referer ? activeEvent.referer.replace(/^https?:\/\//, '') : '(direct)'}
+                        </span>
+                      </div>
+
+                      {/* IP Address Row */}
+                      <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border text-xs">
+                        <span className="text-muted-foreground">IP Address</span>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5" title={activeEvent.ipAddress || 'Anonymized'}>
+                            <Shield className="w-3.5 h-3.5 text-muted-foreground/60" />
+                            <span className="font-mono text-[11px] text-muted-foreground">
+                              {activeEvent.ipAddress 
+                                ? (activeEvent.ipAddress.length > 20 
+                                    ? `${activeEvent.ipAddress.substring(0, 16)}...` 
+                                    : activeEvent.ipAddress)
+                                : 'Anonymized'}
+                            </span>
+                          </div>
+                          {activeEvent.ipAddress && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopyText(activeEvent.ipAddress!, 'ipAddress')}
+                              className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                              title="Copy IP / Hash"
+                            >
+                              {copiedField === 'ipAddress' ? (
+                                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* UTM Parameters Section */}
+                      {(activeEvent.utmCampaign || activeEvent.utmSource || activeEvent.utmMedium || activeEvent.utmTerm || activeEvent.utmContent) && (
+                        <div className="py-2.5 border-b border-dashed border-border text-xs space-y-2">
+                          <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            <span>UTM Parameters</span>
+                          </div>
+                          {activeEvent.utmCampaign && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Campaign</span>
+                              <span className="font-semibold text-primary font-mono text-xs">{activeEvent.utmCampaign}</span>
+                            </div>
+                          )}
+                          {activeEvent.utmSource && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Source</span>
+                              <span className="text-foreground font-mono text-xs">{activeEvent.utmSource}</span>
+                            </div>
+                          )}
+                          {activeEvent.utmMedium && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Medium</span>
+                              <span className="text-foreground font-mono text-xs">{activeEvent.utmMedium}</span>
+                            </div>
+                          )}
+                          {activeEvent.utmTerm && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Term</span>
+                              <span className="text-foreground font-mono text-xs">{activeEvent.utmTerm}</span>
+                            </div>
+                          )}
+                          {activeEvent.utmContent && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Content</span>
+                              <span className="text-foreground font-mono text-xs">{activeEvent.utmContent}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Collapsible Raw JSON Payload */}
+                    <div className="pt-2">
+                      <div className="flex items-center justify-between mb-2">
                         <button
                           type="button"
-                          onClick={() => handleCopyText(activeEvent.originalUrl, 'targetUrl')}
-                          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs transition-colors cursor-pointer"
-                          title="Copy original URL"
+                          onClick={() => setShowJsonRaw(!showJsonRaw)}
+                          className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                         >
-                          {copiedField === 'targetUrl' ? (
+                          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showJsonRaw ? 'rotate-180' : ''}`} />
+                          <span>Raw Event JSON</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleCopyText(JSON.stringify(activeEvent, null, 2), 'rawJson');
+                            setCopiedJson(true);
+                            setTimeout(() => setCopiedJson(false), 2000);
+                          }}
+                          className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          {copiedJson ? (
                             <>
                               <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                              <span className="text-emerald-500 text-[11px] font-medium">Copied</span>
+                              <span className="text-emerald-500 font-medium">Copied</span>
                             </>
                           ) : (
                             <>
                               <Copy className="w-3 h-3" />
-                              <span className="text-[11px]">Copy</span>
+                              <span>Copy JSON</span>
                             </>
                           )}
                         </button>
-                        <span className="text-muted-foreground/40">·</span>
-                        <a
-                          href={activeEvent.originalUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline flex items-center gap-1 text-xs font-medium"
-                        >
-                          <span>Visit</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
                       </div>
-                    </div>
 
-                    <div className="font-mono text-sm font-semibold text-foreground mb-1">
-                      /{activeEvent.shortUrlHash}
+                      <AnimatePresence>
+                        {showJsonRaw && (
+                          <motion.pre
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="p-3.5 rounded-xl border border-border bg-muted/40 font-mono text-[11px] text-foreground/80 overflow-x-auto select-all max-h-56 shadow-inner"
+                          >
+                            {JSON.stringify(activeEvent, null, 2)}
+                          </motion.pre>
+                        )}
+                      </AnimatePresence>
                     </div>
-                    <p className="text-xs text-muted-foreground break-all leading-relaxed font-mono">
-                      {activeEvent.originalUrl}
-                    </p>
                   </div>
-
-                  {/* Clean Dashed Key-Value Audit Rows */}
-                  <div className="space-y-1">
-                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                      Event Properties
-                    </div>
-
-                    {/* Location Row */}
-                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border text-xs">
-                      <span className="text-muted-foreground">Location</span>
-                      <div className="flex items-center gap-2 text-right">
-                        {getCountryBadge(activeEvent.country, activeEvent.city)}
-                        {activeEvent.latitude != null && activeEvent.longitude != null && (
-                          <span className="text-[10px] font-mono text-muted-foreground/70">
-                            ({activeEvent.latitude.toFixed(2)}°, {activeEvent.longitude.toFixed(2)}°)
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Device Row */}
-                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border text-xs">
-                      <span className="text-muted-foreground">Device & Client</span>
-                      <div className="flex items-center gap-1.5 font-medium text-foreground">
-                        {getDeviceIcon(activeEvent.device)}
-                        <span>{activeEvent.device || 'Desktop'}</span>
-                        <span className="text-muted-foreground/50">·</span>
-                        <span className="text-muted-foreground">{activeEvent.browser || 'Unknown'}</span>
-                        {activeEvent.os && (
-                          <>
-                            <span className="text-muted-foreground/50">·</span>
-                            <span className="text-muted-foreground">{activeEvent.os}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Referrer Row */}
-                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border text-xs">
-                      <span className="text-muted-foreground">Referrer</span>
-                      <span className="font-mono text-foreground font-medium truncate max-w-[220px]" title={activeEvent.referer || 'Direct'}>
-                        {activeEvent.referer ? activeEvent.referer.replace(/^https?:\/\//, '') : '(direct)'}
-                      </span>
-                    </div>
-
-                    {/* IP Address Row */}
-                    <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border text-xs">
-                      <span className="text-muted-foreground">IP Address</span>
-                      <div className="flex items-center gap-1.5">
-                        <Shield className="w-3.5 h-3.5 text-muted-foreground/60" />
-                        <span className="font-mono text-[11px] text-muted-foreground">
-                          {activeEvent.ipAddress ? `${activeEvent.ipAddress.substring(0, 16)}...` : 'Anonymized'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* UTM Campaign Tags */}
-                    {(activeEvent.utmCampaign || activeEvent.utmSource || activeEvent.utmMedium) && (
-                      <div className="py-2.5 border-b border-dashed border-border text-xs space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Campaign</span>
-                          <span className="font-semibold text-primary font-mono">{activeEvent.utmCampaign || '—'}</span>
-                        </div>
-                        {activeEvent.utmSource && (
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-muted-foreground/70">Source</span>
-                            <span className="text-foreground font-mono">{activeEvent.utmSource}</span>
-                          </div>
-                        )}
-                        {activeEvent.utmMedium && (
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-muted-foreground/70">Medium</span>
-                            <span className="text-foreground font-mono">{activeEvent.utmMedium}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Collapsible Raw JSON Payload */}
-                  <div className="pt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowJsonRaw(!showJsonRaw)}
-                        className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                      >
-                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showJsonRaw ? 'rotate-180' : ''}`} />
-                        <span>Raw Event JSON</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleCopyText(JSON.stringify(activeEvent, null, 2), 'rawJson');
-                          setCopiedJson(true);
-                          setTimeout(() => setCopiedJson(false), 2000);
-                        }}
-                        className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors cursor-pointer"
-                      >
-                        {copiedJson ? (
-                          <>
-                            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                            <span className="text-emerald-500 font-medium">Copied</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3 h-3" />
-                            <span>Copy JSON</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    <AnimatePresence>
-                      {showJsonRaw && (
-                        <motion.pre
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="p-3 rounded-lg border border-border bg-muted/40 font-mono text-[10px] text-muted-foreground overflow-x-auto select-all max-h-48"
-                        >
-                          {JSON.stringify(activeEvent, null, 2)}
-                        </motion.pre>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
       </div>
     </div>

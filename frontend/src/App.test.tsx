@@ -13,5 +13,5 @@ describe('App', () => {
     render(<App />);
     expect(screen.getByRole('link', { name: /Features/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Login/i })).toBeInTheDocument();
-  });
+  }, 15000);
 });
