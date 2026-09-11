@@ -1533,16 +1533,29 @@ export const EventsPage: React.FC = () => {
       </div>
 
       {/* ── Active Compound Filter Pills ──────────────────────────────────── */}
-      {activeFilterCount > 0 && (
-        <div className="px-6 py-2 bg-muted/10 flex flex-wrap items-center gap-2 shrink-0">
-          {/* Device Pill */}
-          {selectedDevice !== 'all' && (
-            <div className="relative inline-flex items-center" ref={devicePillRef}>
-              <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
-                <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
-                  <Monitor className="w-3 h-3 text-[#0099ff]" />
-                  <span>Device</span>
-                </div>
+      <AnimatePresence>
+        {activeFilterCount > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="px-6 py-2 bg-muted/10 flex flex-wrap items-center gap-2 shrink-0 overflow-hidden"
+          >
+            {/* Device Pill */}
+            {selectedDevice !== 'all' && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="relative inline-flex items-center" 
+                ref={devicePillRef}
+              >
+                <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border shadow-xs">
+                  <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
+                    <Monitor className="w-3 h-3 text-[#0099ff]" />
+                    <span>Device</span>
+                  </div>
                 <div className="flex items-center px-2 h-full bg-background text-muted-foreground font-medium">
                   is
                 </div>
@@ -1598,13 +1611,19 @@ export const EventsPage: React.FC = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </motion.div>
           )}
 
           {/* Country Pill */}
           {selectedCountry && (
-            <div className="relative inline-flex items-center" ref={countryPillRef}>
-              <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative inline-flex items-center" 
+              ref={countryPillRef}
+            >
+              <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border shadow-xs">
                 <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
                   <MapPin className="w-3 h-3 text-[#0099ff]" />
                   <span>Country</span>
@@ -1682,13 +1701,19 @@ export const EventsPage: React.FC = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </motion.div>
           )}
 
           {/* Link Hash Pill */}
           {linkHashParam && (
-            <div className="relative inline-flex items-center" ref={linkPillRef}>
-              <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative inline-flex items-center" 
+              ref={linkPillRef}
+            >
+              <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border shadow-xs">
                 <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
                   <Layers className="w-3 h-3 text-[#0099ff]" />
                   <span>Link</span>
@@ -1781,13 +1806,19 @@ export const EventsPage: React.FC = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </motion.div>
           )}
 
           {/* Campaign Filter Pill */}
           {selectedCampaign && (
-            <div className="relative inline-flex items-center" ref={campaignPillRef}>
-              <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative inline-flex items-center" 
+              ref={campaignPillRef}
+            >
+              <div className="inline-flex items-center h-7 rounded-md border border-border bg-secondary text-xs overflow-hidden divide-x divide-border shadow-xs">
                 <div className="flex items-center gap-1.5 px-2.5 h-full font-medium text-foreground">
                   <Layers className="w-3 h-3 text-[#0099ff]" />
                   <span>Campaign</span>
@@ -1871,18 +1902,25 @@ export const EventsPage: React.FC = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       )}
+    </AnimatePresence>
 
       {/* ── Main Viewport Area ─────────────────────────────────────────────── */}
       <div className="flex-1 overflow-hidden relative flex">
 
         {/* MODE A: Stream Table View (Dub.co style boxed in page with Fixed Header) */}
         {viewMode === 'stream' ? (
-          <div className="flex-1 flex flex-col min-h-0 h-full p-4 sm:p-6 max-w-7xl mx-auto w-full overflow-hidden">
-            
+          <motion.div 
+            key="stream-view"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="flex-1 flex flex-col min-h-0 h-full p-4 sm:p-6 max-w-7xl mx-auto w-full overflow-hidden"
+          >
             {/* Table inside Box-like Structure */}
             <div className="bg-background border border-border rounded-xl shadow-xs overflow-hidden flex flex-col flex-1 min-h-0">
               <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto relative">
@@ -1982,19 +2020,27 @@ export const EventsPage: React.FC = () => {
                     {sortedEvents.length === 0 && !isLoading ? (
                       <tr>
                         <td colSpan={9} className="py-16 text-center text-muted-foreground">
-                          <div className="flex flex-col items-center justify-center gap-2">
-                            <Activity className="w-8 h-8 text-muted-foreground/40 stroke-1" />
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.2 }}
+                            className="flex flex-col items-center justify-center gap-2"
+                          >
+                            <Activity className="w-8 h-8 text-muted-foreground/40 stroke-1 animate-pulse" />
                             <p className="text-xs font-medium text-foreground">No click events recorded</p>
                             <p className="text-[11px] text-muted-foreground max-w-xs">
                               Visits on your short links will stream here in real-time.
                             </p>
-                          </div>
+                          </motion.div>
                         </td>
                       </tr>
                     ) : (
-                      sortedEvents.map((ev) => (
-                        <tr
+                      sortedEvents.map((ev, index) => (
+                        <motion.tr
                           key={ev.id}
+                          initial={{ opacity: 0, y: 3 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.15, delay: Math.min(index * 0.015, 0.2) }}
                           onClick={() => setActiveEvent(ev)}
                           className="group border-b border-dashed border-border last:border-b-0 hover:bg-neutral-100/70 dark:hover:bg-[#111114] cursor-pointer transition-colors"
                         >
@@ -2078,7 +2124,7 @@ export const EventsPage: React.FC = () => {
                               )}
                             </td>
                           )}
-                        </tr>
+                        </motion.tr>
                       ))
                     )}
                   </tbody>
@@ -2113,11 +2159,17 @@ export const EventsPage: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         ) : (
           /* MODE B: Realtime 3D Globe View (Sink.cool style with INDEPENDENT PULSE SCROLL) */
-          <div className="flex-1 flex flex-col lg:flex-row h-[calc(100vh-210px)] min-h-[580px] max-h-[850px] overflow-hidden bg-background">
-            
+          <motion.div 
+            key="globe-view"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="flex-1 flex flex-col lg:flex-row h-[calc(100vh-210px)] min-h-[580px] max-h-[850px] overflow-hidden bg-background"
+          >
             {/* Left/Center: 3D WebGL Canvas Globe Area */}
             <div className="flex-1 relative flex items-center justify-center p-4 overflow-hidden">
               
@@ -2128,6 +2180,7 @@ export const EventsPage: React.FC = () => {
                     initial={{ opacity: 0, y: -16, scale: 0.96 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -16, scale: 0.96 }}
+                    transition={{ type: 'spring', stiffness: 450, damping: 30 }}
                     className="absolute top-4 inset-x-0 mx-auto max-w-fit z-20 flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-popover/90 backdrop-blur-md border border-primary/40 shadow-xl text-xs font-medium"
                   >
                     <span className="flex h-2 w-2 relative shrink-0">
@@ -2145,7 +2198,12 @@ export const EventsPage: React.FC = () => {
               </AnimatePresence>
 
               {/* Minimal floating stats card (Sink.cool style) */}
-              <div className="absolute top-4 left-6 z-10 flex flex-col gap-1 bg-card/80 backdrop-blur-md border border-border p-3 rounded-xl shadow-xs">
+              <motion.div 
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2, delay: 0.1 }}
+                className="absolute top-4 left-6 z-10 flex flex-col gap-1 bg-card/80 backdrop-blur-md border border-border p-3 rounded-xl shadow-xs"
+              >
                 <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground">
                   <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground'}`} />
                   <span>{isLive ? 'Live updates active' : 'Updates paused'}</span>
@@ -2165,7 +2223,7 @@ export const EventsPage: React.FC = () => {
                     ) : 'Custom range'}
                   </span>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Canvas Globe with Scale Animation, Drag Rotation & Interactive Floating Badges */}
               <div 
@@ -2265,7 +2323,12 @@ export const EventsPage: React.FC = () => {
               </div>
 
               {/* Under-Globe Control Dock: 2 View Options (Visits | Live Stream) + Zoom Controls */}
-              <div className="absolute bottom-3 inset-x-0 mx-auto max-w-fit z-20 flex items-center gap-2 bg-card/95 backdrop-blur-md border border-border p-1.5 rounded-2xl shadow-2xl">
+              <motion.div 
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, delay: 0.15 }}
+                className="absolute bottom-3 inset-x-0 mx-auto max-w-fit z-20 flex items-center gap-2 bg-card/95 backdrop-blur-md border border-border p-1.5 rounded-2xl shadow-2xl"
+              >
                 
                 {/* 2 View Options Segmented Selector */}
                 <div className="relative flex items-center bg-secondary/50 dark:bg-[#121215] p-0.5 rounded-lg border border-border gap-0.5">
@@ -2328,7 +2391,7 @@ export const EventsPage: React.FC = () => {
                     <ZoomOut className="w-4 h-4" />
                   </button>
                 </div>
-              </div>
+              </motion.div>
             </div>{/* Right: Live Event Ticker Feed with INDEPENDENT SCROLL */}
             <div className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-border bg-card/40 flex flex-col h-full overflow-hidden">
               
@@ -2348,55 +2411,79 @@ export const EventsPage: React.FC = () => {
               </div>
 
               {/* Ticker Scroll Area (Independently scrollable) */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
-                {(filteredLiveEvents.length > 0 ? filteredLiveEvents : events.slice(0, 30)).map((ev) => {
-                  const isIncoming = latestArrival && latestArrival.id === ev.id;
-                  return (
-                    <motion.div
-                      key={ev.id}
-                      initial={{ opacity: 0, y: -6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2 }}
-                      onClick={() => setActiveEvent(ev)}
-                      className={`p-3 rounded-xl border transition-all cursor-pointer text-xs ${
-                        isIncoming
-                          ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/40 shadow-sm'
-                          : 'border-border bg-card hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="font-mono font-semibold text-foreground">
-                          /{ev.shortUrlHash}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground font-mono">
-                          {formatRelativeTime(ev.timestamp)}
-                        </span>
-                      </div>
+              <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2 min-h-0">
+                <AnimatePresence initial={false}>
+                  {(filteredLiveEvents.length > 0 ? filteredLiveEvents : events.slice(0, 30)).map((ev) => {
+                    const isIncoming = latestArrival && latestArrival.id === ev.id;
+                    return (
+                      <motion.div
+                        key={ev.id}
+                        layout
+                        initial={{ opacity: 0, height: 0, scale: 0.92 }}
+                        animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                        exit={{ opacity: 0, height: 0, scale: 0.92 }}
+                        transition={{ 
+                          height: { type: 'spring', stiffness: 350, damping: 28 },
+                          opacity: { duration: 0.22 },
+                          scale: { type: 'spring', stiffness: 400, damping: 25 },
+                          layout: {
+                            type: 'spring',
+                            stiffness: 350,
+                            damping: 28,
+                          }
+                        }}
+                        className="shrink-0 w-full overflow-hidden origin-top p-px"
+                      >
+                        <motion.div
+                          whileHover={{ scale: 1.01, y: -1 }}
+                          transition={{ duration: 0.15 }}
+                          onClick={() => setActiveEvent(ev)}
+                          className={`p-3 rounded-xl border transition-colors cursor-pointer text-xs ${
+                            isIncoming
+                              ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/40 shadow-sm'
+                              : 'border-border bg-card hover:bg-neutral-100/70 dark:hover:bg-[#111114]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="font-mono font-semibold text-foreground">
+                              /{ev.shortUrlHash}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {formatRelativeTime(ev.timestamp)}
+                            </span>
+                          </div>
 
-                      <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
-                        <MapPin className="w-3 h-3 text-primary shrink-0 opacity-80" />
-                        <span className="truncate text-[11px] font-medium text-foreground">
-                          {ev.country && ev.country !== 'Unknown' ? `${ev.city && ev.city !== 'Unknown' ? `${ev.city}, ` : ''}${ev.country}` : 'Unknown Location'}
-                        </span>
-                      </div>
+                          <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                            <MapPin className="w-3 h-3 text-primary shrink-0 opacity-80" />
+                            <span className="truncate text-[11px] font-medium text-foreground">
+                              {ev.country && ev.country !== 'Unknown' ? `${ev.city && ev.city !== 'Unknown' ? `${ev.city}, ` : ''}${ev.country}` : 'Unknown Location'}
+                            </span>
+                          </div>
 
-                      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                        <span className="truncate max-w-[150px]">{ev.browser || 'Unknown'} · {ev.os || ev.device || 'Desktop'}</span>
-                        <span className="truncate max-w-[90px] font-mono">{ev.referer ? ev.referer.replace(/^https?:\/\//, '') : 'Direct'}</span>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                            <span className="truncate max-w-[150px]">{ev.browser || 'Unknown'} · {ev.os || ev.device || 'Desktop'}</span>
+                            <span className="truncate max-w-[90px] font-mono">{ev.referer ? ev.referer.replace(/^https?:\/\//, '') : 'Direct'}</span>
+                          </div>
+                        </motion.div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
 
                 {events.length === 0 && (
-                  <div className="py-16 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
+                    className="py-16 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2"
+                  >
                     <Radio className="w-5 h-5 text-muted-foreground animate-pulse" />
                     <span>Listening for incoming visitor clicks...</span>
-                  </div>
+                  </motion.div>
                 )}
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* ── Event Details Modal Popup Box (Centered Dialog with Trim Minimalist Design) ── */}
