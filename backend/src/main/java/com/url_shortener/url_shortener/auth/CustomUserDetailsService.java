@@ -22,6 +22,10 @@ public class CustomUserDetailsService implements UserDetailsService {
         var user = userRepository.findByEmailIgnoreCaseOrUsernameIgnoreCase(identifier, identifier)
                 .orElseThrow(() -> new UsernameNotFoundException("Invalid email or username"));
 
+        if (user.isSuspended()) {
+            throw new org.springframework.security.authentication.DisabledException("Your account has been suspended by an administrator.");
+        }
+
         if (!user.hasPassword()) {
             throw new BadCredentialsException("This account was created via social login. Please sign in with Google or GitHub, or set a password.");
         }

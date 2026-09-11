@@ -41,6 +41,13 @@ public class Url {
     @Builder.Default
     private boolean isActive = true;
 
+    @Column(name = "is_quarantined")
+    @Builder.Default
+    private boolean isQuarantined = false;
+
+    @Column(name = "quarantine_reason")
+    private String quarantineReason;
+
     @Column(name = "password_hash")
     private String passwordHash;
 

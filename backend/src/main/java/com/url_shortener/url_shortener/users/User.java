@@ -45,6 +45,13 @@ public class User {
     @Builder.Default
     private boolean emailVerified = false;
 
+    @Column(name = "is_suspended", nullable = false)
+    @Builder.Default
+    private boolean isSuspended = false;
+
+    @Column(name = "suspended_reason")
+    private String suspendedReason;
+
     @Column(name = "email_verified_at")
     private LocalDateTime emailVerifiedAt;
 

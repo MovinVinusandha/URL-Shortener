@@ -24,4 +24,12 @@ public interface UrlRepository extends JpaRepository<Url, Long> {
     java.util.List<Url> findAllByShortUrlIn(java.util.Collection<String> shortUrls);
 
     long countByUserId(Long userId);
+
+    long countByIsQuarantinedTrue();
+
+    long countByIsActiveFalse();
+
+    long countByIsActiveTrueAndIsQuarantinedFalse();
+
+    org.springframework.data.domain.Page<Url> findByShortUrlContainingIgnoreCaseOrLongUrlContainingIgnoreCase(String shortUrl, String longUrl, org.springframework.data.domain.Pageable pageable);
 }

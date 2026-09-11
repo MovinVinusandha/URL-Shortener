@@ -33,6 +33,7 @@ public class UrlService {
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final TagRepository tagRepository;
     private final FolderRepository folderRepository;
+    private final com.url_shortener.url_shortener.admin.BlacklistedDomainRepository blacklistedDomainRepository;
 
     @org.springframework.beans.factory.annotation.Autowired 
     private org.springframework.cache.CacheManager cacheManager;
@@ -41,10 +42,8 @@ public class UrlService {
     private String rootDomainUrl;
 
     public UrlSend generateShortUrl(UrlRequest urlRequest) {
-        var authForCheck = SecurityContextHolder.getContext().getAuthentication();
-        if (authForCheck != null && authForCheck.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ROOT") || a.getAuthority().equals("ROOT"))) {
-            throw new AccessDeniedException("Admins cannot create short links.");
+        if (isDomainBlacklisted(urlRequest.getLongUrl())) {
+            throw new IllegalArgumentException("The destination URL domain is blacklisted or prohibited on this instance.");
         }
         String hash;
         if (urlRequest.getCustomAlias() != null && !urlRequest.getCustomAlias().trim().isEmpty()) {
@@ -87,6 +86,9 @@ public class UrlService {
             var user = userRepository.findById((Long) authentication.getPrincipal()).orElse(null);
             if (user == null) {
                 throw new UserNotFoundException();
+            }
+            if (user.isSuspended()) {
+                throw new AccessDeniedException("Your account has been suspended by an administrator.");
             }
             url.setUser(user);
         }
@@ -162,8 +164,11 @@ public class UrlService {
 
     @org.springframework.transaction.annotation.Transactional
     public BatchCampaignResponseDto createBatchCampaignUrls(BatchCampaignRequestDto request, User currentUser) {
-        if (currentUser.getRole() == com.url_shortener.url_shortener.users.Role.ROOT || currentUser.getRole() == com.url_shortener.url_shortener.users.Role.ADMIN) {
-            throw new AccessDeniedException("Admins cannot create short links.");
+        if (currentUser.isSuspended()) {
+            throw new AccessDeniedException("Your account has been suspended by an administrator.");
+        }
+        if (isDomainBlacklisted(request.getLongUrl())) {
+            throw new IllegalArgumentException("The destination URL domain is blacklisted or prohibited on this instance.");
         }
 
         Folder folder = null;
@@ -291,6 +296,10 @@ public class UrlService {
         // Enforce strict lazy evaluation first
         var url = isExistsShortUrl(shortUrl);
         
+        if (url.isQuarantined()) {
+            throw new LinkQuarantinedException(shortUrl, url.getQuarantineReason());
+        }
+
         if (url.getExpiresAt() != null && url.getExpiresAt().isBefore(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC))) {
             url.setActive(false);
             urlRepository.save(url);
@@ -330,6 +339,10 @@ public class UrlService {
     public String getUrlForUnlock(String shortUrl, String password) {
         var url = isExistsShortUrl(shortUrl);
         
+        if (url.isQuarantined()) {
+            throw new LinkQuarantinedException(shortUrl, url.getQuarantineReason());
+        }
+
         if (!url.isActive()) {
             throw new LinkExpiredException();
         }
@@ -482,6 +495,13 @@ public class UrlService {
     }
 
     public UrlDto updateUrl(String hash, UrlUpdateRequestDto request, User currentUser) {
+        if (currentUser.isSuspended()) {
+            throw new org.springframework.security.access.AccessDeniedException("Your account has been suspended by an administrator.");
+        }
+        if (request.getLongUrl() != null && isDomainBlacklisted(request.getLongUrl())) {
+            throw new IllegalArgumentException("The destination URL domain is blacklisted or prohibited on this instance.");
+        }
+
         var url = isExistsShortUrl(hash);
 
         boolean isAdmin = currentUser.getRole() == com.url_shortener.url_shortener.users.Role.ROOT || currentUser.getRole() == com.url_shortener.url_shortener.users.Role.ADMIN;
@@ -676,6 +696,39 @@ public class UrlService {
         }
 
         return new BulkUrlActionResponseDto(true, affected, "Successfully performed " + action + " on " + affected + " links.");
+    }
+
+    public boolean isDomainBlacklisted(String longUrl) {
+        if (longUrl == null || longUrl.isBlank()) return false;
+        try {
+            java.net.URI uri = new java.net.URI(longUrl);
+            String host = uri.getHost();
+            if (host == null) return false;
+            host = host.toLowerCase();
+
+            if (rootDomainUrl != null && !rootDomainUrl.isBlank()) {
+                try {
+                    String rootHost = new java.net.URI(rootDomainUrl).getHost();
+                    if (rootHost != null && (host.equalsIgnoreCase(rootHost) || host.endsWith("." + rootHost))) {
+                        return true;
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            var blacklist = blacklistedDomainRepository.findAll();
+            for (var b : blacklist) {
+                String pattern = b.getDomainPattern().toLowerCase().trim();
+                if (pattern.startsWith("*.")) {
+                    String root = pattern.substring(2);
+                    if (host.equals(root) || host.endsWith("." + root)) return true;
+                } else if (host.equals(pattern) || host.endsWith("." + pattern)) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            // invalid URL
+        }
+        return false;
     }
 
     private static Long getUserId() {

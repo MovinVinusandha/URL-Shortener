@@ -20,4 +20,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmailIgnoreCaseOrUsernameIgnoreCase(String email, String username);
 
     Optional<User> findByPublicId(String publicId);
+
+    long countByIsSuspendedTrue();
+
+    long countByIsSuspendedFalse();
+
+    org.springframework.data.domain.Page<User> findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(String username, String email, org.springframework.data.domain.Pageable pageable);
 }

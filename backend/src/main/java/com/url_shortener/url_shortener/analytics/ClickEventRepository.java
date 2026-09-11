@@ -251,6 +251,8 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
     @Query("SELECT COUNT(c) FROM ClickEvent c")
     long countAllClicks();
 
+    long countByTimestampAfter(LocalDateTime timestamp);
+
     // ── OVERALL ANALYTICS QUERIES (User specific) ───────────────────────────
 
     @Query("""

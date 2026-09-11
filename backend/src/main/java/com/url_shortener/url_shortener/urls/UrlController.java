@@ -80,6 +80,10 @@ public class UrlController {
             HttpHeaders headers = new HttpHeaders();
             headers.add("Location", longUrl);
             return new ResponseEntity<>(headers, HttpStatus.FOUND);
+        } catch (LinkQuarantinedException e) {
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(java.net.URI.create(dashboardUrl + "/blocked/" + hash))
+                    .build();
         } catch (PasswordProtectedException e) {
             return ResponseEntity.status(HttpStatus.FOUND)
                     .location(java.net.URI.create(dashboardUrl + "/secure/" + hash))
