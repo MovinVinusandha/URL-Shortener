@@ -348,8 +348,8 @@ const DashboardPage: React.FC = () => {
         }
       } catch (err) {
         console.error("Failed to load URLs", err);
-        // Fallback to local storage
-        if (storageKey && isMounted) {
+        // For anonymous users only, fallback to local storage
+        if (!user && storageKey && isMounted) {
           try {
             const raw = localStorage.getItem(storageKey);
             if (raw) {
@@ -361,6 +361,8 @@ const DashboardPage: React.FC = () => {
           } catch (e) {
             // If storage parsing fails, start empty
           }
+        } else if (user && isMounted) {
+          setUrls([]);
         }
       } finally {
         if (isMounted) {
