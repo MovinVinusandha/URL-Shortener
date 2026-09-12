@@ -83,6 +83,8 @@ function AnimatedRoutes() {
                 <Route path="/admin/audit-logs" element={<AdminAuditLogsPage />} />
                 <Route path="/admin/maintenance" element={<AdminMaintenancePage />} />
                 <Route path="/admin/settings" element={<AdminSettingsPage />} />
+                <Route path="/admin/account-settings" element={<SettingsPage />} />
+                <Route path="/admin/account-settings/security" element={<SecurityPage />} />
               </Route>
             </Route>
 

@@ -16,6 +16,7 @@ import type { AdminLayoutContext } from '../../layouts/AdminLayout';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import Skeleton from 'react-loading-skeleton';
+import CustomSelect from '../../components/CustomSelect';
 
 const AdminUsersPage: React.FC = () => {
   const { refreshTrigger } = useOutletContext<AdminLayoutContext>();
@@ -169,17 +170,17 @@ const AdminUsersPage: React.FC = () => {
                       {/* Role Badge / Selector */}
                       <td className="py-3 px-4">
                         {isRoot && !isRootUser && !isSelf ? (
-                          <div className="relative inline-block">
-                            <select
-                              value={u.role}
-                              onChange={(e) => handleRoleChange(u, e.target.value as 'USER' | 'ADMIN')}
-                              className="text-xs bg-background text-foreground border border-border rounded-lg pl-2 pr-6 py-1 font-medium focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 appearance-none cursor-pointer transition-colors"
-                            >
-                              <option value="USER">USER</option>
-                              <option value="ADMIN">ADMIN</option>
-                            </select>
-                            <ChevronDown className="w-3 h-3 text-muted-foreground absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                          </div>
+                          <CustomSelect
+                            value={u.role}
+                            onChange={(val) => handleRoleChange(u, val as 'USER' | 'ADMIN')}
+                            options={[
+                              { value: 'USER', label: 'USER' },
+                              { value: 'ADMIN', label: 'ADMIN' },
+                            ]}
+                            className="w-24"
+                            triggerClassName="py-1 px-2 text-xs"
+                            menuClassName="min-w-[96px]"
+                          />
                         ) : (
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
                             u.role === 'ROOT' 

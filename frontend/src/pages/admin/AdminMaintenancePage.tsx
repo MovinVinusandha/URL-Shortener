@@ -29,6 +29,7 @@ import axiosInstance from '../../api/axiosInstance';
 import type { MaintenanceOverview, CleanupResult } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import type { AdminLayoutContext } from '../../layouts/AdminLayout';
+import CustomSelect from '../../components/CustomSelect';
 
 const AdminMaintenancePage: React.FC = () => {
   const { user } = useAuth();
@@ -357,19 +358,17 @@ const AdminMaintenancePage: React.FC = () => {
 
             <div className="flex items-center gap-3 pt-1">
               <label className="text-xs font-medium text-foreground whitespace-nowrap">Warm Top URLs:</label>
-              <div className="relative">
-                <select
-                  value={warmUpCount}
-                  onChange={e => setWarmUpCount(Number(e.target.value))}
-                  className="appearance-none pl-3 pr-8 py-1.5 rounded-lg border border-border bg-background text-xs font-mono text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors cursor-pointer"
-                >
-                  <option value={20}>Top 20 URLs</option>
-                  <option value={50}>Top 50 URLs</option>
-                  <option value={100}>Top 100 URLs</option>
-                  <option value={250}>Top 250 URLs</option>
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none opacity-60" />
-              </div>
+              <CustomSelect
+                value={warmUpCount}
+                onChange={val => setWarmUpCount(Number(val))}
+                options={[
+                  { value: 20, label: 'Top 20 URLs' },
+                  { value: 50, label: 'Top 50 URLs' },
+                  { value: 100, label: 'Top 100 URLs' },
+                  { value: 250, label: 'Top 250 URLs' },
+                ]}
+                className="w-40 font-mono"
+              />
 
               <button
                 onClick={handleWarmUp}
@@ -417,62 +416,70 @@ const AdminMaintenancePage: React.FC = () => {
           </div>
 
           {/* URL Bulk Flush */}
-          <div className="p-5 rounded-2xl border border-border bg-card shadow-xs space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-secondary text-foreground border border-border">
-                <RefreshCw className="w-4 h-4 text-muted-foreground" />
+          <div className="p-5 rounded-2xl border border-border bg-card shadow-xs flex flex-col justify-between space-y-4">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-secondary text-foreground border border-border">
+                  <RefreshCw className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Flush URL Cache (`urls::*`)</h3>
+                  <p className="text-xs text-muted-foreground">Evicts all cached short link mappings without affecting active user sessions</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Flush URL Cache (`urls::*`)</h3>
-                <p className="text-xs text-muted-foreground">Evicts all cached short link mappings without affecting active user sessions</p>
-              </div>
+
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Useful when updating routing domain configurations or clearing stale redirects en masse.
+              </p>
             </div>
 
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Useful when updating routing domain configurations or clearing stale redirects en masse.
-            </p>
-
-            <button
-              onClick={handleFlushUrls}
-              disabled={isFlushingUrls}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-foreground text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isFlushingUrls ? 'animate-spin' : ''}`} />
-              Flush All URL Caches
-            </button>
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={handleFlushUrls}
+                disabled={isFlushingUrls}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-foreground text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isFlushingUrls ? 'animate-spin' : ''}`} />
+                Flush All URL Caches
+              </button>
+            </div>
           </div>
 
           {/* Full Redis Flush (ROOT Only) */}
-          <div className="p-5 rounded-2xl border border-border bg-card shadow-xs space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-secondary text-foreground border border-border">
-                <AlertTriangle className="w-4 h-4 text-red-500" />
+          <div className="p-5 rounded-2xl border border-border bg-card shadow-xs flex flex-col justify-between space-y-4">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-secondary text-foreground border border-border">
+                  <AlertTriangle className="w-4 h-4 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    Purge Entire Redis Store (FLUSHDB)
+                    {!isRoot && (
+                      <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-secondary text-muted-foreground border border-border">
+                        Root Required
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">Destructive operational action that empties the entire selected Redis database</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                  Purge Entire Redis Store (FLUSHDB)
-                  {!isRoot && (
-                    <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-secondary text-muted-foreground border border-border">
-                      Root Required
-                    </span>
-                  )}
-                </h3>
-                <p className="text-xs text-muted-foreground">Destructive operational action that empties the entire selected Redis database</p>
-              </div>
+
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Warning: All cached tokens, link lookups, and active connection state will be dropped immediately.
+              </p>
             </div>
 
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Warning: All cached tokens, link lookups, and active connection state will be dropped immediately.
-            </p>
-
-            <button
-              onClick={handleFlushAll}
-              disabled={!isRoot || isFlushingAll}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              {isFlushingAll ? 'Purging...' : 'Flush Entire Redis DB'}
-            </button>
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={handleFlushAll}
+                disabled={!isRoot || isFlushingAll}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                {isFlushingAll ? 'Purging...' : 'Flush Entire Redis DB'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -494,37 +501,35 @@ const AdminMaintenancePage: React.FC = () => {
               {/* Cleanup Type Selection */}
               <div>
                 <label className="text-xs font-medium text-foreground block mb-1.5">Target Link Category</label>
-                <div className="relative">
-                  <select
-                    value={cleanupType}
-                    onChange={e => setCleanupType(e.target.value as any)}
-                    className="w-full pl-3 pr-8 py-2 rounded-lg border border-border bg-background text-xs text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 appearance-none cursor-pointer transition-colors"
-                  >
-                    <option value="DORMANT">Dormant (0 Clicks & Inactive)</option>
-                    <option value="EXPIRED">Expired (expiresAt &lt; Now)</option>
-                    <option value="INACTIVE">Deactivated Links</option>
-                  </select>
-                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
+                <CustomSelect
+                  value={cleanupType}
+                  onChange={val => setCleanupType(val as any)}
+                  options={[
+                    { value: 'DORMANT', label: 'Dormant (0 Clicks & Inactive)' },
+                    { value: 'EXPIRED', label: 'Expired (expiresAt < Now)' },
+                    { value: 'INACTIVE', label: 'Deactivated Links' },
+                  ]}
+                  size="md"
+                  className="w-full"
+                />
               </div>
 
               {/* Days Inactive */}
               <div>
                 <label className="text-xs font-medium text-foreground block mb-1.5">Inactivity Age Threshold</label>
-                <div className="relative">
-                  <select
-                    value={daysThreshold}
-                    onChange={e => setDaysThreshold(Number(e.target.value))}
-                    className="w-full pl-3 pr-8 py-2 rounded-lg border border-border bg-background text-xs text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 appearance-none cursor-pointer transition-colors"
-                  >
-                    <option value={7}>Older than 7 days</option>
-                    <option value={30}>Older than 30 days</option>
-                    <option value={90}>Older than 90 days</option>
-                    <option value={180}>Older than 180 days</option>
-                    <option value={365}>Older than 365 days (1 Year)</option>
-                  </select>
-                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
+                <CustomSelect
+                  value={daysThreshold}
+                  onChange={val => setDaysThreshold(Number(val))}
+                  options={[
+                    { value: 7, label: 'Older than 7 days' },
+                    { value: 30, label: 'Older than 30 days' },
+                    { value: 90, label: 'Older than 90 days' },
+                    { value: 180, label: 'Older than 180 days' },
+                    { value: 365, label: 'Older than 365 days (1 Year)' },
+                  ]}
+                  size="md"
+                  className="w-full"
+                />
               </div>
 
               {/* Action Mode */}
@@ -653,20 +658,19 @@ const AdminMaintenancePage: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 pt-2">
               <div className="w-full sm:w-auto">
                 <label className="text-xs font-medium text-foreground block mb-1.5">Pruning Age Threshold</label>
-                <div className="relative">
-                  <select
-                    value={clickDaysOlderThan}
-                    onChange={e => setClickDaysOlderThan(Number(e.target.value))}
-                    className="w-full sm:w-64 pl-3 pr-8 py-2 rounded-lg border border-border bg-background text-xs font-mono text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 appearance-none cursor-pointer transition-colors"
-                  >
-                    <option value={30}>Older than 30 days</option>
-                    <option value={60}>Older than 60 days</option>
-                    <option value={90}>Older than 90 days (Recommended)</option>
-                    <option value={180}>Older than 180 days</option>
-                    <option value={365}>Older than 365 days (1 Year)</option>
-                  </select>
-                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
+                <CustomSelect
+                  value={clickDaysOlderThan}
+                  onChange={val => setClickDaysOlderThan(Number(val))}
+                  options={[
+                    { value: 30, label: 'Older than 30 days' },
+                    { value: 60, label: 'Older than 60 days' },
+                    { value: 90, label: 'Older than 90 days (Recommended)' },
+                    { value: 180, label: 'Older than 180 days' },
+                    { value: 365, label: 'Older than 365 days (1 Year)' },
+                  ]}
+                  size="md"
+                  className="w-full sm:w-64 font-mono"
+                />
               </div>
 
               <div className="flex items-center gap-3 sm:ml-auto sm:mt-5">

@@ -29,6 +29,7 @@ import axiosInstance from '../../api/axiosInstance';
 import type { AdminAuditLogItem, PaginatedAuditLogs, AuditChainVerification } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import type { AdminLayoutContext } from '../../layouts/AdminLayout';
+import CustomSelect from '../../components/CustomSelect';
 
 const ACTION_COLOR_MAP: Record<string, { bg: string; text: string; border: string }> = {
   LINK_QUARANTINED: { bg: 'bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-500/20' },
@@ -250,55 +251,53 @@ const AdminAuditLogsPage: React.FC = () => {
           </div>
 
           {/* Action Filter */}
-          <div className="relative">
-            <select
-              value={actionFilter}
-              onChange={(e) => { setActionFilter(e.target.value); setPage(0); }}
-              className="w-full md:w-auto appearance-none pl-3 pr-8 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors cursor-pointer"
-            >
-              <option value="ALL">All Actions</option>
-              <option value="LINK_QUARANTINED">Link Quarantined</option>
-              <option value="BULK_LINK_QUARANTINED">Bulk Link Quarantined</option>
-              <option value="LINK_UNQUARANTINED">Link Restored</option>
-              <option value="LINK_DELETED">Link Deleted</option>
-              <option value="BULK_LINK_DELETED">Bulk Link Deleted</option>
-              <option value="USER_SUSPENDED">User Suspended</option>
-              <option value="USER_UNSUSPENDED">User Restored</option>
-              <option value="USER_ROLE_CHANGED">User Role Changed</option>
-              <option value="DOMAIN_BLOCKED">Domain Blocked</option>
-              <option value="IP_BLOCKED">IP Blocked</option>
-              <option value="SETTING_UPDATED">Setting Updated</option>
-              <option value="INCIDENT_RESOLVED">Incident Resolved</option>
-              <option value="CACHE_WARM_UP">Cache Warm Up</option>
-              <option value="CACHE_FLUSH_URLS">Flush URL Cache</option>
-              <option value="CACHE_FLUSH_ALL">Flush Entire Redis</option>
-              <option value="LINKS_PURGE_DEACTIVATE">Links Deactivated</option>
-              <option value="LINKS_PURGE_HARD">Links Hard Purged</option>
-              <option value="CLICK_EVENTS_PRUNED">Click Events Pruned</option>
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none opacity-60" />
-          </div>
+          <CustomSelect
+            value={actionFilter}
+            onChange={(val) => { setActionFilter(val); setPage(0); }}
+            options={[
+              { value: 'ALL', label: 'All Actions' },
+              { value: 'LINK_QUARANTINED', label: 'Link Quarantined' },
+              { value: 'BULK_LINK_QUARANTINED', label: 'Bulk Link Quarantined' },
+              { value: 'LINK_UNQUARANTINED', label: 'Link Restored' },
+              { value: 'LINK_DELETED', label: 'Link Deleted' },
+              { value: 'BULK_LINK_DELETED', label: 'Bulk Link Deleted' },
+              { value: 'USER_SUSPENDED', label: 'User Suspended' },
+              { value: 'USER_UNSUSPENDED', label: 'User Restored' },
+              { value: 'USER_ROLE_CHANGED', label: 'User Role Changed' },
+              { value: 'DOMAIN_BLOCKED', label: 'Domain Blocked' },
+              { value: 'IP_BLOCKED', label: 'IP Blocked' },
+              { value: 'SETTING_UPDATED', label: 'Setting Updated' },
+              { value: 'INCIDENT_RESOLVED', label: 'Incident Resolved' },
+              { value: 'CACHE_WARM_UP', label: 'Cache Warm Up' },
+              { value: 'CACHE_FLUSH_URLS', label: 'Flush URL Cache' },
+              { value: 'CACHE_FLUSH_ALL', label: 'Flush Entire Redis' },
+              { value: 'LINKS_PURGE_DEACTIVATE', label: 'Links Deactivated' },
+              { value: 'LINKS_PURGE_HARD', label: 'Links Hard Purged' },
+              { value: 'CLICK_EVENTS_PRUNED', label: 'Click Events Pruned' },
+            ]}
+            className="w-full md:w-auto"
+            menuClassName="w-56"
+          />
 
           {/* Target Type Filter */}
-          <div className="relative">
-            <select
-              value={targetTypeFilter}
-              onChange={(e) => { setTargetTypeFilter(e.target.value); setPage(0); }}
-              className="w-full md:w-auto appearance-none pl-3 pr-8 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors cursor-pointer"
-            >
-              <option value="ALL">All Targets</option>
-              <option value="LINK">Links</option>
-              <option value="USER">Users</option>
-              <option value="DOMAIN">Domains</option>
-              <option value="IP">Perimeter IPs</option>
-              <option value="SETTING">Settings</option>
-              <option value="INCIDENT">Incidents</option>
-              <option value="REDIS">Redis Cache</option>
-              <option value="URL_STORE">URL Store</option>
-              <option value="ANALYTICS_STORE">Analytics Store</option>
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none opacity-60" />
-          </div>
+          <CustomSelect
+            value={targetTypeFilter}
+            onChange={(val) => { setTargetTypeFilter(val); setPage(0); }}
+            options={[
+              { value: 'ALL', label: 'All Targets' },
+              { value: 'LINK', label: 'Links' },
+              { value: 'USER', label: 'Users' },
+              { value: 'DOMAIN', label: 'Domains' },
+              { value: 'IP', label: 'Perimeter IPs' },
+              { value: 'SETTING', label: 'Settings' },
+              { value: 'INCIDENT', label: 'Incidents' },
+              { value: 'REDIS', label: 'Redis Cache' },
+              { value: 'URL_STORE', label: 'URL Store' },
+              { value: 'ANALYTICS_STORE', label: 'Analytics Store' },
+            ]}
+            className="w-full md:w-auto"
+            menuClassName="w-48"
+          />
 
           <button
             type="submit"
@@ -355,7 +354,7 @@ const AdminAuditLogsPage: React.FC = () => {
                     <tr 
                       key={log.id} 
                       onClick={() => setActiveModalEntry(log)}
-                      className="hover:bg-secondary/70 transition-colors cursor-pointer group"
+                      className="hover:bg-secondary dark:hover:bg-zinc-800/60 transition-colors cursor-pointer group"
                     >
                       {/* ID */}
                       <td className="py-3 px-4 font-mono text-muted-foreground text-center">

@@ -33,6 +33,7 @@ import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Skeleton from 'react-loading-skeleton';
 import { DateRangePicker, type DateRangeValue } from '../../components/DateRangePicker';
+import CustomSelect from '../../components/CustomSelect';
 
 type TriageTab = 'needs_review' | 'spikes' | 'all';
 type TimePreset = '1h' | '24h' | '7d' | '30d' | 'all' | 'custom';
@@ -482,22 +483,22 @@ const AdminLinksPage: React.FC = () => {
             />
           </div>
 
-          <div className="sm:col-span-3 relative">
-            <select
+          <div className="sm:col-span-3">
+            <CustomSelect
               value={clickThreshold === null ? '' : clickThreshold}
-              onChange={(e) => {
-                setClickThreshold(e.target.value === '' ? null : Number(e.target.value));
+              onChange={(val) => {
+                setClickThreshold(val === '' ? null : Number(val));
                 setPage(0);
               }}
-              className="w-full appearance-none pl-3 pr-8 py-1.5 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-foreground transition-colors cursor-pointer"
-            >
-              <option value="">Any Traffic Volume</option>
-              <option value="100">&gt; 100 Clicks</option>
-              <option value="500">&gt; 500 Clicks (Surge)</option>
-              <option value="5000">&gt; 5,000 Clicks (Viral)</option>
-              <option value="0">0 Clicks (Dead / Stale)</option>
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none opacity-60" />
+              options={[
+                { value: '', label: 'Any Traffic Volume' },
+                { value: 100, label: '> 100 Clicks' },
+                { value: 500, label: '> 500 Clicks (Surge)' },
+                { value: 5000, label: '> 5,000 Clicks (Viral)' },
+                { value: 0, label: '0 Clicks (Dead / Stale)' },
+              ]}
+              className="w-full"
+            />
           </div>
         </div>
       </div>
