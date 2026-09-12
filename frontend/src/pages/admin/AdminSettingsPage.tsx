@@ -55,7 +55,7 @@ const AdminSettingsPage: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isVaultLoading, setIsVaultLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
 
   // SMTP Test State
   const [testEmail, setTestEmail] = useState('');
@@ -105,36 +105,35 @@ const AdminSettingsPage: React.FC = () => {
 
   const handleSaveSetting = async (key: string, value: string, description: string) => {
     try {
-      setIsSaving(true);
+      setSavingKey(key);
       await axiosInstance.put(`/admin/settings/${key}`, {
         settingValue: value,
         description
       });
       setSettings((prev) => ({ ...prev, [key.toLowerCase()]: value }));
       toast.success('Setting updated successfully');
-      fetchVault();
+      await Promise.all([fetchSettings(), fetchVault()]);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to save setting');
     } finally {
-      setIsSaving(false);
+      setSavingKey(null);
     }
   };
 
   const handleUpdateVaultVariable = async (key: string, value: string) => {
     try {
-      setIsSaving(true);
+      setSavingKey(key);
       await axiosInstance.put('/admin/settings/vault', {
         key,
         value
       });
       toast.success(`Updated ${key} and synced to .env & runtime`);
       setEditingKey(null);
-      fetchVault();
-      fetchSettings();
+      await Promise.all([fetchVault(), fetchSettings()]);
     } catch (err: any) {
       toast.error(err.response?.data?.message || `Failed to update ${key}`);
     } finally {
-      setIsSaving(false);
+      setSavingKey(null);
     }
   };
 
@@ -379,14 +378,23 @@ const AdminSettingsPage: React.FC = () => {
                     const nextVal = settings.allow_registration === 'true' ? 'false' : 'true';
                     handleSaveSetting('ALLOW_REGISTRATION', nextVal, 'Public user registration toggle');
                   }}
-                  disabled={isSaving}
-                  className={`px-4 py-2 text-xs font-medium rounded-xl border transition-colors shrink-0 ${
+                  disabled={savingKey === 'ALLOW_REGISTRATION'}
+                  className={`px-4 py-2 text-xs font-medium rounded-xl border transition-all shrink-0 cursor-pointer disabled:opacity-50 ${
                     settings.allow_registration === 'true'
                       ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
                       : 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20'
                   }`}
                 >
-                  {settings.allow_registration === 'true' ? 'Registration Open' : 'Registration Closed'}
+                  {savingKey === 'ALLOW_REGISTRATION' ? (
+                    <span className="flex items-center gap-1.5">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      Saving...
+                    </span>
+                  ) : settings.allow_registration === 'true' ? (
+                    'Registration Open'
+                  ) : (
+                    'Registration Closed'
+                  )}
                 </button>
               </div>
 
@@ -409,14 +417,23 @@ const AdminSettingsPage: React.FC = () => {
                     const nextVal = settings.require_email_verification === 'true' ? 'false' : 'true';
                     handleSaveSetting('REQUIRE_EMAIL_VERIFICATION', nextVal, 'Email verification requirement toggle');
                   }}
-                  disabled={isSaving}
-                  className={`px-4 py-2 text-xs font-medium rounded-xl border transition-colors shrink-0 ${
+                  disabled={savingKey === 'REQUIRE_EMAIL_VERIFICATION'}
+                  className={`px-4 py-2 text-xs font-medium rounded-xl border transition-all shrink-0 cursor-pointer disabled:opacity-50 ${
                     settings.require_email_verification === 'true'
                       ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
                       : 'bg-secondary text-muted-foreground border-border hover:bg-secondary/80'
                   }`}
                 >
-                  {settings.require_email_verification === 'true' ? 'Enforced' : 'Optional / Disabled'}
+                  {savingKey === 'REQUIRE_EMAIL_VERIFICATION' ? (
+                    <span className="flex items-center gap-1.5">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      Saving...
+                    </span>
+                  ) : settings.require_email_verification === 'true' ? (
+                    'Enforced'
+                  ) : (
+                    'Optional / Disabled'
+                  )}
                 </button>
               </div>
 
@@ -441,6 +458,15 @@ const AdminSettingsPage: React.FC = () => {
                     max="100000"
                     value={settings.max_links_per_user || '1000'}
                     onChange={(e) => setSettings({ ...settings, max_links_per_user: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSaveSetting(
+                          'MAX_LINKS_PER_USER',
+                          settings.max_links_per_user,
+                          'Maximum links per regular user account'
+                        );
+                      }
+                    }}
                     className="w-24 px-3 py-1.5 text-xs bg-background border border-border rounded-lg font-mono text-center text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
                   />
                   <button
@@ -451,11 +477,15 @@ const AdminSettingsPage: React.FC = () => {
                         'Maximum links per regular user account'
                       )
                     }
-                    disabled={isSaving}
-                    className="p-2 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
+                    disabled={savingKey === 'MAX_LINKS_PER_USER'}
+                    className="p-2 rounded-lg bg-foreground text-background hover:bg-foreground/80 transition-all cursor-pointer disabled:opacity-50"
                     title="Save quota"
                   >
-                    <Save className="w-3.5 h-3.5" />
+                    {savingKey === 'MAX_LINKS_PER_USER' ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -481,6 +511,15 @@ const AdminSettingsPage: React.FC = () => {
                     max="3650"
                     value={settings.default_link_expiration_days || '0'}
                     onChange={(e) => setSettings({ ...settings, default_link_expiration_days: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSaveSetting(
+                          'DEFAULT_LINK_EXPIRATION_DAYS',
+                          settings.default_link_expiration_days,
+                          'Default forced link expiration policy'
+                        );
+                      }
+                    }}
                     className="w-24 px-3 py-1.5 text-xs bg-background border border-border rounded-lg font-mono text-center text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
                   />
                   <button
@@ -491,11 +530,15 @@ const AdminSettingsPage: React.FC = () => {
                         'Default forced link expiration policy'
                       )
                     }
-                    disabled={isSaving}
-                    className="p-2 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
+                    disabled={savingKey === 'DEFAULT_LINK_EXPIRATION_DAYS'}
+                    className="p-2 rounded-lg bg-foreground text-background hover:bg-foreground/80 transition-all cursor-pointer disabled:opacity-50"
                     title="Save default expiration"
                   >
-                    <Save className="w-3.5 h-3.5" />
+                    {savingKey === 'DEFAULT_LINK_EXPIRATION_DAYS' ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -520,6 +563,15 @@ const AdminSettingsPage: React.FC = () => {
                     placeholder="AIzaSy..."
                     value={settings.safe_browsing_api_key || ''}
                     onChange={(e) => setSettings({ ...settings, safe_browsing_api_key: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSaveSetting(
+                          'SAFE_BROWSING_API_KEY',
+                          settings.safe_browsing_api_key,
+                          'Google Safe Browsing API Key override'
+                        );
+                      }
+                    }}
                     className="flex-1 sm:w-64 px-3 py-1.5 text-xs bg-background border border-border rounded-lg font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
                   />
                   <button
@@ -530,11 +582,15 @@ const AdminSettingsPage: React.FC = () => {
                         'Google Safe Browsing API Key override'
                       )
                     }
-                    disabled={isSaving}
-                    className="p-2 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
+                    disabled={savingKey === 'SAFE_BROWSING_API_KEY'}
+                    className="p-2 rounded-lg bg-foreground text-background hover:bg-foreground/80 transition-all cursor-pointer disabled:opacity-50"
                     title="Save API key"
                   >
-                    <Save className="w-3.5 h-3.5" />
+                    {savingKey === 'SAFE_BROWSING_API_KEY' ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -724,15 +780,19 @@ const AdminSettingsPage: React.FC = () => {
                           />
                           <button
                             onClick={() => handleUpdateVaultVariable(item.key, editingValue)}
-                            disabled={isSaving}
-                            className="p-1.5 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
+                            disabled={savingKey === item.key}
+                            className="p-1.5 rounded-lg bg-foreground text-background hover:bg-foreground/80 transition-all cursor-pointer disabled:opacity-50"
                             title="Save change"
                           >
-                            <Check className="w-3.5 h-3.5" />
+                            {savingKey === item.key ? (
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Check className="w-3.5 h-3.5" />
+                            )}
                           </button>
                           <button
                             onClick={() => setEditingKey(null)}
-                            className="p-1.5 rounded-lg border border-border bg-secondary text-foreground hover:bg-secondary/80 cursor-pointer"
+                            className="p-1.5 rounded-lg border border-border bg-secondary text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
                             title="Cancel"
                           >
                             ✕
@@ -820,7 +880,7 @@ const AdminSettingsPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isTestingSmtp}
-                className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+                className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-lg bg-foreground text-background hover:bg-foreground/85 active:scale-95 transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
               >
                 {isTestingSmtp ? (
                   <>

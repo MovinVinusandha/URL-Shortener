@@ -125,6 +125,20 @@ html {
     -webkit-box-shadow: 0 0 0px 1000px #000000 inset !important;
     transition: background-color 5000s ease-in-out 0s;
   }
+
+  /* Universal button clickable animation and hover behavior */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+
+  button:not(:disabled):active,
+  [role="button"]:not([aria-disabled="true"]):active {
+    transform: scale(0.97);
+  }
 }
 
 @layer components {
