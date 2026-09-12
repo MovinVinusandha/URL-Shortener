@@ -26,6 +26,7 @@ import type {
 import type { AdminLayoutContext } from '../../layouts/AdminLayout';
 import { toast } from 'react-hot-toast';
 import Skeleton from 'react-loading-skeleton';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type SecurityTab = 'incidents' | 'scanner' | 'blacklists';
 
@@ -218,7 +219,12 @@ const AdminSecurityPage: React.FC = () => {
   const unresolvedCount = incidents.filter(i => !i.isResolved).length;
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="space-y-6 max-w-5xl mx-auto"
+    >
       {/* ── Security Suite Header Tabs ──────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
         <div>
@@ -234,43 +240,70 @@ const AdminSecurityPage: React.FC = () => {
         <div className="flex items-center gap-1.5 p-1 bg-secondary/40 border border-border rounded-xl">
           <button
             onClick={() => setActiveTab('incidents')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`relative px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
               activeTab === 'incidents'
-                ? 'bg-foreground text-background shadow-xs'
+                ? 'text-background font-semibold'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Flame className="w-3.5 h-3.5" />
-            <span>Incidents</span>
-            {unresolvedCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 text-[10px] rounded-full bg-red-500 text-white font-mono font-semibold">
-                {unresolvedCount}
-              </span>
+            {activeTab === 'incidents' && (
+              <motion.div
+                layoutId="security-active-tab-pill"
+                className="absolute inset-0 bg-foreground rounded-lg shadow-xs"
+                transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+              />
             )}
+            <span className="relative z-10 flex items-center gap-1.5">
+              <Flame className="w-3.5 h-3.5" />
+              <span>Incidents</span>
+              {unresolvedCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 text-[10px] rounded-full bg-red-500 text-white font-mono font-semibold">
+                  {unresolvedCount}
+                </span>
+              )}
+            </span>
           </button>
 
           <button
             onClick={() => setActiveTab('scanner')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`relative px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
               activeTab === 'scanner'
-                ? 'bg-foreground text-background shadow-xs'
+                ? 'text-background font-semibold'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Search className="w-3.5 h-3.5" />
-            <span>URL Scanner</span>
+            {activeTab === 'scanner' && (
+              <motion.div
+                layoutId="security-active-tab-pill"
+                className="absolute inset-0 bg-foreground rounded-lg shadow-xs"
+                transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-1.5">
+              <Search className="w-3.5 h-3.5" />
+              <span>URL Scanner</span>
+            </span>
           </button>
 
           <button
             onClick={() => setActiveTab('blacklists')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`relative px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
               activeTab === 'blacklists'
-                ? 'bg-foreground text-background shadow-xs'
+                ? 'text-background font-semibold'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Globe className="w-3.5 h-3.5" />
-            <span>Blacklists</span>
+            {activeTab === 'blacklists' && (
+              <motion.div
+                layoutId="security-active-tab-pill"
+                className="absolute inset-0 bg-foreground rounded-lg shadow-xs"
+                transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" />
+              <span>Blacklists</span>
+            </span>
           </button>
         </div>
       </div>
@@ -777,7 +810,7 @@ const AdminSecurityPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

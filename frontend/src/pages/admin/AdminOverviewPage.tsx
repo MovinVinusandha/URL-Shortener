@@ -146,7 +146,12 @@ const AdminOverviewPage: React.FC = () => {
   const isPanicActive = stats?.systemMode && stats.systemMode !== 'NORMAL';
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="space-y-6 max-w-7xl mx-auto pb-12"
+    >
       {/* ── 0. Emergency Panic Mode Alert Banner ────────────────────── */}
       {isPanicActive && (
         <motion.div
@@ -188,10 +193,10 @@ const AdminOverviewPage: React.FC = () => {
       {/* ── 1. KPI Metrics Grid ───────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Links Card */}
-        <div className="p-5 bg-card/70 border border-border rounded-2xl shadow-xs flex flex-col justify-between">
+        <div className="p-5 bg-card/70 border border-border rounded-2xl shadow-xs flex flex-col justify-between transition-all duration-200 hover:border-border/80 hover:shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Links</span>
-            <div className="p-2 rounded-xl bg-secondary text-foreground">
+            <div className="p-2 rounded-xl bg-secondary text-foreground transition-transform duration-200 group-hover:scale-105">
               <LinkIcon className="w-4 h-4 text-blue-500" />
             </div>
           </div>
@@ -213,7 +218,7 @@ const AdminOverviewPage: React.FC = () => {
         </div>
 
         {/* Traffic Volume Card */}
-        <div className="p-5 bg-card/70 border border-border rounded-2xl shadow-xs flex flex-col justify-between">
+        <div className="p-5 bg-card/70 border border-border rounded-2xl shadow-xs flex flex-col justify-between transition-all duration-200 hover:border-border/80 hover:shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Traffic & Clicks</span>
             <div className="p-2 rounded-xl bg-secondary text-foreground">
@@ -232,7 +237,7 @@ const AdminOverviewPage: React.FC = () => {
         </div>
 
         {/* User Accounts Card */}
-        <div className="p-5 bg-card/70 border border-border rounded-2xl shadow-xs flex flex-col justify-between">
+        <div className="p-5 bg-card/70 border border-border rounded-2xl shadow-xs flex flex-col justify-between transition-all duration-200 hover:border-border/80 hover:shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">User Directory</span>
             <div className="p-2 rounded-xl bg-secondary text-foreground">
@@ -260,7 +265,7 @@ const AdminOverviewPage: React.FC = () => {
         </div>
 
         {/* Security & Perimeter Pulse Card */}
-        <div className="p-5 bg-card/70 border border-border rounded-2xl shadow-xs flex flex-col justify-between">
+        <div className="p-5 bg-card/70 border border-border rounded-2xl shadow-xs flex flex-col justify-between transition-all duration-200 hover:border-border/80 hover:shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Security Pulse</span>
             <div className="p-2 rounded-xl bg-secondary text-foreground">
@@ -593,7 +598,7 @@ const AdminOverviewPage: React.FC = () => {
           <div className="space-y-3 flex-1">
             {stats?.recentAuditActions && stats.recentAuditActions.length > 0 ? (
               stats.recentAuditActions.map(action => (
-                <div key={action.id} className="p-3 rounded-xl bg-secondary/30 border border-border flex items-start justify-between gap-3 text-xs">
+                <div key={action.id} className="p-3 rounded-xl bg-secondary/30 border border-border flex items-start justify-between gap-3 text-xs transition-colors duration-150 hover:bg-secondary/60">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-semibold px-1.5 py-0.5 rounded text-[10px] bg-primary/10 text-primary border border-primary/20">
@@ -621,7 +626,7 @@ const AdminOverviewPage: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

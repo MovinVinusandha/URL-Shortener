@@ -29,6 +29,7 @@ import type { AdminLayoutContext } from '../../layouts/AdminLayout';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import Skeleton from 'react-loading-skeleton';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type SettingsTab = 'policies' | 'panic' | 'vault' | 'smtp';
 
@@ -194,7 +195,12 @@ const AdminSettingsPage: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="space-y-6 max-w-5xl mx-auto"
+    >
       {/* ── Top Header & Tab Strip ───────────────────────────── */}
       <div className="p-5 bg-background border border-border rounded-2xl shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -214,56 +220,92 @@ const AdminSettingsPage: React.FC = () => {
           <div className="flex items-center gap-1.5 p-1 bg-secondary/40 border border-border rounded-xl shrink-0">
             <button
               onClick={() => setActiveTab('policies')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+              className={`relative px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
                 activeTab === 'policies'
-                  ? 'bg-foreground text-background shadow-xs'
+                  ? 'text-background font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>Runtime Policies</span>
+              {activeTab === 'policies' && (
+                <motion.div
+                  layoutId="settings-active-tab-pill"
+                  className="absolute inset-0 bg-foreground rounded-lg shadow-xs"
+                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-1.5">
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span>Runtime Policies</span>
+              </span>
             </button>
             <button
               onClick={() => setActiveTab('panic')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+              className={`relative px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
                 activeTab === 'panic'
-                  ? 'bg-foreground text-background shadow-xs'
+                  ? 'text-background font-semibold'
                   : currentPanicMode !== 'NORMAL'
                   ? 'text-amber-500 font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Radio className={`w-3.5 h-3.5 ${currentPanicMode !== 'NORMAL' ? (activeTab === 'panic' ? 'text-background' : 'text-red-500') + ' animate-pulse' : ''}`} />
-              <span>Panic Switch</span>
-              {currentPanicMode !== 'NORMAL' && (
-                <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono font-semibold ${
-                  activeTab === 'panic' ? 'bg-background text-foreground' : 'bg-red-500 text-white'
-                }`}>
-                  ACTIVE
-                </span>
+              {activeTab === 'panic' && (
+                <motion.div
+                  layoutId="settings-active-tab-pill"
+                  className="absolute inset-0 bg-foreground rounded-lg shadow-xs"
+                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                />
               )}
+              <span className="relative z-10 flex items-center gap-1.5">
+                <Radio className={`w-3.5 h-3.5 ${currentPanicMode !== 'NORMAL' ? (activeTab === 'panic' ? 'text-background' : 'text-red-500') + ' animate-pulse' : ''}`} />
+                <span>Panic Switch</span>
+                {currentPanicMode !== 'NORMAL' && (
+                  <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono font-semibold ${
+                    activeTab === 'panic' ? 'bg-background text-foreground' : 'bg-red-500 text-white'
+                  }`}>
+                    ACTIVE
+                  </span>
+                )}
+              </span>
             </button>
             <button
               onClick={() => setActiveTab('vault')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+              className={`relative px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
                 activeTab === 'vault'
-                  ? 'bg-foreground text-background shadow-xs'
+                  ? 'text-background font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Database className="w-3.5 h-3.5" />
-              <span>Environment Vault</span>
+              {activeTab === 'vault' && (
+                <motion.div
+                  layoutId="settings-active-tab-pill"
+                  className="absolute inset-0 bg-foreground rounded-lg shadow-xs"
+                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5" />
+                <span>Environment Vault</span>
+              </span>
             </button>
             <button
               onClick={() => setActiveTab('smtp')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+              className={`relative px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
                 activeTab === 'smtp'
-                  ? 'bg-foreground text-background shadow-xs'
+                  ? 'text-background font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Mail className="w-3.5 h-3.5" />
-              <span>SMTP Diagnostics</span>
+              {activeTab === 'smtp' && (
+                <motion.div
+                  layoutId="settings-active-tab-pill"
+                  className="absolute inset-0 bg-foreground rounded-lg shadow-xs"
+                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5" />
+                <span>SMTP Diagnostics</span>
+              </span>
             </button>
           </div>
         </div>
@@ -791,7 +833,7 @@ const AdminSettingsPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

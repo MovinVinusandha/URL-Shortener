@@ -332,7 +332,12 @@ const AdminLinksPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5 max-w-7xl mx-auto">
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="space-y-5 max-w-7xl mx-auto"
+    >
       {/* ── 1. Triage KPI Summary Cards ─────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <button
@@ -415,38 +420,65 @@ const AdminLinksPage: React.FC = () => {
           <div className="flex items-center gap-1.5 p-1 bg-secondary/40 border border-border rounded-xl w-fit">
             <button
               onClick={() => { setActiveTab('needs_review'); setPage(0); }}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+              className={`relative px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'needs_review'
-                  ? 'bg-foreground text-background shadow-xs'
+                  ? 'text-background font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span>Needs Review</span>
+              {activeTab === 'needs_review' && (
+                <motion.div
+                  layoutId="links-active-triage-pill"
+                  className="absolute inset-0 bg-foreground rounded-lg shadow-xs"
+                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Needs Review</span>
+              </span>
             </button>
 
             <button
               onClick={() => { setActiveTab('spikes'); setPage(0); }}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+              className={`relative px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'spikes'
-                  ? 'bg-foreground text-background shadow-xs'
+                  ? 'text-background font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Flame className="w-3.5 h-3.5" />
-              <span>Traffic Spikes</span>
+              {activeTab === 'spikes' && (
+                <motion.div
+                  layoutId="links-active-triage-pill"
+                  className="absolute inset-0 bg-foreground rounded-lg shadow-xs"
+                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-1.5">
+                <Flame className="w-3.5 h-3.5" />
+                <span>Traffic Spikes</span>
+              </span>
             </button>
 
             <button
               onClick={() => { setActiveTab('all'); setPage(0); }}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+              className={`relative px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'all'
-                  ? 'bg-foreground text-background shadow-xs'
+                  ? 'text-background font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Filter className="w-3.5 h-3.5" />
-              <span>All Links (Search)</span>
+              {activeTab === 'all' && (
+                <motion.div
+                  layoutId="links-active-triage-pill"
+                  className="absolute inset-0 bg-foreground rounded-lg shadow-xs"
+                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-1.5">
+                <Filter className="w-3.5 h-3.5" />
+                <span>All Links (Search)</span>
+              </span>
             </button>
           </div>
 
@@ -956,7 +988,7 @@ const AdminLinksPage: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 };
 

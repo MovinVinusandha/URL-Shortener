@@ -198,7 +198,12 @@ const AdminMaintenancePage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="space-y-6 max-w-7xl mx-auto pb-12"
+    >
       {/* ── Page Header ─────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-5">
         <div>
@@ -237,7 +242,7 @@ const AdminMaintenancePage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Redis Memory */}
-          <div className="p-4 rounded-xl border border-border bg-card shadow-xs flex flex-col justify-between">
+          <div className="p-4 rounded-xl border border-border bg-card shadow-xs flex flex-col justify-between transition-all duration-200 hover:border-border/80 hover:shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">Redis Memory</span>
               <span className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-secondary text-muted-foreground border border-border">
@@ -255,7 +260,7 @@ const AdminMaintenancePage: React.FC = () => {
           </div>
 
           {/* Cached URLs */}
-          <div className="p-4 rounded-xl border border-border bg-card shadow-xs flex flex-col justify-between">
+          <div className="p-4 rounded-xl border border-border bg-card shadow-xs flex flex-col justify-between transition-all duration-200 hover:border-border/80 hover:shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">URL Cache Keys</span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-secondary text-muted-foreground border border-border">
@@ -273,7 +278,7 @@ const AdminMaintenancePage: React.FC = () => {
           </div>
 
           {/* Cache Hit Ratio */}
-          <div className="p-4 rounded-xl border border-border bg-card shadow-xs flex flex-col justify-between">
+          <div className="p-4 rounded-xl border border-border bg-card shadow-xs flex flex-col justify-between transition-all duration-200 hover:border-border/80 hover:shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">Cache Hit Ratio</span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-secondary text-muted-foreground border border-border">
@@ -291,7 +296,7 @@ const AdminMaintenancePage: React.FC = () => {
           </div>
 
           {/* Total DB Size */}
-          <div className="p-4 rounded-xl border border-border bg-card shadow-xs flex flex-col justify-between">
+          <div className="p-4 rounded-xl border border-border bg-card shadow-xs flex flex-col justify-between transition-all duration-200 hover:border-border/80 hover:shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">Database Storage</span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-secondary text-muted-foreground border border-border">
@@ -324,14 +329,23 @@ const AdminMaintenancePage: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveSection(tab.id as any)}
-              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer ${
+              className={`relative flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer ${
                 isActive
-                  ? 'bg-foreground text-background shadow-xs'
+                  ? 'text-background font-semibold'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
               }`}
             >
-              <Icon className="w-3.5 h-3.5" />
-              {tab.label}
+              {isActive && (
+                <motion.div
+                  layoutId="maintenance-active-tab-pill"
+                  className="absolute inset-0 bg-foreground rounded-lg shadow-xs"
+                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-2">
+                <Icon className="w-3.5 h-3.5" />
+                {tab.label}
+              </span>
             </button>
           );
         })}
@@ -790,7 +804,7 @@ const AdminMaintenancePage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

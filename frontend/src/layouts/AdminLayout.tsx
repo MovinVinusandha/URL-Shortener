@@ -107,21 +107,32 @@ const AdminLayout: React.FC = () => {
                 to={item.to}
                 end={item.end}
                 className={({ isActive }) => `
-                  w-full flex items-center justify-between px-3 py-2 text-xs font-medium rounded-lg transition-colors
+                  relative w-full flex items-center justify-between px-3 py-2 text-xs font-medium rounded-lg transition-colors
                   ${isActive 
-                    ? 'bg-secondary text-foreground font-semibold shadow-xs' 
+                    ? 'text-foreground font-semibold shadow-xs' 
                     : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
                   }
                 `}
               >
-                <div className="flex items-center gap-2.5">
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span>{item.label}</span>
-                </div>
-                {item.isRootOnly && (
-                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-500">
-                    ROOT
-                  </span>
+                {({ isActive }) => (
+                  <>
+                    {isActive && (
+                      <motion.div
+                        layoutId="admin-active-nav-pill"
+                        className="absolute inset-0 bg-secondary rounded-lg"
+                        transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                      />
+                    )}
+                    <div className="relative z-10 flex items-center gap-2.5">
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span>{item.label}</span>
+                    </div>
+                    {item.isRootOnly && (
+                      <span className="relative z-10 text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-500">
+                        ROOT
+                      </span>
+                    )}
+                  </>
                 )}
               </NavLink>
             );

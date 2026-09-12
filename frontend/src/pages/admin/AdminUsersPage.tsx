@@ -16,6 +16,7 @@ import type { AdminLayoutContext } from '../../layouts/AdminLayout';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import Skeleton from 'react-loading-skeleton';
+import { motion } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 
 const AdminUsersPage: React.FC = () => {
@@ -89,7 +90,12 @@ const AdminUsersPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto">
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="space-y-4 max-w-7xl mx-auto"
+    >
       {/* ── Search & Filter Controls ───────────────────────── */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-background border border-border p-3 rounded-2xl shadow-xs">
         <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-80">
@@ -272,7 +278,7 @@ const AdminUsersPage: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
