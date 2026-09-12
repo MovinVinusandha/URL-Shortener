@@ -34,6 +34,7 @@ public class UrlService {
     private final TagRepository tagRepository;
     private final FolderRepository folderRepository;
     private final com.url_shortener.url_shortener.admin.BlacklistedDomainRepository blacklistedDomainRepository;
+    private final com.url_shortener.url_shortener.admin.SystemSettingRepository systemSettingRepository;
 
     @org.springframework.beans.factory.annotation.Autowired 
     private org.springframework.cache.CacheManager cacheManager;
@@ -52,6 +53,17 @@ public class UrlService {
     }
 
     public UrlSend generateShortUrl(UrlRequest urlRequest, String clientIp) {
+        String panicMode = systemSettingRepository.findBySettingKey("PANIC_MODE")
+                .map(s -> s.getSettingValue().toUpperCase())
+                .orElse("NORMAL");
+
+        if ("MAINTENANCE".equals(panicMode)) {
+            throw new IllegalStateException("The system is currently undergoing scheduled maintenance. Link creation is paused.");
+        }
+        if ("READ_ONLY".equals(panicMode)) {
+            throw new IllegalStateException("The system is currently operating in read-only lockdown mode. New link creation is temporarily halted.");
+        }
+
         if (isDomainBlacklisted(urlRequest.getLongUrl())) {
             throw new IllegalArgumentException("The destination URL domain is blacklisted or prohibited on this instance.");
         }
@@ -95,7 +107,21 @@ public class UrlService {
         url.setShortUrl(hash);
         
         url.setActive(true);
-        if (urlRequest.getExpiresAt() != null && urlRequest.getExpiresAt().isBefore(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC))) {
+
+        // Apply default link expiration if not explicitly provided
+        if (url.getExpiresAt() == null) {
+            systemSettingRepository.findBySettingKey("DEFAULT_LINK_EXPIRATION_DAYS")
+                    .ifPresent(s -> {
+                        try {
+                            long days = Long.parseLong(s.getSettingValue().trim());
+                            if (days > 0) {
+                                url.setExpiresAt(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC).plusDays(days));
+                            }
+                        } catch (Exception ignored) {}
+                    });
+        }
+
+        if (url.getExpiresAt() != null && url.getExpiresAt().isBefore(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC))) {
             url.setActive(false);
         }
         
@@ -120,6 +146,23 @@ public class UrlService {
             if (user.isSuspended()) {
                 throw new AccessDeniedException("Your account has been suspended by an administrator.");
             }
+
+            // Enforce max links per user quota (for non-ROOT/ADMIN users)
+            if (user.getRole() == com.url_shortener.url_shortener.users.Role.USER) {
+                long maxLinks = 1000;
+                try {
+                    var quotaSetting = systemSettingRepository.findBySettingKey("MAX_LINKS_PER_USER");
+                    if (quotaSetting.isPresent() && !quotaSetting.get().getSettingValue().isBlank()) {
+                        maxLinks = Long.parseLong(quotaSetting.get().getSettingValue().trim());
+                    }
+                } catch (Exception ignored) {}
+
+                long currentLinks = urlRepository.countByUserId(user.getId());
+                if (currentLinks >= maxLinks) {
+                    throw new AccessDeniedException("You have reached the maximum allowed link quota (" + maxLinks + ") for your account.");
+                }
+            }
+
             url.setUser(user);
         }
 
@@ -198,6 +241,17 @@ public class UrlService {
 
     @org.springframework.transaction.annotation.Transactional
     public BatchCampaignResponseDto createBatchCampaignUrls(BatchCampaignRequestDto request, User currentUser) {
+        String panicMode = systemSettingRepository.findBySettingKey("PANIC_MODE")
+                .map(s -> s.getSettingValue().toUpperCase())
+                .orElse("NORMAL");
+
+        if ("MAINTENANCE".equals(panicMode)) {
+            throw new IllegalStateException("The system is currently undergoing scheduled maintenance. Batch link creation is paused.");
+        }
+        if ("READ_ONLY".equals(panicMode)) {
+            throw new IllegalStateException("The system is currently operating in read-only lockdown mode. Batch link creation is temporarily halted.");
+        }
+
         if (currentUser.isSuspended()) {
             throw new AccessDeniedException("Your account has been suspended by an administrator.");
         }
@@ -327,6 +381,14 @@ public class UrlService {
     private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
 
     public String getLongUrlForRedirect(String shortUrl) {
+        String panicMode = systemSettingRepository.findBySettingKey("PANIC_MODE")
+                .map(s -> s.getSettingValue().toUpperCase())
+                .orElse("NORMAL");
+
+        if ("MAINTENANCE".equals(panicMode)) {
+            throw new IllegalStateException("The system is currently undergoing scheduled maintenance. Redirection is temporarily paused.");
+        }
+
         // Enforce strict lazy evaluation first
         var url = isExistsShortUrl(shortUrl);
         

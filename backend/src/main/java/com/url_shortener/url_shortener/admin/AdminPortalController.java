@@ -167,6 +167,28 @@ public class AdminPortalController {
         ));
     }
 
+    @GetMapping("/settings/vault")
+    @Operation(summary = "Get categorized and sanitized environment vault (ROOT only)")
+    public ResponseEntity<List<EnvironmentVaultDto>> getEnvironmentVault() {
+        return ResponseEntity.ok(adminService.getEnvironmentVault());
+    }
+
+    @PutMapping("/settings/vault")
+    @Operation(summary = "Update an environment variable with .env file synchronization (ROOT only)")
+    public ResponseEntity<EnvironmentVaultDto> updateEnvVariable(
+            @Valid @RequestBody EnvVariableUpdateRequestDto request
+    ) {
+        return ResponseEntity.ok(adminService.updateEnvVariable(request.getKey(), request.getValue()));
+    }
+
+    @PostMapping("/settings/test-smtp")
+    @Operation(summary = "Diagnostic SMTP connection and delivery test (ROOT only)")
+    public ResponseEntity<SmtpTestResultDto> testSmtpConnection(
+            @Valid @RequestBody SmtpTestRequestDto request
+    ) {
+        return ResponseEntity.ok(adminService.testSmtpConnection(request.getRecipientEmail()));
+    }
+
     @GetMapping("/incidents")
     @Operation(summary = "Get list of security threat incidents")
     public ResponseEntity<Page<com.url_shortener.url_shortener.security.SecurityIncident>> getIncidents(

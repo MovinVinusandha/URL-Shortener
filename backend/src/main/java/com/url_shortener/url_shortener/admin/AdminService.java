@@ -44,9 +44,43 @@ public class AdminService {
     private final com.url_shortener.url_shortener.security.ThreatScannerService threatScannerService;
     private final com.url_shortener.url_shortener.security.BlockedIpService blockedIpService;
     private final com.url_shortener.url_shortener.admin.audit.AdminAuditService adminAuditService;
+    private final EnvSyncService envSyncService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.mail.javamail.JavaMailSender javaMailSender;
 
     @Value("${app.domain.root}")
     private String rootDomainUrl;
+
+    @Value("${app.frontend.url:http://localhost}")
+    private String frontendUrl;
+
+    @Value("${app.dashboard.url:http://app.localhost}")
+    private String dashboardUrl;
+
+    @Value("${spring.mail.host:}")
+    private String mailHost;
+
+    @Value("${spring.mail.port:587}")
+    private int mailPort;
+
+    @Value("${spring.mail.username:}")
+    private String mailUsername;
+
+    @Value("${root.user.email:admin@trim.com}")
+    private String rootUserEmail;
+
+    @Value("${oauth.google.client-id:${GOOGLE_CLIENT_ID:}}")
+    private String googleClientId;
+
+    @Value("${oauth.github.client-id:${GITHUB_CLIENT_ID:}}")
+    private String githubClientId;
+
+    @Value("${spring.data.redis.host:redis}")
+    private String redisHost;
+
+    @Value("${spring.data.redis.port:6379}")
+    private int redisPort;
 
     public AdminOverviewDto getOverviewStats() {
         long totalLinks = urlRepository.count();
@@ -624,6 +658,222 @@ public class AdminService {
             adminAuditService.record(actorId, actorEmail, actorRole, actorIp, action, targetType, targetIdentifier, details, metadataJson);
         } catch (Exception e) {
             log.warn("Failed to record audit log for action {}: {}", action, e.getMessage());
+        }
+    }
+
+    /**
+     * Resolves effective setting with priority: system_settings DB table -> .env file -> fallback default.
+     */
+    public String getEffectiveSetting(String key, String defaultValue) {
+        if (key == null) return defaultValue;
+        try {
+            var dbSetting = systemSettingRepository.findBySettingKey(key.trim());
+            if (dbSetting.isPresent() && !dbSetting.get().getSettingValue().isBlank()) {
+                return dbSetting.get().getSettingValue().trim();
+            }
+        } catch (Exception ignored) {}
+
+        Map<String, String> envMap = envSyncService.readEnvMap();
+        if (envMap.containsKey(key.trim())) {
+            return envMap.get(key.trim());
+        }
+
+        return defaultValue;
+    }
+
+    /**
+     * Returns sanitized and masked environment vault items across categories.
+     */
+    public List<EnvironmentVaultDto> getEnvironmentVault() {
+        Map<String, String> envMap = envSyncService.readEnvMap();
+        List<EnvironmentVaultDto> items = new ArrayList<>();
+
+        // Group definitions: key, category, isSecret, description
+        record EnvDef(String key, String category, boolean isSecret, String description, String fallback) {}
+        List<EnvDef> definitions = List.of(
+                // 1. Instance & Policies
+                new EnvDef("APP_SELF_HOSTED", "SYSTEM", false, "Flag indicating if instance is operating in self-hosted mode", "false"),
+                new EnvDef("ALLOW_REGISTRATION", "SYSTEM", false, "Allows or forbids new user public account registrations", "true"),
+                new EnvDef("REQUIRE_EMAIL_VERIFICATION", "SYSTEM", false, "Enforces email confirmation before URL shortening privileges", "true"),
+                new EnvDef("PANIC_MODE", "SYSTEM", false, "Emergency lockdown: NORMAL, READ_ONLY, or MAINTENANCE", "NORMAL"),
+                new EnvDef("MAX_LINKS_PER_USER", "SYSTEM", false, "Maximum links quota for standard user accounts", "1000"),
+                new EnvDef("DEFAULT_LINK_EXPIRATION_DAYS", "SYSTEM", false, "Default forced link expiry in days (0 for permanent)", "0"),
+
+                // 2. Database & Cache
+                new EnvDef("SPRING_DATASOURCE_URL", "DATABASE", false, "JDBC connection string for MySQL database", "jdbc:mysql://mysql:3306/url_shortener"),
+                new EnvDef("SPRING_DATASOURCE_USERNAME", "DATABASE", false, "Database username", "root"),
+                new EnvDef("SPRING_DATASOURCE_PASSWORD", "DATABASE", true, "Database root password", ""),
+                new EnvDef("REDIS_HOST", "DATABASE", false, "Redis caching host address", redisHost),
+                new EnvDef("REDIS_PORT", "DATABASE", false, "Redis server port", String.valueOf(redisPort)),
+
+                // 3. Routing & Domains
+                new EnvDef("ROOT_DOMAIN_URL", "ROUTING", false, "Base domain URL used for public shortened redirection links", rootDomainUrl),
+                new EnvDef("APP_DOMAIN_URL", "ROUTING", false, "CORS allowed origin list for web clients", frontendUrl),
+                new EnvDef("APP_DASHBOARD_URL", "ROUTING", false, "Origin of user and admin dashboard portal", dashboardUrl),
+                new EnvDef("API_DOMAIN_NAME", "ROUTING", false, "Nginx reverse proxy API domain name", "api.localhost"),
+                new EnvDef("APP_DOMAIN_NAME", "ROUTING", false, "Nginx reverse proxy app domain name", "app.localhost"),
+                new EnvDef("ROOT_DOMAIN_NAME", "ROUTING", false, "Nginx reverse proxy root domain name", "localhost"),
+
+                // 4. Security & Authentication
+                new EnvDef("JWT_SECRET", "SECURITY", true, "HMAC-SHA secret key used for signing JWT tokens", ""),
+                new EnvDef("JWT_ACCESS_TOKEN_EXPIRATION", "SECURITY", false, "Access token validity in seconds", "900"),
+                new EnvDef("JWT_REFRESH_TOKEN_EXPIRATION", "SECURITY", false, "Refresh token validity in seconds", "604800"),
+                new EnvDef("ROOT_USER_EMAIL", "SECURITY", false, "Root system owner email address", rootUserEmail),
+                new EnvDef("ROOT_USER_PASSWORD", "SECURITY", true, "Root administrator initial credential", ""),
+                new EnvDef("SAFE_BROWSING_API_KEY", "SECURITY", true, "Google Safe Browsing v4 Threat API Key", ""),
+
+                // 5. Mail & SMTP
+                new EnvDef("SPRING_MAIL_HOST", "MAIL", false, "SMTP server hostname", mailHost),
+                new EnvDef("SPRING_MAIL_PORT", "MAIL", false, "SMTP port (typically 587 or 465)", String.valueOf(mailPort)),
+                new EnvDef("SPRING_MAIL_USERNAME", "MAIL", false, "SMTP account username / email", mailUsername),
+                new EnvDef("SPRING_MAIL_PASSWORD", "MAIL", true, "SMTP account app password", ""),
+                new EnvDef("SPRING_MAIL_SMTP_AUTH", "MAIL", false, "SMTP authentication flag", "true"),
+                new EnvDef("SPRING_MAIL_SMTP_STARTTLS_ENABLE", "MAIL", false, "STARTTLS encryption enablement", "true"),
+
+                // 6. OAuth Providers
+                new EnvDef("OAUTH_GOOGLE_CLIENT_ID", "OAUTH", false, "Google OAuth 2.0 Web Client ID", googleClientId),
+                new EnvDef("OAUTH_GOOGLE_CLIENT_SECRET", "OAUTH", true, "Google OAuth 2.0 Client Secret", ""),
+                new EnvDef("OAUTH_GITHUB_CLIENT_ID", "OAUTH", false, "GitHub OAuth App Client ID", githubClientId),
+                new EnvDef("OAUTH_GITHUB_CLIENT_SECRET", "OAUTH", true, "GitHub OAuth App Client Secret", "")
+        );
+
+        for (EnvDef def : definitions) {
+            String val = envMap.getOrDefault(def.key, def.fallback);
+            String source = "ENV";
+
+            // Check if overridden in dynamic DB system_settings
+            var dbSetting = systemSettingRepository.findBySettingKey(def.key);
+            if (dbSetting.isPresent() && !dbSetting.get().getSettingValue().isBlank()) {
+                val = dbSetting.get().getSettingValue();
+                source = "DYNAMIC_OVERRIDE";
+            }
+
+            items.add(EnvironmentVaultDto.builder()
+                    .key(def.key)
+                    .category(def.category)
+                    .value(val != null ? val : "")
+                    .isSecret(def.isSecret)
+                    .source(source)
+                    .description(def.description)
+                    .build());
+        }
+
+        return items;
+    }
+
+    /**
+     * Updates an environment variable in both .env and dynamic system_settings table for immediate effect.
+     */
+    @Transactional
+    public EnvironmentVaultDto updateEnvVariable(String key, String value) {
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException("Variable key cannot be blank");
+        }
+        String cleanKey = key.trim();
+        String cleanVal = value != null ? value.trim() : "";
+
+        // 1. Sync to .env file on disk
+        boolean syncedToEnv = envSyncService.updateEnvVariable(cleanKey, cleanVal);
+
+        // 2. Save in system_settings database for dynamic runtime resolution
+        SystemSetting setting = systemSettingRepository.findBySettingKey(cleanKey)
+                .orElseGet(() -> SystemSetting.builder().settingKey(cleanKey).build());
+        String oldValue = setting.getSettingValue();
+        setting.setSettingValue(cleanVal);
+        setting.setDescription("Configured via Admin Environment Vault");
+        systemSettingRepository.save(setting);
+
+        recordAudit("ENV_VARIABLE_UPDATED", "VAULT", cleanKey,
+                "Updated environment variable " + cleanKey + " (synced to .env: " + syncedToEnv + ")",
+                "{\"key\":\"" + cleanKey + "\",\"oldValue\":\"" + (cleanKey.contains("SECRET") || cleanKey.contains("PASSWORD") ? "******" : oldValue) + "\"}");
+
+        return EnvironmentVaultDto.builder()
+                .key(cleanKey)
+                .category("CONFIG")
+                .value(cleanVal)
+                .isSecret(cleanKey.contains("SECRET") || cleanKey.contains("PASSWORD"))
+                .source(syncedToEnv ? "ENV_AND_OVERRIDE" : "DYNAMIC_OVERRIDE")
+                .description("Synchronized live environment variable")
+                .build();
+    }
+
+    /**
+     * Diagnostic SMTP connection and delivery tester.
+     */
+    public SmtpTestResultDto testSmtpConnection(String recipientEmail) {
+        long startTime = System.currentTimeMillis();
+        String effectiveHost = getEffectiveSetting("SPRING_MAIL_HOST", mailHost);
+        int effectivePort = mailPort;
+        try {
+            effectivePort = Integer.parseInt(getEffectiveSetting("SPRING_MAIL_PORT", String.valueOf(mailPort)));
+        } catch (NumberFormatException ignored) {}
+        String effectiveUser = getEffectiveSetting("SPRING_MAIL_USERNAME", mailUsername);
+
+        if (effectiveHost == null || effectiveHost.isBlank()) {
+            return SmtpTestResultDto.builder()
+                    .success(false)
+                    .latencyMs(System.currentTimeMillis() - startTime)
+                    .host("None")
+                    .port(effectivePort)
+                    .fromEmail(effectiveUser)
+                    .message("SMTP Host is not configured. Set SPRING_MAIL_HOST in the Environment Vault.")
+                    .build();
+        }
+
+        if (javaMailSender == null) {
+            return SmtpTestResultDto.builder()
+                    .success(false)
+                    .latencyMs(System.currentTimeMillis() - startTime)
+                    .host(effectiveHost)
+                    .port(effectivePort)
+                    .fromEmail(effectiveUser)
+                    .message("JavaMailSender bean is unavailable. Ensure SMTP settings are saved.")
+                    .build();
+        }
+
+        try {
+            var mimeMessage = javaMailSender.createMimeMessage();
+            var helper = new org.springframework.mail.javamail.MimeMessageHelper(mimeMessage, true, "UTF-8");
+            helper.setFrom(effectiveUser != null && !effectiveUser.isBlank() ? effectiveUser : "noreply@trim.com");
+            helper.setTo(recipientEmail);
+            helper.setSubject("Trim SMTP Connection Diagnostic Test");
+            helper.setText("""
+                    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <h2 style="color: #0f172a; margin-bottom: 12px;">Trim SMTP Verification Successful</h2>
+                        <p style="color: #475569; font-size: 14px; line-height: 1.6;">
+                            This test email confirms that your SMTP mail host (<strong>%s:%d</strong>) is correctly configured and operational.
+                        </p>
+                        <p style="color: #94a3b8; font-size: 12px; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 12px;">
+                            Sent by Trim Admin Environment Vault at %s
+                        </p>
+                    </div>
+                    """.formatted(effectiveHost, effectivePort, LocalDateTime.now().toString()), true);
+
+            javaMailSender.send(mimeMessage);
+            long latency = System.currentTimeMillis() - startTime;
+
+            recordAudit("SMTP_DIAGNOSTIC_TEST", "MAIL", recipientEmail,
+                    "Dispatched SMTP test email to " + recipientEmail + " (latency: " + latency + "ms)", null);
+
+            return SmtpTestResultDto.builder()
+                    .success(true)
+                    .latencyMs(latency)
+                    .host(effectiveHost)
+                    .port(effectivePort)
+                    .fromEmail(effectiveUser)
+                    .message("Diagnostic email dispatched successfully to " + recipientEmail)
+                    .build();
+        } catch (Exception e) {
+            long latency = System.currentTimeMillis() - startTime;
+            log.warn("SMTP test failed for {}: {}", recipientEmail, e.getMessage());
+            return SmtpTestResultDto.builder()
+                    .success(false)
+                    .latencyMs(latency)
+                    .host(effectiveHost)
+                    .port(effectivePort)
+                    .fromEmail(effectiveUser)
+                    .message("SMTP Error: " + e.getMessage())
+                    .build();
         }
     }
 }

@@ -41,6 +41,7 @@ public class AuthController {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final TokenRevocationService tokenRevocationService;
+    private final com.url_shortener.url_shortener.admin.SystemSettingRepository systemSettingRepository;
 
     @Value("${app.dashboard.url:http://localhost:5173}")
     private String dashboardUrl;
@@ -75,7 +76,8 @@ public class AuthController {
                           PasswordEncoder passwordEncoder,
                           PasswordResetTokenRepository passwordResetTokenRepository,
                           EmailVerificationTokenRepository emailVerificationTokenRepository,
-                          TokenRevocationService tokenRevocationService) {
+                          TokenRevocationService tokenRevocationService,
+                          com.url_shortener.url_shortener.admin.SystemSettingRepository systemSettingRepository) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.jwtConfig = jwtConfig;
@@ -89,18 +91,27 @@ public class AuthController {
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.emailVerificationTokenRepository = emailVerificationTokenRepository;
         this.tokenRevocationService = tokenRevocationService;
+        this.systemSettingRepository = systemSettingRepository;
     }
 
     @GetMapping("/config")
     public ResponseEntity<PublicAuthConfigDto> getAuthConfig() {
+        boolean dynamicAllowRegistration = systemSettingRepository.findBySettingKey("ALLOW_REGISTRATION")
+                .map(s -> Boolean.parseBoolean(s.getSettingValue()))
+                .orElse(allowRegistration);
+
+        boolean dynamicRequireEmailVerification = systemSettingRepository.findBySettingKey("REQUIRE_EMAIL_VERIFICATION")
+                .map(s -> Boolean.parseBoolean(s.getSettingValue()))
+                .orElse(requireEmailVerification);
+
         boolean googleEnabled = googleClientId != null && !googleClientId.isBlank();
         boolean githubEnabled = githubClientId != null && !githubClientId.isBlank();
         boolean smtpEnabled = mailHost != null && !mailHost.isBlank();
 
         return ResponseEntity.ok(PublicAuthConfigDto.builder()
                 .isSelfHosted(isSelfHosted)
-                .allowRegistration(allowRegistration)
-                .requireEmailVerification(requireEmailVerification && smtpEnabled)
+                .allowRegistration(dynamicAllowRegistration)
+                .requireEmailVerification(dynamicRequireEmailVerification && smtpEnabled)
                 .googleOAuthEnabled(googleEnabled)
                 .githubOAuthEnabled(githubEnabled)
                 .smtpConfigured(smtpEnabled)

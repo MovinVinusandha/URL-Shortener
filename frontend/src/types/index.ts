@@ -345,4 +345,23 @@ export interface AuditChainVerification {
   verifiedAt: string;
 }
 
+export interface EnvironmentVaultItem {
+  key: string;
+  category: 'SYSTEM' | 'DATABASE' | 'ROUTING' | 'SECURITY' | 'MAIL' | 'OAUTH' | 'CONFIG';
+  value: string;
+  isSecret: boolean;
+  source: 'ENV' | 'DYNAMIC_OVERRIDE' | 'ENV_AND_OVERRIDE';
+  description?: string | null;
+}
+
+export interface SmtpTestResult {
+  success: boolean;
+  latencyMs: number;
+  host: string;
+  port: number;
+  fromEmail?: string | null;
+  message: string;
+}
+
+
 
