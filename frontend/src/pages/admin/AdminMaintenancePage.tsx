@@ -103,7 +103,7 @@ const AdminMaintenancePage: React.FC = () => {
       toast.success(data.message || 'URL cache cleared');
       fetchOverview();
     } catch (err: any) {
-      toast.error('Failed to flush URL cache');
+      toast.error(err.response?.data?.message || 'Failed to flush URL cache');
     } finally {
       setIsFlushingUrls(false);
     }
@@ -117,7 +117,7 @@ const AdminMaintenancePage: React.FC = () => {
       toast.success(data.message || 'Entire Redis cache purged');
       fetchOverview();
     } catch (err: any) {
-      toast.error('Failed to purge Redis cache');
+      toast.error(err.response?.data?.message || 'Failed to purge Redis cache');
     } finally {
       setIsFlushingAll(false);
     }
@@ -130,7 +130,7 @@ const AdminMaintenancePage: React.FC = () => {
       toast.success(data.message || 'Cache pre-warmed successfully');
       fetchOverview();
     } catch (err: any) {
-      toast.error('Failed to pre-warm cache');
+      toast.error(err.response?.data?.message || 'Failed to pre-warm cache');
     } finally {
       setIsWarmingUp(false);
     }

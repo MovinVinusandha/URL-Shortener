@@ -233,7 +233,7 @@ const AdminUsersPage: React.FC = () => {
 
                         {/* Status */}
                         <td className="py-3 px-4">
-                          {u.isSuspended ? (
+                          {(u.isSuspended ?? u.suspended) ? (
                             <span 
                               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/10 text-red-500 border border-red-500/20"
                               title={u.suspendedReason || 'Suspended'}
@@ -268,12 +268,12 @@ const AdminUsersPage: React.FC = () => {
                             <button
                               onClick={() => handleToggleSuspend(u)}
                               className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors ${
-                                u.isSuspended
+                                (u.isSuspended ?? u.suspended)
                                   ? 'border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10'
                                   : 'border-red-500/30 text-red-500 hover:bg-red-500/10'
                               }`}
                             >
-                              {u.isSuspended ? 'Reactivate' : 'Suspend'}
+                              {(u.isSuspended ?? u.suspended) ? 'Reactivate' : 'Suspend'}
                             </button>
                           )}
                         </td>

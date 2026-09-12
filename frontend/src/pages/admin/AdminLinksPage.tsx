@@ -684,7 +684,7 @@ const AdminLinksPage: React.FC = () => {
                       {/* Short Link Hash */}
                       <td className="py-3 px-3 font-mono font-medium text-foreground whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
-                          {link.isPasswordProtected && (
+                          {(link.isPasswordProtected ?? link.passwordProtected) && (
                             <span title="Password protected">
                               <Lock className="w-3 h-3 text-amber-500 shrink-0" />
                             </span>
@@ -763,14 +763,14 @@ const AdminLinksPage: React.FC = () => {
 
                       {/* Status Badge */}
                       <td className="py-3 px-4 whitespace-nowrap">
-                        {link.isQuarantined ? (
+                        {(link.isQuarantined ?? link.quarantined) ? (
                           <span 
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/10 text-red-500 border border-red-500/20"
                             title={link.quarantineReason || 'Quarantined'}
                           >
                             <ShieldAlert className="w-2.5 h-2.5" /> Quarantined
                           </span>
-                        ) : !link.isActive ? (
+                        ) : !(link.isActive ?? link.active) ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-neutral-500/10 text-muted-foreground border border-border">
                             Expired
                           </span>
@@ -784,7 +784,7 @@ const AdminLinksPage: React.FC = () => {
                       {/* Moderation Actions */}
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
-                          {link.isQuarantined ? (
+                          {(link.isQuarantined ?? link.quarantined) ? (
                             <button
                               onClick={() => handleUnquarantine(link)}
                               className="p-1.5 text-xs text-emerald-600 hover:bg-emerald-500/10 rounded-lg transition-colors inline-flex items-center gap-1"

@@ -19,7 +19,10 @@ public class AdminUserDto {
     private String email;
     private Role role;
     private boolean emailVerified;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("isSuspended")
     private boolean isSuspended;
+
     private String suspendedReason;
     private long linkCount;
     private long totalClicks;

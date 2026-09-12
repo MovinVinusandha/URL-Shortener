@@ -18,10 +18,18 @@ public class AdminLinkDto {
     private String longUrl;
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
     private boolean isActive;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("isQuarantined")
     private boolean isQuarantined;
+
     private String quarantineReason;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("isPasswordProtected")
     private boolean isPasswordProtected;
+
     private long totalClicks;
     private String userEmail;
     private String username;

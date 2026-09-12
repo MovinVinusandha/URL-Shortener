@@ -176,8 +176,8 @@ const AdminSecurityPage: React.FC = () => {
       await axiosInstance.delete(`/admin/blacklist/${item.id}`);
       toast.success(`"${item.domainPattern}" removed`);
       fetchDomainBlacklist();
-    } catch (err) {
-      toast.error('Failed to remove domain');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to remove domain');
     }
   };
 
@@ -211,8 +211,8 @@ const AdminSecurityPage: React.FC = () => {
       await axiosInstance.delete(`/admin/blocked-ips/${item.id}`);
       toast.success(`IP "${item.ipAddress}" unblocked`);
       fetchBlockedIps();
-    } catch (err) {
-      toast.error('Failed to unblock IP');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to unblock IP');
     }
   };
 

@@ -236,9 +236,12 @@ export interface AdminLink {
   createdAt: string;
   expiresAt?: string | null;
   isActive: boolean;
+  active?: boolean;
   isQuarantined: boolean;
+  quarantined?: boolean;
   quarantineReason?: string | null;
   isPasswordProtected: boolean;
+  passwordProtected?: boolean;
   totalClicks: number;
   userEmail: string;
   username: string;
@@ -272,6 +275,7 @@ export interface AdminUser {
   role: 'USER' | 'ADMIN' | 'ROOT';
   emailVerified: boolean;
   isSuspended: boolean;
+  suspended?: boolean;
   suspendedReason?: string | null;
   linkCount: number;
   totalClicks: number;
