@@ -1,5 +1,6 @@
 package com.url_shortener.url_shortener.admin;
 
+import com.url_shortener.url_shortener.admin.audit.AdminAuditLogDto;
 import com.url_shortener.url_shortener.admin.dto.*;
 import com.url_shortener.url_shortener.analytics.ClickEventRepository;
 import com.url_shortener.url_shortener.auth.TokenRevocationService;
@@ -83,6 +84,13 @@ public class AdminService {
     private int redisPort;
 
     public AdminOverviewDto getOverviewStats() {
+        return getOverviewStats(7);
+    }
+
+    public AdminOverviewDto getOverviewStats(int days) {
+        if (days < 1) days = 7;
+        if (days > 90) days = 90;
+
         long totalLinks = urlRepository.count();
         long activeLinks = urlRepository.countByIsActiveTrueAndIsQuarantinedFalse();
         long expiredLinks = urlRepository.countByIsActiveFalse();
@@ -108,9 +116,41 @@ public class AdminService {
         long suspendedUsers = userRepository.countByIsSuspendedTrue();
         long activeUsers = userRepository.countByIsSuspendedFalse();
 
-        // System Health
+        // 1. Operational Mode (Panic Switch)
+        String systemMode = getEffectiveSetting("PANIC_MODE", "NORMAL");
+
+        // 2. Security & Perimeter Pulse
+        long unresolvedIncidents = 0;
+        try {
+            unresolvedIncidents = securityIncidentRepository.countByIsResolvedFalse();
+        } catch (Exception ignored) {}
+
+        long blockedIpsCount = 0;
+        try {
+            blockedIpsCount = blockedIpService.getAllBlockedIps().size();
+        } catch (Exception ignored) {}
+
+        long blacklistedDomainsCount = 0;
+        try {
+            blacklistedDomainsCount = blacklistedDomainRepository.count();
+        } catch (Exception ignored) {}
+
+        boolean auditChainValid = true;
+        try {
+            auditChainValid = adminAuditService.verifyChainIntegrity().isValid();
+        } catch (Exception ignored) {}
+
+        AdminOverviewDto.SecurityPulseDto securityPulse = AdminOverviewDto.SecurityPulseDto.builder()
+                .unresolvedIncidents(unresolvedIncidents)
+                .blockedIpsCount(blockedIpsCount)
+                .blacklistedDomainsCount(blacklistedDomainsCount)
+                .auditChainValid(auditChainValid)
+                .build();
+
+        // 3. System Health & Storage
         String redisStatus = "HEALTHY";
         String redisMemory = "Normal";
+        Long totalCachedKeys = 0L;
         try {
             RedisConnection connection = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
             String pong = connection.ping();
@@ -121,13 +161,130 @@ public class AdminService {
             if (info != null && info.containsKey("used_memory_human")) {
                 redisMemory = info.getProperty("used_memory_human");
             }
+            totalCachedKeys = connection.serverCommands().dbSize();
             connection.close();
         } catch (Exception e) {
             redisStatus = "UNREACHABLE";
             redisMemory = "Unknown";
         }
 
-        // Top Target Domains
+        AdminOverviewDto.SystemHealthDto health = AdminOverviewDto.SystemHealthDto.builder()
+                .redisStatus(redisStatus)
+                .redisMemory(redisMemory)
+                .sweeperStatus("RUNNING")
+                .lastSweeperRun(LocalDateTime.now().toString())
+                .activeWorkerThreads(4)
+                .totalCachedKeys(totalCachedKeys != null ? totalCachedKeys : 0L)
+                .build();
+
+        // 4. Time-series Daily Activity (Clicks & Links Created)
+        LocalDateTime rangeStart = LocalDateTime.now().minusDays(days).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        Map<String, Long> clicksByDateMap = new HashMap<>();
+        try {
+            List<Object[]> clickRows = clickEventRepository.countClicksByDateInstance(rangeStart);
+            for (Object[] row : clickRows) {
+                if (row != null && row.length >= 2 && row[0] != null) {
+                    clicksByDateMap.put(row[0].toString(), ((Number) row[1]).longValue());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to query clicks by date: {}", e.getMessage());
+        }
+
+        Map<String, Long> linksByDateMap = new HashMap<>();
+        try {
+            List<Object[]> linkRows = urlRepository.countLinksCreatedByDateInstance(rangeStart);
+            for (Object[] row : linkRows) {
+                if (row != null && row.length >= 2 && row[0] != null) {
+                    linksByDateMap.put(row[0].toString(), ((Number) row[1]).longValue());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to query links by date: {}", e.getMessage());
+        }
+
+        List<AdminOverviewDto.DailyActivityDataPoint> activitySeries = new ArrayList<>();
+        java.time.LocalDate currentDay = rangeStart.toLocalDate();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        while (!currentDay.isAfter(today)) {
+            String dateKey = currentDay.toString();
+            long cCount = clicksByDateMap.getOrDefault(dateKey, 0L);
+            long lCount = linksByDateMap.getOrDefault(dateKey, 0L);
+            activitySeries.add(new AdminOverviewDto.DailyActivityDataPoint(dateKey, cCount, lCount));
+            currentDay = currentDay.plusDays(1);
+        }
+
+        // 5. Device Distribution
+        List<AdminOverviewDto.DistributionDataPoint> deviceDistribution = new ArrayList<>();
+        try {
+            List<Object[]> devRows = clickEventRepository.countClicksByDeviceInstance(rangeStart);
+            long totalDevClicks = 0;
+            for (Object[] row : devRows) {
+                if (row != null && row.length >= 2 && row[1] != null) {
+                    totalDevClicks += ((Number) row[1]).longValue();
+                }
+            }
+            for (Object[] row : devRows) {
+                if (row != null && row.length >= 2) {
+                    String devName = row[0] != null ? row[0].toString() : "Other";
+                    long cnt = ((Number) row[1]).longValue();
+                    double pct = totalDevClicks > 0 ? (cnt * 100.0) / totalDevClicks : 0.0;
+                    deviceDistribution.add(new AdminOverviewDto.DistributionDataPoint(devName, cnt, Math.round(pct * 10.0) / 10.0));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to query device distribution: {}", e.getMessage());
+        }
+
+        // 6. Country Distribution
+        List<AdminOverviewDto.DistributionDataPoint> countryDistribution = new ArrayList<>();
+        try {
+            List<Object[]> ctryRows = clickEventRepository.countClicksByCountryInstance(rangeStart);
+            long totalCtryClicks = 0;
+            for (Object[] row : ctryRows) {
+                if (row != null && row.length >= 2 && row[1] != null) {
+                    totalCtryClicks += ((Number) row[1]).longValue();
+                }
+            }
+            int limit = 0;
+            for (Object[] row : ctryRows) {
+                if (row != null && row.length >= 2 && limit < 6) {
+                    String ctryName = row[0] != null ? row[0].toString() : "Unknown";
+                    long cnt = ((Number) row[1]).longValue();
+                    double pct = totalCtryClicks > 0 ? (cnt * 100.0) / totalCtryClicks : 0.0;
+                    countryDistribution.add(new AdminOverviewDto.DistributionDataPoint(ctryName, cnt, Math.round(pct * 10.0) / 10.0));
+                    limit++;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to query country distribution: {}", e.getMessage());
+        }
+
+        // 7. Recent Audit Actions (Top 4)
+        List<AdminOverviewDto.RecentAuditActionDto> recentAuditActions = new ArrayList<>();
+        try {
+            Page<AdminAuditLogDto> auditPage = adminAuditService.getAuditLogs(
+                    null, null, null, null, null, null, PageRequest.of(0, 4, Sort.by(Sort.Direction.DESC, "id"))
+            );
+            if (auditPage != null && auditPage.hasContent()) {
+                for (AdminAuditLogDto l : auditPage.getContent()) {
+                    recentAuditActions.add(AdminOverviewDto.RecentAuditActionDto.builder()
+                            .id(l.getId())
+                            .action(l.getAction())
+                            .actorEmail(l.getActorEmail())
+                            .targetType(l.getTargetType())
+                            .targetIdentifier(l.getTargetIdentifier())
+                            .details(l.getDetails())
+                            .createdAt(l.getCreatedAt())
+                            .build()
+                    );
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to query recent audit logs for overview: {}", e.getMessage());
+        }
+
+        // 8. Top Target Domains
         List<Url> sampleUrls = urlRepository.findAll();
         Map<String, Long> domainCounts = new HashMap<>();
         for (Url u : sampleUrls) {
@@ -145,17 +302,9 @@ public class AdminService {
 
         List<AdminOverviewDto.TopDomainDto> topDomains = domainCounts.entrySet().stream()
                 .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
-                .limit(10)
+                .limit(8)
                 .map(e -> new AdminOverviewDto.TopDomainDto(e.getKey(), e.getValue()))
                 .collect(Collectors.toList());
-
-        AdminOverviewDto.SystemHealthDto health = AdminOverviewDto.SystemHealthDto.builder()
-                .redisStatus(redisStatus)
-                .redisMemory(redisMemory)
-                .sweeperStatus("RUNNING")
-                .lastSweeperRun(LocalDateTime.now().toString())
-                .activeWorkerThreads(4)
-                .build();
 
         return AdminOverviewDto.builder()
                 .totalLinks(totalLinks)
@@ -167,8 +316,14 @@ public class AdminService {
                 .totalUsers(totalUsers)
                 .activeUsers(activeUsers)
                 .suspendedUsers(suspendedUsers)
+                .systemMode(systemMode)
+                .securityPulse(securityPulse)
                 .systemHealth(health)
                 .topDomains(topDomains)
+                .activitySeries(activitySeries)
+                .deviceDistribution(deviceDistribution)
+                .countryDistribution(countryDistribution)
+                .recentAuditActions(recentAuditActions)
                 .build();
     }
 

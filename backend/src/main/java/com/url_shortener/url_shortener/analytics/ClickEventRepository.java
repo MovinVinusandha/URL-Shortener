@@ -742,4 +742,31 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
     @org.springframework.data.jpa.repository.Modifying
     @Query("DELETE FROM ClickEvent c WHERE c.timestamp < :cutoff")
     int deleteByTimestampBefore(@Param("cutoff") LocalDateTime cutoff);
+
+    @Query("""
+            SELECT CAST(c.timestamp AS date) as dt, COUNT(c) as cnt
+            FROM ClickEvent c
+            WHERE c.timestamp >= :startDate
+            GROUP BY CAST(c.timestamp AS date)
+            ORDER BY dt ASC
+            """)
+    List<Object[]> countClicksByDateInstance(@Param("startDate") LocalDateTime startDate);
+
+    @Query("""
+            SELECT COALESCE(c.device, 'Desktop') as dev, COUNT(c) as cnt
+            FROM ClickEvent c
+            WHERE c.timestamp >= :startDate
+            GROUP BY COALESCE(c.device, 'Desktop')
+            ORDER BY cnt DESC
+            """)
+    List<Object[]> countClicksByDeviceInstance(@Param("startDate") LocalDateTime startDate);
+
+    @Query("""
+            SELECT COALESCE(c.country, 'Unknown') as ctry, COUNT(c) as cnt
+            FROM ClickEvent c
+            WHERE c.timestamp >= :startDate
+            GROUP BY COALESCE(c.country, 'Unknown')
+            ORDER BY cnt DESC
+            """)
+    List<Object[]> countClicksByCountryInstance(@Param("startDate") LocalDateTime startDate);
 }

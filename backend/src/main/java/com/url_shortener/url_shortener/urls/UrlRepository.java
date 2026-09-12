@@ -45,4 +45,13 @@ public interface UrlRepository extends JpaRepository<Url, Long>, org.springframe
     java.util.List<Url> findDormantUrls(@org.springframework.data.repository.query.Param("cutoff") java.time.LocalDateTime cutoff);
 
     java.util.List<Url> findByIsActiveFalseAndUpdatedAtBefore(java.time.LocalDateTime cutoff);
+
+    @org.springframework.data.jpa.repository.Query("""
+            SELECT CAST(u.createdAt AS date) as dt, COUNT(u) as cnt
+            FROM Url u
+            WHERE u.createdAt >= :startDate
+            GROUP BY CAST(u.createdAt AS date)
+            ORDER BY dt ASC
+            """)
+    java.util.List<Object[]> countLinksCreatedByDateInstance(@org.springframework.data.repository.query.Param("startDate") java.time.LocalDateTime startDate);
 }

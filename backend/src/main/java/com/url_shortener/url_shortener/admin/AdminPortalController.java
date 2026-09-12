@@ -23,9 +23,11 @@ public class AdminPortalController {
     private final AdminService adminService;
 
     @GetMapping("/overview")
-    @Operation(summary = "Get platform overview KPIs, system health, and top target domains")
-    public ResponseEntity<AdminOverviewDto> getOverview() {
-        return ResponseEntity.ok(adminService.getOverviewStats());
+    @Operation(summary = "Get platform overview KPIs, system health, activity graphs, and top target domains")
+    public ResponseEntity<AdminOverviewDto> getOverview(
+            @RequestParam(defaultValue = "7") int days
+    ) {
+        return ResponseEntity.ok(adminService.getOverviewStats(days));
     }
 
     @GetMapping("/links")

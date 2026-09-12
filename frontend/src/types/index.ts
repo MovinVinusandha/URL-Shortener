@@ -169,6 +169,37 @@ export interface SystemHealth {
   sweeperStatus: string;
   lastSweeperRun: string;
   activeWorkerThreads: number;
+  totalDatabaseSizeMb?: number | null;
+  totalCachedKeys?: number | null;
+}
+
+export interface SecurityPulse {
+  unresolvedIncidents: number;
+  blockedIpsCount: number;
+  blacklistedDomainsCount: number;
+  auditChainValid: boolean;
+}
+
+export interface DailyActivityPoint {
+  date: string;
+  clicks: number;
+  linksCreated: number;
+}
+
+export interface DistributionPoint {
+  name: string;
+  count: number;
+  percentage: number;
+}
+
+export interface RecentAuditActionItem {
+  id: number;
+  action: string;
+  actorEmail: string;
+  targetType: string;
+  targetIdentifier?: string | null;
+  details?: string | null;
+  createdAt: string;
 }
 
 export interface TopDomain {
@@ -186,8 +217,14 @@ export interface AdminOverviewStats {
   totalUsers: number;
   activeUsers: number;
   suspendedUsers: number;
+  systemMode?: 'NORMAL' | 'READ_ONLY' | 'MAINTENANCE' | string;
+  securityPulse?: SecurityPulse;
   systemHealth: SystemHealth;
   topDomains: TopDomain[];
+  activitySeries?: DailyActivityPoint[];
+  deviceDistribution?: DistributionPoint[];
+  countryDistribution?: DistributionPoint[];
+  recentAuditActions?: RecentAuditActionItem[];
 }
 
 export interface AdminLink {
