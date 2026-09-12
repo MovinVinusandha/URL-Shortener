@@ -44,6 +44,13 @@ const ACTION_COLOR_MAP: Record<string, { bg: string; text: string; border: strin
   IP_UNBLOCKED: { bg: 'bg-neutral-500/10', text: 'text-muted-foreground', border: 'border-border' },
   SETTING_UPDATED: { bg: 'bg-indigo-500/10', text: 'text-indigo-400', border: 'border-indigo-500/20' },
   INCIDENT_RESOLVED: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', border: 'border-emerald-500/20' },
+  CACHE_EVICT_KEY: { bg: 'bg-cyan-500/10', text: 'text-cyan-400', border: 'border-cyan-500/20' },
+  CACHE_FLUSH_URLS: { bg: 'bg-cyan-500/10', text: 'text-cyan-400', border: 'border-cyan-500/20' },
+  CACHE_FLUSH_ALL: { bg: 'bg-red-500/10', text: 'text-red-500', border: 'border-red-500/20' },
+  CACHE_WARM_UP: { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20' },
+  LINKS_PURGE_DEACTIVATE: { bg: 'bg-amber-500/10', text: 'text-amber-500', border: 'border-amber-500/20' },
+  LINKS_PURGE_HARD: { bg: 'bg-red-500/10', text: 'text-red-500', border: 'border-red-500/20' },
+  CLICK_EVENTS_PRUNED: { bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/20' },
 };
 
 const AdminAuditLogsPage: React.FC = () => {
@@ -260,6 +267,12 @@ const AdminAuditLogsPage: React.FC = () => {
             <option value="IP_BLOCKED">IP Blocked</option>
             <option value="SETTING_UPDATED">Setting Updated</option>
             <option value="INCIDENT_RESOLVED">Incident Resolved</option>
+            <option value="CACHE_WARM_UP">Cache Warm Up</option>
+            <option value="CACHE_FLUSH_URLS">Flush URL Cache</option>
+            <option value="CACHE_FLUSH_ALL">Flush Entire Redis</option>
+            <option value="LINKS_PURGE_DEACTIVATE">Links Deactivated</option>
+            <option value="LINKS_PURGE_HARD">Links Hard Purged</option>
+            <option value="CLICK_EVENTS_PRUNED">Click Events Pruned</option>
           </select>
 
           {/* Target Type Filter */}
@@ -275,6 +288,9 @@ const AdminAuditLogsPage: React.FC = () => {
             <option value="IP">Perimeter IPs</option>
             <option value="SETTING">Settings</option>
             <option value="INCIDENT">Incidents</option>
+            <option value="REDIS">Redis Cache</option>
+            <option value="URL_STORE">URL Store</option>
+            <option value="ANALYTICS_STORE">Analytics Store</option>
           </select>
 
           <button

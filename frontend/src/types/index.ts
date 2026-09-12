@@ -363,5 +363,33 @@ export interface SmtpTestResult {
   message: string;
 }
 
+export interface TableStorageItem {
+  tableName: string;
+  sizeMb: number;
+  rowCount: number;
+}
 
+export interface MaintenanceOverview {
+  redisConnected: boolean;
+  redisVersion: string;
+  usedMemoryHuman: string;
+  peakMemoryHuman: string;
+  totalKeys: number;
+  urlKeysCount: number;
+  connectedClients: number;
+  uptimeSeconds: number;
+  keyspaceHits: number;
+  keyspaceMisses: number;
+  hitRatioPercentage: number;
+  totalDatabaseSizeMb: number;
+  tables: TableStorageItem[];
+}
 
+export interface CleanupResult {
+  dryRun: boolean;
+  affectedCount: number;
+  operation: string;
+  message: string;
+  sampleAffectedUrls: string[];
+  timestamp: string;
+}

@@ -37,4 +37,12 @@ public interface UrlRepository extends JpaRepository<Url, Long>, org.springframe
     long countByMinClicks(@org.springframework.data.repository.query.Param("minClicks") Long minClicks);
 
     org.springframework.data.domain.Page<Url> findByShortUrlContainingIgnoreCaseOrLongUrlContainingIgnoreCase(String shortUrl, String longUrl, org.springframework.data.domain.Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query("SELECT u FROM Url u WHERE u.isActive = true AND u.isQuarantined = false ORDER BY u.statistic.accessedTimes DESC")
+    java.util.List<Url> findTopActiveUrls(org.springframework.data.domain.Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query("SELECT u FROM Url u WHERE u.createdAt < :cutoff AND (u.statistic IS NULL OR u.statistic.accessedTimes = 0)")
+    java.util.List<Url> findDormantUrls(@org.springframework.data.repository.query.Param("cutoff") java.time.LocalDateTime cutoff);
+
+    java.util.List<Url> findByIsActiveFalseAndUpdatedAtBefore(java.time.LocalDateTime cutoff);
 }

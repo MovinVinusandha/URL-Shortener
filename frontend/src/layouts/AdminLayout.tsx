@@ -12,7 +12,8 @@ import {
   Monitor, 
   Shield,
   RefreshCw,
-  FileText
+  FileText,
+  Wrench
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -59,6 +60,7 @@ const AdminLayout: React.FC = () => {
     { to: '/admin/users', label: 'User Directory', icon: Users, end: false },
     { to: '/admin/security', label: 'Security & Blacklist', icon: ShieldAlert, end: false },
     { to: '/admin/audit-logs', label: 'Audit Trail', icon: FileText, end: false },
+    { to: '/admin/maintenance', label: 'Maintenance', icon: Wrench, end: false },
     ...(isRoot ? [{ to: '/admin/settings', label: 'Live Settings', icon: SlidersHorizontal, end: false, isRootOnly: true }] : [])
   ];
 

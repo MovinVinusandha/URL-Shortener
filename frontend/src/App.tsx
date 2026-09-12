@@ -31,6 +31,7 @@ import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminSecurityPage from './pages/admin/AdminSecurityPage';
 import AdminAuditLogsPage from './pages/admin/AdminAuditLogsPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+import AdminMaintenancePage from './pages/admin/AdminMaintenancePage';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
 
@@ -80,6 +81,7 @@ function AnimatedRoutes() {
                 <Route path="/admin/users" element={<AdminUsersPage />} />
                 <Route path="/admin/security" element={<AdminSecurityPage />} />
                 <Route path="/admin/audit-logs" element={<AdminAuditLogsPage />} />
+                <Route path="/admin/maintenance" element={<AdminMaintenancePage />} />
                 <Route path="/admin/settings" element={<AdminSettingsPage />} />
               </Route>
             </Route>

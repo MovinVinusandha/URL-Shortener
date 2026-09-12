@@ -736,4 +736,10 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
     @org.springframework.data.jpa.repository.Modifying
     @Query("DELETE FROM ClickEvent c WHERE c.url.id IN (SELECT u.id FROM Url u WHERE u.user.id = :userId)")
     void deleteByUserId(@Param("userId") Long userId);
+
+    long countByTimestampBefore(LocalDateTime timestamp);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM ClickEvent c WHERE c.timestamp < :cutoff")
+    int deleteByTimestampBefore(@Param("cutoff") LocalDateTime cutoff);
 }

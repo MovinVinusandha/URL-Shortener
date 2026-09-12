@@ -13,6 +13,7 @@ public class AdminSecurityRules implements SecurityRules {
         registry.requestMatchers("/admin/settings/**").hasRole(Role.ROOT.name());
         registry.requestMatchers("/admin/users/*/role").hasRole(Role.ROOT.name());
         registry.requestMatchers("/admin/audit-logs/verify", "/admin/audit-logs/export").hasRole(Role.ROOT.name());
+        registry.requestMatchers("/admin/maintenance/cache/flush-all").hasRole(Role.ROOT.name());
         registry.requestMatchers("/admin/**").hasAnyRole(Role.ROOT.name(), Role.ADMIN.name());
     }
 }
