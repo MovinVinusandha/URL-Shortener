@@ -353,7 +353,11 @@ const AdminLinksPage: React.FC = () => {
             <AlertTriangle className="w-4 h-4 text-amber-500" />
           </div>
           <div className="text-xl font-bold font-mono text-foreground mt-1">
-            {triageSummary ? triageSummary.needsAttentionCount : '—'}
+            {triageSummary ? (
+              triageSummary.needsAttentionCount
+            ) : (
+              <Skeleton width={40} height={22} borderRadius={6} />
+            )}
           </div>
           <span className="text-[10px] text-muted-foreground">Quarantined + 24h Queue</span>
         </button>
@@ -371,7 +375,11 @@ const AdminLinksPage: React.FC = () => {
             <Flame className="w-4 h-4 text-orange-500" />
           </div>
           <div className="text-xl font-bold font-mono text-foreground mt-1">
-            {triageSummary ? triageSummary.spikeCount : '—'}
+            {triageSummary ? (
+              triageSummary.spikeCount
+            ) : (
+              <Skeleton width={40} height={22} borderRadius={6} />
+            )}
           </div>
           <span className="text-[10px] text-muted-foreground">&gt; 500 Clicks Surge</span>
         </button>
@@ -389,7 +397,11 @@ const AdminLinksPage: React.FC = () => {
             <Clock className="w-4 h-4 text-primary" />
           </div>
           <div className="text-xl font-bold font-mono text-foreground mt-1">
-            {triageSummary ? triageSummary.createdLast24hCount : '—'}
+            {triageSummary ? (
+              triageSummary.createdLast24hCount
+            ) : (
+              <Skeleton width={40} height={22} borderRadius={6} />
+            )}
           </div>
           <span className="text-[10px] text-muted-foreground">Fresh Instance Activity</span>
         </button>
@@ -407,7 +419,11 @@ const AdminLinksPage: React.FC = () => {
             <Activity className="w-4 h-4 text-muted-foreground" />
           </div>
           <div className="text-xl font-bold font-mono text-foreground mt-1">
-            {triageSummary ? triageSummary.totalLinks.toLocaleString() : '—'}
+            {triageSummary ? (
+              triageSummary.totalLinks.toLocaleString()
+            ) : (
+              <Skeleton width={50} height={22} borderRadius={6} />
+            )}
           </div>
           <span className="text-[10px] text-muted-foreground">All Registered Links</span>
         </button>
@@ -608,10 +624,14 @@ const AdminLinksPage: React.FC = () => {
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i}>
-                    <td colSpan={7} className="py-3 px-4">
-                      <Skeleton height={24} borderRadius={8} />
-                    </td>
+                  <tr key={i} className="animate-pulse">
+                    <td className="py-3 px-3 text-center"><Skeleton width={16} height={16} borderRadius={4} /></td>
+                    <td className="py-3 px-3"><Skeleton width={80} height={16} borderRadius={6} /></td>
+                    <td className="py-3 px-4"><Skeleton width="80%" height={16} borderRadius={6} /></td>
+                    <td className="py-3 px-4"><Skeleton width={120} height={16} borderRadius={6} /></td>
+                    <td className="py-3 px-4 text-center"><Skeleton width={40} height={16} borderRadius={6} /></td>
+                    <td className="py-3 px-4"><Skeleton width={70} height={18} borderRadius={12} /></td>
+                    <td className="py-3 px-4 text-right"><Skeleton width={60} height={24} borderRadius={8} className="ml-auto" /></td>
                   </tr>
                 ))
               ) : links.length === 0 ? (

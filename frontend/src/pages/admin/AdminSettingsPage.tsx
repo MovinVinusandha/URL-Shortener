@@ -344,10 +344,19 @@ const AdminSettingsPage: React.FC = () => {
       {activeTab === 'policies' && (
         <div className="space-y-4">
           {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton height={80} borderRadius={16} />
-              <Skeleton height={80} borderRadius={16} />
-              <Skeleton height={80} borderRadius={16} />
+            <div className="space-y-4 animate-pulse">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="p-5 bg-background border border-border rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <Skeleton width={36} height={36} borderRadius={12} className="shrink-0" />
+                    <div className="space-y-1.5">
+                      <Skeleton width={160} height={15} borderRadius={4} />
+                      <Skeleton width={260} height={12} borderRadius={4} />
+                    </div>
+                  </div>
+                  <Skeleton width={110} height={34} borderRadius={12} className="shrink-0" />
+                </div>
+              ))}
             </div>
           ) : (
             <>
@@ -645,10 +654,24 @@ const AdminSettingsPage: React.FC = () => {
           </div>
 
           {isVaultLoading ? (
-            <div className="space-y-3">
-              <Skeleton height={60} borderRadius={16} />
-              <Skeleton height={60} borderRadius={16} />
-              <Skeleton height={60} borderRadius={16} />
+            <div className="space-y-2.5 animate-pulse">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="p-4 bg-background border border-border rounded-2xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Skeleton width={140} height={14} borderRadius={4} />
+                      <Skeleton width={60} height={14} borderRadius={4} />
+                      <Skeleton width={50} height={14} borderRadius={4} />
+                    </div>
+                    <Skeleton width="70%" height={12} borderRadius={4} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Skeleton width={180} height={28} borderRadius={8} />
+                    <Skeleton width={32} height={28} borderRadius={8} />
+                    <Skeleton width={32} height={28} borderRadius={8} />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="space-y-2.5">

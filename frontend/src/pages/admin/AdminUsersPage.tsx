@@ -132,10 +132,22 @@ const AdminUsersPage: React.FC = () => {
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}>
-                    <td colSpan={7} className="py-3 px-4">
-                      <Skeleton height={24} borderRadius={8} />
+                  <tr key={i} className="animate-pulse">
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2.5">
+                        <Skeleton circle width={28} height={28} />
+                        <div className="space-y-1">
+                          <Skeleton width={110} height={14} borderRadius={4} />
+                          <Skeleton width={140} height={12} borderRadius={4} />
+                        </div>
+                      </div>
                     </td>
+                    <td className="py-3 px-4"><Skeleton width={60} height={20} borderRadius={8} /></td>
+                    <td className="py-3 px-4"><Skeleton width={55} height={16} borderRadius={12} /></td>
+                    <td className="py-3 px-4 text-center"><Skeleton width={35} height={16} borderRadius={6} /></td>
+                    <td className="py-3 px-4 text-center"><Skeleton width={35} height={16} borderRadius={6} /></td>
+                    <td className="py-3 px-4"><Skeleton width={75} height={14} borderRadius={4} /></td>
+                    <td className="py-3 px-4 text-right"><Skeleton width={60} height={24} borderRadius={8} className="ml-auto" /></td>
                   </tr>
                 ))
               ) : users.length === 0 ? (

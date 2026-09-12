@@ -117,17 +117,97 @@ const AdminOverviewPage: React.FC = () => {
 
   if (isLoading && !stats) {
     return (
-      <div className="space-y-6">
-        <Skeleton height={50} borderRadius={16} />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-pulse">
+        {/* KPI Grid Skeletons */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map(i => (
-            <Skeleton key={i} height={110} borderRadius={16} />
+            <div key={i} className="p-5 bg-card/70 border border-border rounded-2xl flex flex-col justify-between space-y-4">
+              <div className="flex items-center justify-between">
+                <Skeleton width={80} height={14} borderRadius={4} />
+                <Skeleton width={32} height={32} borderRadius={10} />
+              </div>
+              <div>
+                <Skeleton width={110} height={28} borderRadius={6} />
+                <div className="mt-2 flex items-center gap-2">
+                  <Skeleton width={70} height={14} borderRadius={4} />
+                  <Skeleton width={50} height={14} borderRadius={4} />
+                </div>
+              </div>
+            </div>
           ))}
         </div>
-        <Skeleton height={320} borderRadius={16} />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Skeleton height={240} borderRadius={16} />
-          <Skeleton height={240} borderRadius={16} />
+
+        {/* Chart Canvas Skeleton */}
+        <div className="p-5 bg-card border border-border rounded-2xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <Skeleton width={36} height={36} borderRadius={12} />
+              <div className="space-y-1">
+                <Skeleton width={180} height={16} borderRadius={4} />
+                <Skeleton width={240} height={12} borderRadius={4} />
+              </div>
+            </div>
+            <Skeleton width={160} height={28} borderRadius={10} />
+          </div>
+          <div className="h-72 w-full pt-2 flex items-end gap-3 px-2">
+            {[40, 65, 30, 85, 55, 90, 45, 70, 60, 95, 50, 75].map((h, idx) => (
+              <div key={idx} className="flex-1 flex flex-col justify-end h-full">
+                <Skeleton height={`${h}%`} borderRadius={6} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 3-column Breakdown Cards Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="p-5 bg-card border border-border rounded-2xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Skeleton width={18} height={18} borderRadius={4} />
+                  <Skeleton width={110} height={16} borderRadius={4} />
+                </div>
+                <Skeleton width={50} height={14} borderRadius={4} />
+              </div>
+              <div className="space-y-3 pt-1">
+                {[1, 2, 3, 4].map(row => (
+                  <div key={row} className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <Skeleton width={90} height={13} borderRadius={4} />
+                      <Skeleton width={60} height={13} borderRadius={4} />
+                    </div>
+                    <Skeleton height={6} borderRadius={999} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom 2-column Grid Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[1, 2].map(i => (
+            <div key={i} className="p-5 bg-card border border-border rounded-2xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Skeleton width={18} height={18} borderRadius={4} />
+                  <Skeleton width={130} height={16} borderRadius={4} />
+                </div>
+                <Skeleton width={60} height={14} borderRadius={4} />
+              </div>
+              <div className="space-y-2.5">
+                {[1, 2, 3, 4].map(row => (
+                  <div key={row} className="p-3 rounded-xl border border-border bg-secondary/30 flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Skeleton width={140} height={14} borderRadius={4} />
+                      <Skeleton width={90} height={11} borderRadius={4} />
+                    </div>
+                    <Skeleton width={70} height={14} borderRadius={4} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );

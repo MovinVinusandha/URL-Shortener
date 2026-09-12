@@ -356,11 +356,14 @@ const AdminSecurityPage: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {isIncidentsLoading ? (
-                    Array.from({ length: 3 }).map((_, i) => (
-                      <tr key={i}>
-                        <td colSpan={6} className="py-3 px-4">
-                          <Skeleton height={24} borderRadius={8} />
-                        </td>
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="py-3 px-4"><Skeleton width={60} height={18} borderRadius={12} /></td>
+                        <td className="py-3 px-4"><Skeleton width={110} height={14} borderRadius={4} /></td>
+                        <td className="py-3 px-4"><Skeleton width="85%" height={14} borderRadius={4} /></td>
+                        <td className="py-3 px-4"><Skeleton width={90} height={14} borderRadius={4} /></td>
+                        <td className="py-3 px-4"><Skeleton width={80} height={14} borderRadius={4} /></td>
+                        <td className="py-3 px-4 text-right"><Skeleton width={55} height={22} borderRadius={8} className="ml-auto" /></td>
                       </tr>
                     ))
                   ) : incidents.length === 0 ? (
@@ -660,11 +663,12 @@ const AdminSecurityPage: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {isDomainLoading ? (
-                      Array.from({ length: 2 }).map((_, i) => (
-                        <tr key={i}>
-                          <td colSpan={4} className="py-3 px-4">
-                            <Skeleton height={24} borderRadius={8} />
-                          </td>
+                      Array.from({ length: 3 }).map((_, i) => (
+                        <tr key={i} className="animate-pulse">
+                          <td className="py-3 px-4 font-mono"><Skeleton width={130} height={14} borderRadius={4} /></td>
+                          <td className="py-3 px-4"><Skeleton width="75%" height={14} borderRadius={4} /></td>
+                          <td className="py-3 px-4"><Skeleton width={75} height={14} borderRadius={4} /></td>
+                          <td className="py-3 px-4 text-right"><Skeleton width={28} height={28} borderRadius={8} className="ml-auto" /></td>
                         </tr>
                       ))
                     ) : domainBlacklist.length === 0 ? (
@@ -766,11 +770,12 @@ const AdminSecurityPage: React.FC = () => {
                   </thead>
                   <tbody className="divide-y border-border">
                     {isIpLoading ? (
-                      Array.from({ length: 2 }).map((_, i) => (
-                        <tr key={i}>
-                          <td colSpan={4} className="py-3 px-4">
-                            <Skeleton height={24} borderRadius={8} />
-                          </td>
+                      Array.from({ length: 3 }).map((_, i) => (
+                        <tr key={i} className="animate-pulse">
+                          <td className="py-3 px-4 font-mono"><Skeleton width={110} height={14} borderRadius={4} /></td>
+                          <td className="py-3 px-4"><Skeleton width="75%" height={14} borderRadius={4} /></td>
+                          <td className="py-3 px-4"><Skeleton width={75} height={14} borderRadius={4} /></td>
+                          <td className="py-3 px-4 text-right"><Skeleton width={28} height={28} borderRadius={8} className="ml-auto" /></td>
                         </tr>
                       ))
                     ) : blockedIps.length === 0 ? (

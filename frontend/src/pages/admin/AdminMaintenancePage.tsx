@@ -600,6 +600,25 @@ const AdminMaintenancePage: React.FC = () => {
             </div>
           </div>
 
+          {/* Preview Loading Skeleton */}
+          {isLinkActionLoading && !linkCleanupResult && (
+            <div className="p-4 rounded-2xl border border-border bg-card shadow-xs space-y-3 animate-pulse">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Skeleton width={90} height={18} borderRadius={4} />
+                  <Skeleton width={140} height={16} borderRadius={4} />
+                </div>
+                <Skeleton width={60} height={14} borderRadius={4} />
+              </div>
+              <Skeleton width="60%" height={14} borderRadius={4} />
+              <div className="flex gap-2">
+                {[1, 2, 3, 4].map(i => (
+                  <Skeleton key={i} width={60} height={20} borderRadius={6} />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Preview Results Banner */}
           {linkCleanupResult && (
             <motion.div
@@ -708,6 +727,20 @@ const AdminMaintenancePage: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Click Prune Loading Skeleton */}
+          {isClickActionLoading && !clickPruneResult && (
+            <div className="p-4 rounded-2xl border border-border bg-card shadow-xs space-y-2 animate-pulse">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Skeleton width={90} height={18} borderRadius={4} />
+                  <Skeleton width={160} height={16} borderRadius={4} />
+                </div>
+                <Skeleton width={60} height={14} borderRadius={4} />
+              </div>
+              <Skeleton width="50%" height={14} borderRadius={4} />
+            </div>
+          )}
 
           {/* Click Prune Results Banner */}
           {clickPruneResult && (

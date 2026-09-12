@@ -331,10 +331,14 @@ const AdminAuditLogsPage: React.FC = () => {
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i}>
-                    <td colSpan={7} className="py-3 px-4">
-                      <Skeleton height={24} borderRadius={8} />
-                    </td>
+                  <tr key={i} className="animate-pulse">
+                    <td className="py-3 px-4 text-center font-mono"><Skeleton width={20} height={14} borderRadius={4} /></td>
+                    <td className="py-3 px-4"><Skeleton width={90} height={14} borderRadius={4} /></td>
+                    <td className="py-3 px-4"><Skeleton width={120} height={20} borderRadius={6} /></td>
+                    <td className="py-3 px-4"><Skeleton width={130} height={14} borderRadius={4} /></td>
+                    <td className="py-3 px-4"><Skeleton width={100} height={14} borderRadius={4} /></td>
+                    <td className="py-3 px-4"><Skeleton width="90%" height={14} borderRadius={4} /></td>
+                    <td className="py-3 px-4 text-right font-mono"><Skeleton width={60} height={14} borderRadius={4} className="ml-auto" /></td>
                   </tr>
                 ))
               ) : logs.length === 0 ? (
