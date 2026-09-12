@@ -16,4 +16,6 @@ public class PublicAuthConfigDto {
     private boolean googleOAuthEnabled;
     private boolean githubOAuthEnabled;
     private boolean smtpConfigured;
+    @Builder.Default
+    private String systemMode = "NORMAL";
 }

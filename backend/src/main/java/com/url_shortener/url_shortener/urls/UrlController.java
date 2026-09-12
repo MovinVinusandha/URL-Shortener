@@ -88,6 +88,10 @@ public class UrlController {
             HttpHeaders headers = new HttpHeaders();
             headers.add("Location", longUrl);
             return new ResponseEntity<>(headers, HttpStatus.FOUND);
+        } catch (com.url_shortener.url_shortener.common.SystemMaintenanceException e) {
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(java.net.URI.create(dashboardUrl + "/maintenance/" + hash))
+                    .build();
         } catch (LinkQuarantinedException e) {
             return ResponseEntity.status(HttpStatus.FOUND)
                     .location(java.net.URI.create(dashboardUrl + "/blocked/" + hash))

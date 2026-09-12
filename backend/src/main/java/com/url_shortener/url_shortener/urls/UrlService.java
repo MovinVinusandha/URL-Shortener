@@ -386,7 +386,7 @@ public class UrlService {
                 .orElse("NORMAL");
 
         if ("MAINTENANCE".equals(panicMode)) {
-            throw new IllegalStateException("The system is currently undergoing scheduled maintenance. Redirection is temporarily paused.");
+            throw new com.url_shortener.url_shortener.common.SystemMaintenanceException(shortUrl);
         }
 
         // Enforce strict lazy evaluation first

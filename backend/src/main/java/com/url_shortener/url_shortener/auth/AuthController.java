@@ -108,6 +108,10 @@ public class AuthController {
         boolean githubEnabled = githubClientId != null && !githubClientId.isBlank();
         boolean smtpEnabled = mailHost != null && !mailHost.isBlank();
 
+        String systemMode = systemSettingRepository.findBySettingKey("PANIC_MODE")
+                .map(s -> s.getSettingValue().toUpperCase())
+                .orElse("NORMAL");
+
         return ResponseEntity.ok(PublicAuthConfigDto.builder()
                 .isSelfHosted(isSelfHosted)
                 .allowRegistration(dynamicAllowRegistration)
@@ -115,6 +119,7 @@ public class AuthController {
                 .googleOAuthEnabled(googleEnabled)
                 .githubOAuthEnabled(githubEnabled)
                 .smtpConfigured(smtpEnabled)
+                .systemMode(systemMode)
                 .build());
     }
 

@@ -23,6 +23,7 @@ import SecurityPage from './pages/SecurityPage';
 import EventsPage from './pages/EventsPage';
 import DashboardLayout from './layouts/DashboardLayout';
 import BlockedPage from './pages/BlockedPage';
+import MaintenancePage from './pages/MaintenancePage';
 import AdminProtectedRoute from './components/AdminProtectedRoute';
 import AdminLayout from './layouts/AdminLayout';
 import AdminOverviewPage from './pages/admin/AdminOverviewPage';
@@ -54,6 +55,8 @@ function AnimatedRoutes() {
             <Route path="/secure/:hash" element={<SecurePage />} />
             <Route path="/blocked/:hash" element={<BlockedPage />} />
             <Route path="/blocked" element={<BlockedPage />} />
+            <Route path="/maintenance/:hash" element={<MaintenancePage />} />
+            <Route path="/maintenance" element={<MaintenancePage />} />
 
             {/* ── Protected User Routes ─────────────────────────── */}
             <Route element={<ProtectedRoute />}>

@@ -46,6 +46,7 @@ export interface PublicAuthConfig {
   googleOAuthEnabled: boolean;
   githubOAuthEnabled: boolean;
   smtpConfigured: boolean;
+  systemMode?: 'NORMAL' | 'READ_ONLY' | 'MAINTENANCE' | string;
 }
 
 // ─── Folders ──────────────────────────────────────────────────────────────────

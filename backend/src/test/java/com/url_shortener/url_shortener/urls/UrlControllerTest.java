@@ -165,6 +165,16 @@ class UrlControllerTest {
     }
 
     @Test
+    void redirectToNewUrl_Maintenance_RedirectsToMaintenancePage() throws Exception {
+        when(urlService.getLongUrlForRedirect("maint123"))
+                .thenThrow(new com.url_shortener.url_shortener.common.SystemMaintenanceException("maint123"));
+
+        mockMvc.perform(get("/maint123"))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", org.hamcrest.Matchers.endsWith("/maintenance/maint123")));
+    }
+
+    @Test
     void unlockUrl_Success() throws Exception {
         UnlockRequest unlockRequest = new UnlockRequest();
         unlockRequest.setPassword("mySecret");
