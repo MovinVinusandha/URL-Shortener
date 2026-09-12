@@ -473,25 +473,16 @@ public class UrlService {
             sortBy = "id";
         }
 
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ROOT") || a.getAuthority().equals("ROOT"));
-
-        List<Url> urls;
-        if (isAdmin) {
-            urls = urlRepository.findAll(Sort.by(sortBy).descending());
-        } else {
-            Long userId = getUserId();
-            List<Url> unassignedUrls = urlRepository.findByUserIdAndFolderIsNull(userId);
-            if (!unassignedUrls.isEmpty()) {
-                folderRepository.findByNameIgnoreCaseAndUserId("Links", userId).ifPresent(linksFolder -> {
-                    unassignedUrls.forEach(url -> url.setFolder(linksFolder));
-                    urlRepository.saveAll(unassignedUrls);
-                });
-            }
-            urls = urlRepository.findAllByUserIdWithFilters(userId, tagId, folderId, folderSlug, search);
-            urls.sort(Comparator.comparing(Url::getId).reversed());
+        Long userId = getUserId();
+        List<Url> unassignedUrls = urlRepository.findByUserIdAndFolderIsNull(userId);
+        if (!unassignedUrls.isEmpty()) {
+            folderRepository.findByNameIgnoreCaseAndUserId("Links", userId).ifPresent(linksFolder -> {
+                unassignedUrls.forEach(url -> url.setFolder(linksFolder));
+                urlRepository.saveAll(unassignedUrls);
+            });
         }
+        List<Url> urls = urlRepository.findAllByUserIdWithFilters(userId, tagId, folderId, folderSlug, search);
+        urls.sort(Comparator.comparing(Url::getId).reversed());
 
         var dtos = urls.stream()
                 .map(this::toDtoWithClickCountSafe)

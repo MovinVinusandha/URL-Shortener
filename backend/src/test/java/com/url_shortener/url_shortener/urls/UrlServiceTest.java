@@ -372,7 +372,8 @@ class UrlServiceTest {
         Url url1 = Url.builder().id(1L).shortUrl("h1").build();
         Url url2 = Url.builder().id(2L).shortUrl("h2").build();
 
-        when(urlRepository.findAll(any(Sort.class))).thenReturn(List.of(url1, url2));
+        when(urlRepository.findByUserIdAndFolderIsNull(1L)).thenReturn(List.of());
+        when(urlRepository.findAllByUserIdWithFilters(1L, null, null, null, null)).thenReturn(new ArrayList<>(List.of(url1, url2)));
 
         UrlDto dto1 = new UrlDto(BigInteger.ONE, "https://long1.com", "h1", BigInteger.valueOf(5L), null, null, null, true, false, null, null, null);
         UrlDto dto2 = new UrlDto(BigInteger.TWO, "https://long2.com", "h2", BigInteger.valueOf(20L), null, null, null, true, false, null, null, null);
