@@ -2281,9 +2281,11 @@ export const EventsPage: React.FC = () => {
                         return (
                           <motion.tr
                             key={ev.id}
-                            initial={isNewLiveArrival ? { opacity: 0, y: -6 } : false}
+                            layout
+                            initial={{ opacity: 0, y: isNewLiveArrival ? -6 : 6 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={isNewLiveArrival ? { duration: 0.25, ease: 'easeOut' } : { duration: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            transition={{ duration: 0.15 }}
                             onClick={() => setActiveEvent(ev)}
                             className={`group border-b border-dashed border-border last:border-b-0 hover:bg-neutral-100/70 dark:hover:bg-[#111114] cursor-pointer transition-colors ${
                               isNewLiveArrival ? 'bg-primary/5' : ''

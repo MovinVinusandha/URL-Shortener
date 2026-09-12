@@ -681,8 +681,12 @@ const AdminSettingsPage: React.FC = () => {
                 const isEditing = editingKey === item.key;
 
                 return (
-                  <div
+                  <motion.div
                     key={item.key}
+                    layout
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.15 }}
                     className="p-4 bg-background border border-border rounded-2xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3"
                   >
                     <div className="space-y-1 min-w-0 flex-1">
@@ -778,7 +782,7 @@ const AdminSettingsPage: React.FC = () => {
                         </>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
 

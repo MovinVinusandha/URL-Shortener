@@ -115,6 +115,17 @@ const AdminLinksPage: React.FC = () => {
     }
   };
 
+  // ── Debounced Search State ──
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(0);
+    }, 250);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
   // ── Fetch Links ──
   const fetchLinks = async () => {
     try {
@@ -129,7 +140,7 @@ const AdminLinksPage: React.FC = () => {
       const params: Record<string, any> = {
         page,
         size: 15,
-        search: searchTerm.trim() || undefined,
+        search: debouncedSearch.trim() || undefined,
         status: effectiveStatus,
         startDate: timeRange.start,
         endDate: timeRange.end,
@@ -157,12 +168,12 @@ const AdminLinksPage: React.FC = () => {
 
   useEffect(() => {
     fetchLinks();
-  }, [page, activeTab, dateRange, clickThreshold, domainFilter, refreshTrigger]);
+  }, [page, activeTab, dateRange, clickThreshold, domainFilter, debouncedSearch, refreshTrigger]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setDebouncedSearch(searchTerm);
     setPage(0);
-    fetchLinks();
   };
 
   // ── Copy Link ──
@@ -645,16 +656,22 @@ const AdminLinksPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                links.map((link) => {
-                  const isSelected = selectedHashes.includes(link.shortUrl);
-                  return (
-                    <tr 
-                      key={link.id} 
-                      className={`hover:bg-secondary/70 transition-colors ${
-                        isSelected ? 'bg-secondary/80' : ''
-                      }`}
-                    >
-                      {/* Selection Checkbox */}
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {links.map((link) => {
+                    const isSelected = selectedHashes.includes(link.shortUrl);
+                    return (
+                      <motion.tr 
+                        key={link.id} 
+                        layout
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.15 }}
+                        className={`hover:bg-secondary/70 transition-colors ${
+                          isSelected ? 'bg-secondary/80' : ''
+                        }`}
+                      >
+                        {/* Selection Checkbox */}
                       <td className="py-3 px-3 text-center">
                         <input
                           type="checkbox"
@@ -796,9 +813,10 @@ const AdminLinksPage: React.FC = () => {
                           </button>
                         </div>
                       </td>
-                    </tr>
+                    </motion.tr>
                   );
-                })
+                })}
+                </AnimatePresence>
               )}
             </tbody>
           </table>

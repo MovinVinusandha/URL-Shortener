@@ -19,7 +19,8 @@ import {
   ExternalLink,
   Lock,
   Layers,
-  ShieldAlert
+  ShieldAlert,
+  ArrowUpDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -66,6 +67,9 @@ const AdminAuditLogsPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
 
+  // Sorting state (ID column sorting matching Events tab)
+  const [sortDir, setSortDir] = useState<'ASC' | 'DESC'>('DESC');
+
   // Filters
   const [search, setSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('ALL');
@@ -79,18 +83,18 @@ const AdminAuditLogsPage: React.FC = () => {
   // Detail Modal
   const [activeModalEntry, setActiveModalEntry] = useState<AdminAuditLogItem | null>(null);
 
-  const fetchAuditLogs = async () => {
+  const fetchAuditLogs = async (searchVal: string, pageNum: number, dir: 'ASC' | 'DESC', act: string, tgt: string) => {
     try {
       setIsLoading(true);
       const params: Record<string, any> = {
-        page,
+        page: pageNum,
         size: 15,
-        search: search.trim() || undefined,
-        action: actionFilter !== 'ALL' ? actionFilter : undefined,
-        targetType: targetTypeFilter !== 'ALL' ? targetTypeFilter : undefined,
+        search: searchVal.trim() || undefined,
+        action: act !== 'ALL' ? act : undefined,
+        targetType: tgt !== 'ALL' ? tgt : undefined,
         actorEmail: actorEmailFilter.trim() || undefined,
         sortBy: 'id',
-        sortDir: 'DESC'
+        sortDir: dir
       };
 
       const { data } = await axiosInstance.get<PaginatedAuditLogs>('/admin/audit-logs', { params });
@@ -139,21 +143,20 @@ const AdminAuditLogsPage: React.FC = () => {
     }
   };
 
+  // Live search debounced query effect + filter trigger
   useEffect(() => {
-    fetchAuditLogs();
-  }, [page, actionFilter, targetTypeFilter, refreshTrigger]);
+    const handler = setTimeout(() => {
+      fetchAuditLogs(search, page, sortDir, actionFilter, targetTypeFilter);
+    }, 250);
+
+    return () => clearTimeout(handler);
+  }, [search, page, sortDir, actionFilter, targetTypeFilter, refreshTrigger]);
 
   useEffect(() => {
     if (isRoot) {
       verifyIntegrity();
     }
   }, [refreshTrigger]);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPage(0);
-    fetchAuditLogs();
-  };
 
   return (
     <motion.div
@@ -242,14 +245,17 @@ const AdminAuditLogsPage: React.FC = () => {
 
       {/* ── 3. Filters & Exploration Bar ────────────────────── */}
       <div className="p-4 bg-background border border-border rounded-2xl shadow-xs space-y-3">
-        <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-2.5">
+        <div className="flex flex-col md:flex-row gap-2.5">
           {/* Search Box */}
           <div className="relative flex-1">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
               placeholder="Search across target identifier, description, actor email, or hash..."
               className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
             />
@@ -303,14 +309,7 @@ const AdminAuditLogsPage: React.FC = () => {
             className="w-full md:w-auto"
             menuClassName="w-48"
           />
-
-          <button
-            type="submit"
-            className="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-secondary hover:bg-secondary/80 text-foreground border border-border transition-colors cursor-pointer"
-          >
-            Filter
-          </button>
-        </form>
+        </div>
       </div>
 
       {/* ── 4. Main Audit Table ──────────────────────────────── */}
@@ -319,7 +318,19 @@ const AdminAuditLogsPage: React.FC = () => {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-border bg-secondary/40 text-muted-foreground font-medium">
-                <th className="py-3 px-4 w-12 font-mono text-center">ID</th>
+                <th 
+                  onClick={() => {
+                    setSortDir(prev => prev === 'ASC' ? 'DESC' : 'ASC');
+                    setPage(0);
+                  }}
+                  className="group/th py-3 px-4 w-20 font-mono text-center cursor-pointer hover:text-foreground transition-colors select-none"
+                  title={sortDir === 'ASC' ? 'Sorted Ascending (Click for Descending)' : 'Sorted Descending (Click for Ascending)'}
+                >
+                  <span className="inline-flex items-center justify-center gap-1.5 w-full">
+                    <span>ID</span>
+                    <ArrowUpDown className={`w-3 h-3 text-[#0099ff] transition-all duration-200 transform ${sortDir === 'ASC' ? 'rotate-180' : 'rotate-0'}`} />
+                  </span>
+                </th>
                 <th className="py-3 px-4">Timestamp</th>
                 <th className="py-3 px-4">Action</th>
                 <th className="py-3 px-4">Actor</th>
@@ -352,73 +363,79 @@ const AdminAuditLogsPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                logs.map((log) => {
-                  const style = ACTION_COLOR_MAP[log.action] || {
-                    bg: 'bg-secondary/60',
-                    text: 'text-foreground',
-                    border: 'border-border'
-                  };
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {logs.map((log) => {
+                    const style = ACTION_COLOR_MAP[log.action] || {
+                      bg: 'bg-secondary/60',
+                      text: 'text-foreground',
+                      border: 'border-border'
+                    };
 
-                  return (
-                    <tr 
-                      key={log.id} 
-                      onClick={() => setActiveModalEntry(log)}
-                      className="hover:bg-secondary dark:hover:bg-zinc-800/60 transition-colors cursor-pointer group"
-                    >
-                      {/* ID */}
-                      <td className="py-3 px-4 font-mono text-muted-foreground text-center">
-                        #{log.id}
-                      </td>
+                    return (
+                      <motion.tr 
+                        key={log.id} 
+                        initial={{ opacity: 0, y: 3 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -3 }}
+                        transition={{ duration: 0.15, ease: 'easeOut' }}
+                        onClick={() => setActiveModalEntry(log)}
+                        className="hover:bg-secondary dark:hover:bg-zinc-800/60 transition-colors cursor-pointer group"
+                      >
+                        {/* ID */}
+                        <td className="py-3 px-4 font-mono text-muted-foreground text-center">
+                          #{log.id}
+                        </td>
 
-                      {/* Timestamp */}
-                      <td className="py-3 px-4 whitespace-nowrap text-muted-foreground font-mono">
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-3 h-3 text-muted-foreground/60" />
-                          <span>{new Date(log.createdAt).toLocaleString()}</span>
-                        </div>
-                      </td>
+                        {/* Timestamp */}
+                        <td className="py-3 px-4 whitespace-nowrap text-muted-foreground font-mono">
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="w-3 h-3 text-muted-foreground/60" />
+                            <span>{new Date(log.createdAt).toLocaleString()}</span>
+                          </div>
+                        </td>
 
-                      {/* Action Badge */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${style.bg} ${style.text} ${style.border}`}>
-                          {log.action.replace(/_/g, ' ')}
-                        </span>
-                      </td>
-
-                      {/* Actor Email & Role */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <User className="w-3 h-3 text-muted-foreground/60" />
-                          <span className="font-medium text-foreground">{log.actorEmail}</span>
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-secondary text-muted-foreground border border-border uppercase">
-                            {log.actorRole}
+                        {/* Action Badge */}
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${style.bg} ${style.text} ${style.border}`}>
+                            {log.action.replace(/_/g, ' ')}
                           </span>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Target Identifier */}
-                      <td className="py-3 px-4 font-mono font-medium text-foreground whitespace-nowrap">
-                        <span className="text-muted-foreground text-[10px] uppercase font-sans mr-1">
-                          [{log.targetType}]
-                        </span>
-                        <span>{log.targetIdentifier || '—'}</span>
-                      </td>
+                        {/* Actor Email & Role */}
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            <User className="w-3 h-3 text-muted-foreground/60" />
+                            <span className="font-medium text-foreground">{log.actorEmail}</span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-secondary text-muted-foreground border border-border uppercase">
+                              {log.actorRole}
+                            </span>
+                          </div>
+                        </td>
 
-                      {/* Details Summary */}
-                      <td className="py-3 px-4 text-muted-foreground max-w-xs truncate">
-                        {log.details || '—'}
-                      </td>
+                        {/* Target Identifier */}
+                        <td className="py-3 px-4 font-mono font-medium text-foreground whitespace-nowrap">
+                          <span className="text-muted-foreground text-[10px] uppercase font-sans mr-1">
+                            [{log.targetType}]
+                          </span>
+                          <span>{log.targetIdentifier || '—'}</span>
+                        </td>
 
-                      {/* Hash Preview */}
-                      <td className="py-3 px-4 text-right font-mono whitespace-nowrap text-muted-foreground group-hover:text-primary transition-colors">
-                        <div className="flex items-center justify-end gap-1">
-                          <Hash className="w-3 h-3 opacity-60" />
-                          <span>{log.entryHash.slice(0, 8)}...</span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                        {/* Details Summary */}
+                        <td className="py-3 px-4 text-muted-foreground max-w-xs truncate">
+                          {log.details || '—'}
+                        </td>
+
+                        {/* Hash Preview */}
+                        <td className="py-3 px-4 text-right font-mono whitespace-nowrap text-muted-foreground group-hover:text-primary transition-colors">
+                          <div className="flex items-center justify-end gap-1">
+                            <Hash className="w-3 h-3 opacity-60" />
+                            <span>{log.entryHash.slice(0, 8)}...</span>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
               )}
             </tbody>
           </table>

@@ -16,7 +16,7 @@ import type { AdminLayoutContext } from '../../layouts/AdminLayout';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import Skeleton from 'react-loading-skeleton';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 
 const AdminUsersPage: React.FC = () => {
@@ -28,9 +28,18 @@ const AdminUsersPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   const isRoot = currentUser?.role === 'ROOT' || currentUser?.role === 'ROLE_ROOT';
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(0);
+    }, 250);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
   const fetchUsers = async () => {
     try {
@@ -38,7 +47,7 @@ const AdminUsersPage: React.FC = () => {
       const params = {
         page,
         size: 15,
-        search: searchTerm.trim() || undefined
+        search: debouncedSearch.trim() || undefined
       };
       const { data } = await axiosInstance.get<PaginatedAdminUsers>('/admin/users', { params });
       setUsers(data.content || []);
@@ -54,12 +63,12 @@ const AdminUsersPage: React.FC = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [page, searchTerm, refreshTrigger]);
+  }, [page, debouncedSearch, refreshTrigger]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setDebouncedSearch(searchTerm);
     setPage(0);
-    fetchUsers();
   };
 
   const handleToggleSuspend = async (user: AdminUser) => {
@@ -157,111 +166,121 @@ const AdminUsersPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                users.map((u) => {
-                  const isSelf = u.email === currentUser?.email;
-                  const isRootUser = u.role === 'ROOT';
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {users.map((u) => {
+                    const isSelf = u.email === currentUser?.email;
+                    const isRootUser = u.role === 'ROOT';
 
-                  return (
-                    <tr key={u.id} className="hover:bg-secondary/70 transition-colors">
-                      {/* User Info */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-secondary text-foreground flex items-center justify-center font-bold uppercase text-[10px] border border-border">
-                            {u.username ? u.username.charAt(0) : 'U'}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="font-medium text-foreground truncate max-w-[160px] flex items-center gap-1.5">
-                              <span>{u.username || 'User'}</span>
-                              {isSelf && (
-                                <span className="text-[9px] bg-secondary text-muted-foreground px-1.5 py-0.2 rounded border border-border">
-                                  You
-                                </span>
-                              )}
+                    return (
+                      <motion.tr 
+                        key={u.id} 
+                        layout
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.15 }}
+                        className="hover:bg-secondary/70 transition-colors"
+                      >
+                        {/* User Info */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-full bg-secondary text-foreground flex items-center justify-center font-bold uppercase text-[10px] border border-border">
+                              {u.username ? u.username.charAt(0) : 'U'}
                             </div>
-                            <div className="text-[11px] text-muted-foreground truncate max-w-[160px]">
-                              {u.email}
+                            <div className="min-w-0">
+                              <div className="font-medium text-foreground truncate max-w-[160px] flex items-center gap-1.5">
+                                <span>{u.username || 'User'}</span>
+                                {isSelf && (
+                                  <span className="text-[9px] bg-secondary text-muted-foreground px-1.5 py-0.2 rounded border border-border">
+                                    You
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground truncate max-w-[160px]">
+                                {u.email}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Role Badge / Selector */}
-                      <td className="py-3 px-4">
-                        {isRoot && !isRootUser && !isSelf ? (
-                          <CustomSelect
-                            value={u.role}
-                            onChange={(val) => handleRoleChange(u, val as 'USER' | 'ADMIN')}
-                            options={[
-                              { value: 'USER', label: 'USER' },
-                              { value: 'ADMIN', label: 'ADMIN' },
-                            ]}
-                            className="w-24"
-                            triggerClassName="py-1 px-2 text-xs"
-                            menuClassName="min-w-[96px]"
-                          />
-                        ) : (
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                            u.role === 'ROOT' 
-                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' 
-                              : u.role === 'ADMIN'
-                              ? 'bg-primary/10 text-primary border-primary/20'
-                              : 'bg-secondary text-muted-foreground border-border'
-                          }`}>
-                            <Shield className="w-2.5 h-2.5" />
-                            {u.role}
-                          </span>
-                        )}
-                      </td>
+                        {/* Role Badge / Selector */}
+                        <td className="py-3 px-4">
+                          {isRoot && !isRootUser && !isSelf ? (
+                            <CustomSelect
+                              value={u.role}
+                              onChange={(val) => handleRoleChange(u, val as 'USER' | 'ADMIN')}
+                              options={[
+                                { value: 'USER', label: 'USER' },
+                                { value: 'ADMIN', label: 'ADMIN' },
+                              ]}
+                              className="w-24"
+                              triggerClassName="py-1 px-2 text-xs"
+                              menuClassName="min-w-[96px]"
+                            />
+                          ) : (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                              u.role === 'ROOT' 
+                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' 
+                                : u.role === 'ADMIN'
+                                ? 'bg-primary/10 text-primary border-primary/20'
+                                : 'bg-secondary text-muted-foreground border-border'
+                            }`}>
+                              <Shield className="w-2.5 h-2.5" />
+                              {u.role}
+                            </span>
+                          )}
+                        </td>
 
-                      {/* Status */}
-                      <td className="py-3 px-4">
-                        {u.isSuspended ? (
-                          <span 
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/10 text-red-500 border border-red-500/20"
-                            title={u.suspendedReason || 'Suspended'}
-                          >
-                            <UserX className="w-2.5 h-2.5" /> Suspended
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                            <UserCheck className="w-2.5 h-2.5" /> Active
-                          </span>
-                        )}
-                      </td>
+                        {/* Status */}
+                        <td className="py-3 px-4">
+                          {u.isSuspended ? (
+                            <span 
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/10 text-red-500 border border-red-500/20"
+                              title={u.suspendedReason || 'Suspended'}
+                            >
+                              <UserX className="w-2.5 h-2.5" /> Suspended
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              <UserCheck className="w-2.5 h-2.5" /> Active
+                            </span>
+                          )}
+                        </td>
 
-                      {/* Link Count */}
-                      <td className="py-3 px-4 text-center font-medium text-foreground">
-                        {u.linkCount.toLocaleString()}
-                      </td>
+                        {/* Link Count */}
+                        <td className="py-3 px-4 text-center font-medium text-foreground">
+                          {u.linkCount.toLocaleString()}
+                        </td>
 
-                      {/* Click Count */}
-                      <td className="py-3 px-4 text-center font-semibold text-foreground">
-                        {u.totalClicks.toLocaleString()}
-                      </td>
+                        {/* Click Count */}
+                        <td className="py-3 px-4 text-center font-semibold text-foreground">
+                          {u.totalClicks.toLocaleString()}
+                        </td>
 
-                      {/* Joined Date */}
-                      <td className="py-3 px-4 text-muted-foreground text-[11px]">
-                        {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
-                      </td>
+                        {/* Joined Date */}
+                        <td className="py-3 px-4 text-muted-foreground text-[11px]">
+                          {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
+                        </td>
 
-                      {/* Actions */}
-                      <td className="py-3 px-4 text-right">
-                        {!isRootUser && !isSelf && (
-                          <button
-                            onClick={() => handleToggleSuspend(u)}
-                            className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors ${
-                              u.isSuspended
-                                ? 'border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10'
-                                : 'border-red-500/30 text-red-500 hover:bg-red-500/10'
-                            }`}
-                          >
-                            {u.isSuspended ? 'Reactivate' : 'Suspend'}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
+                        {/* Actions */}
+                        <td className="py-3 px-4 text-right">
+                          {!isRootUser && !isSelf && (
+                            <button
+                              onClick={() => handleToggleSuspend(u)}
+                              className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors ${
+                                u.isSuspended
+                                  ? 'border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10'
+                                  : 'border-red-500/30 text-red-500 hover:bg-red-500/10'
+                              }`}
+                            >
+                              {u.isSuspended ? 'Reactivate' : 'Suspend'}
+                            </button>
+                          )}
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
               )}
             </tbody>
           </table>
