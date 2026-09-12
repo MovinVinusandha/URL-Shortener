@@ -211,49 +211,59 @@ const AdminSettingsPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-1.5 p-1 bg-secondary/60 rounded-xl border border-border shrink-0">
+          <div className="flex items-center gap-1.5 p-1 bg-secondary/40 border border-border rounded-xl shrink-0">
             <button
               onClick={() => setActiveTab('policies')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
                 activeTab === 'policies'
-                  ? 'bg-background text-foreground shadow-xs'
+                  ? 'bg-foreground text-background shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              Runtime Policies
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Runtime Policies</span>
             </button>
             <button
               onClick={() => setActiveTab('panic')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
                 activeTab === 'panic'
-                  ? 'bg-background text-foreground shadow-xs'
+                  ? 'bg-foreground text-background shadow-xs'
                   : currentPanicMode !== 'NORMAL'
                   ? 'text-amber-500 font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Radio className={`w-3 h-3 ${currentPanicMode !== 'NORMAL' ? 'text-red-500 animate-pulse' : ''}`} />
-              Panic Switch
+              <Radio className={`w-3.5 h-3.5 ${currentPanicMode !== 'NORMAL' ? (activeTab === 'panic' ? 'text-background' : 'text-red-500') + ' animate-pulse' : ''}`} />
+              <span>Panic Switch</span>
+              {currentPanicMode !== 'NORMAL' && (
+                <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono font-semibold ${
+                  activeTab === 'panic' ? 'bg-background text-foreground' : 'bg-red-500 text-white'
+                }`}>
+                  ACTIVE
+                </span>
+              )}
             </button>
             <button
               onClick={() => setActiveTab('vault')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
                 activeTab === 'vault'
-                  ? 'bg-background text-foreground shadow-xs'
+                  ? 'bg-foreground text-background shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              Environment Vault
+              <Database className="w-3.5 h-3.5" />
+              <span>Environment Vault</span>
             </button>
             <button
               onClick={() => setActiveTab('smtp')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
                 activeTab === 'smtp'
-                  ? 'bg-background text-foreground shadow-xs'
+                  ? 'bg-foreground text-background shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              SMTP Diagnostics
+              <Mail className="w-3.5 h-3.5" />
+              <span>SMTP Diagnostics</span>
             </button>
           </div>
         </div>
@@ -380,7 +390,7 @@ const AdminSettingsPage: React.FC = () => {
                     max="100000"
                     value={settings.max_links_per_user || '1000'}
                     onChange={(e) => setSettings({ ...settings, max_links_per_user: e.target.value })}
-                    className="w-24 px-2.5 py-1.5 text-xs bg-secondary/50 border border-border rounded-xl font-mono text-center focus:outline-hidden"
+                    className="w-24 px-3 py-1.5 text-xs bg-background border border-border rounded-lg font-mono text-center text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
                   />
                   <button
                     onClick={() =>
@@ -391,7 +401,7 @@ const AdminSettingsPage: React.FC = () => {
                       )
                     }
                     disabled={isSaving}
-                    className="p-2 rounded-xl bg-foreground text-background hover:opacity-90 transition-opacity"
+                    className="p-2 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
                     title="Save quota"
                   >
                     <Save className="w-3.5 h-3.5" />
@@ -420,7 +430,7 @@ const AdminSettingsPage: React.FC = () => {
                     max="3650"
                     value={settings.default_link_expiration_days || '0'}
                     onChange={(e) => setSettings({ ...settings, default_link_expiration_days: e.target.value })}
-                    className="w-24 px-2.5 py-1.5 text-xs bg-secondary/50 border border-border rounded-xl font-mono text-center focus:outline-hidden"
+                    className="w-24 px-3 py-1.5 text-xs bg-background border border-border rounded-lg font-mono text-center text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
                   />
                   <button
                     onClick={() =>
@@ -431,7 +441,7 @@ const AdminSettingsPage: React.FC = () => {
                       )
                     }
                     disabled={isSaving}
-                    className="p-2 rounded-xl bg-foreground text-background hover:opacity-90 transition-opacity"
+                    className="p-2 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
                     title="Save default expiration"
                   >
                     <Save className="w-3.5 h-3.5" />
@@ -459,7 +469,7 @@ const AdminSettingsPage: React.FC = () => {
                     placeholder="AIzaSy..."
                     value={settings.safe_browsing_api_key || ''}
                     onChange={(e) => setSettings({ ...settings, safe_browsing_api_key: e.target.value })}
-                    className="flex-1 sm:w-64 px-2.5 py-1.5 text-xs bg-secondary/50 border border-border rounded-xl font-mono focus:outline-hidden"
+                    className="flex-1 sm:w-64 px-3 py-1.5 text-xs bg-background border border-border rounded-lg font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
                   />
                   <button
                     onClick={() =>
@@ -470,7 +480,7 @@ const AdminSettingsPage: React.FC = () => {
                       )
                     }
                     disabled={isSaving}
-                    className="p-2 rounded-xl bg-foreground text-background hover:opacity-90 transition-opacity"
+                    className="p-2 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
                     title="Save API key"
                   >
                     <Save className="w-3.5 h-3.5" />
@@ -501,7 +511,7 @@ const AdminSettingsPage: React.FC = () => {
                 className={`p-4 rounded-2xl border cursor-pointer transition-all ${
                   currentPanicMode === 'NORMAL'
                     ? 'border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500/20'
-                    : 'border-border hover:border-foreground/30 bg-secondary/30'
+                    : 'border-border hover:border-foreground/30 bg-card'
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
@@ -519,7 +529,7 @@ const AdminSettingsPage: React.FC = () => {
                 className={`p-4 rounded-2xl border cursor-pointer transition-all ${
                   currentPanicMode === 'READ_ONLY'
                     ? 'border-amber-500 bg-amber-500/5 ring-1 ring-amber-500/20'
-                    : 'border-border hover:border-foreground/30 bg-secondary/30'
+                    : 'border-border hover:border-foreground/30 bg-card'
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
@@ -537,7 +547,7 @@ const AdminSettingsPage: React.FC = () => {
                 className={`p-4 rounded-2xl border cursor-pointer transition-all ${
                   currentPanicMode === 'MAINTENANCE'
                     ? 'border-red-500 bg-red-500/5 ring-1 ring-red-500/20'
-                    : 'border-border hover:border-foreground/30 bg-secondary/30'
+                    : 'border-border hover:border-foreground/30 bg-card'
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
@@ -579,12 +589,12 @@ const AdminSettingsPage: React.FC = () => {
                 placeholder="Search variables..."
                 value={vaultSearch}
                 onChange={e => setVaultSearch(e.target.value)}
-                className="px-2.5 py-1 text-xs bg-secondary/50 border border-border rounded-xl w-48 focus:outline-hidden"
+                className="px-3 py-1.5 text-xs bg-background border border-border rounded-lg w-48 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
               />
               <button
                 onClick={fetchVault}
                 disabled={isVaultLoading}
-                className="p-1.5 rounded-xl border border-border bg-background hover:bg-secondary transition-colors"
+                className="p-1.5 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-foreground transition-colors cursor-pointer"
                 title="Refresh Vault"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isVaultLoading ? 'animate-spin' : ''}`} />
@@ -640,20 +650,20 @@ const AdminSettingsPage: React.FC = () => {
                             type={item.isSecret ? 'password' : 'text'}
                             value={editingValue}
                             onChange={e => setEditingValue(e.target.value)}
-                            className="px-2.5 py-1 text-xs bg-secondary border border-border rounded-xl font-mono w-48 sm:w-64 focus:outline-hidden"
+                            className="px-3 py-1.5 text-xs bg-background border border-border rounded-lg font-mono text-foreground w-48 sm:w-64 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
                             autoFocus
                           />
                           <button
                             onClick={() => handleUpdateVaultVariable(item.key, editingValue)}
                             disabled={isSaving}
-                            className="p-1.5 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity"
+                            className="p-1.5 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
                             title="Save change"
                           >
                             <Check className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => setEditingKey(null)}
-                            className="p-1.5 rounded-lg border border-border bg-secondary text-foreground hover:bg-secondary/80"
+                            className="p-1.5 rounded-lg border border-border bg-secondary text-foreground hover:bg-secondary/80 cursor-pointer"
                             title="Cancel"
                           >
                             ✕
@@ -661,14 +671,14 @@ const AdminSettingsPage: React.FC = () => {
                         </div>
                       ) : (
                         <>
-                          <div className="px-2.5 py-1 rounded-xl bg-secondary/50 border border-border font-mono text-xs text-foreground max-w-xs truncate">
+                          <div className="px-2.5 py-1 rounded-lg bg-secondary/50 border border-border font-mono text-xs text-foreground max-w-xs truncate">
                             {displayVal || <span className="text-muted-foreground italic">(empty)</span>}
                           </div>
 
                           {item.isSecret && (
                             <button
                               onClick={() => toggleReveal(item.key)}
-                              className="p-1.5 rounded-lg border border-border bg-background hover:bg-secondary transition-colors"
+                              className="p-1.5 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-foreground transition-colors cursor-pointer"
                               title={revealedSecrets[item.key] ? 'Mask Secret' : 'Reveal Secret'}
                             >
                               {revealedSecrets[item.key] ? (
@@ -681,7 +691,7 @@ const AdminSettingsPage: React.FC = () => {
 
                           <button
                             onClick={() => copyToClipboard(item.key, item.value)}
-                            className="p-1.5 rounded-lg border border-border bg-background hover:bg-secondary transition-colors"
+                            className="p-1.5 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-foreground transition-colors cursor-pointer"
                             title="Copy value"
                           >
                             {copiedKey === item.key ? (
@@ -696,7 +706,7 @@ const AdminSettingsPage: React.FC = () => {
                               setEditingKey(item.key);
                               setEditingValue(item.value);
                             }}
-                            className="px-2.5 py-1 text-xs rounded-lg border border-border bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
+                            className="px-2.5 py-1 text-xs rounded-lg border border-border bg-secondary text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
                           >
                             Edit
                           </button>
@@ -736,12 +746,12 @@ const AdminSettingsPage: React.FC = () => {
                 value={testEmail}
                 onChange={e => setTestEmail(e.target.value)}
                 required
-                className="w-full sm:flex-1 px-3 py-2 text-xs bg-secondary/50 border border-border rounded-xl focus:outline-hidden"
+                className="w-full sm:flex-1 px-3 py-2 text-xs bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
               />
               <button
                 type="submit"
                 disabled={isTestingSmtp}
-                className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-xl bg-foreground text-background hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 shrink-0"
+                className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
               >
                 {isTestingSmtp ? (
                   <>

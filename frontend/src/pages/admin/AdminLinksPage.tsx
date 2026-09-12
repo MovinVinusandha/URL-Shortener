@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Flame,
   Clock,
   Filter,
@@ -31,6 +32,7 @@ import type { AdminLayoutContext } from '../../layouts/AdminLayout';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Skeleton from 'react-loading-skeleton';
+import { DateRangePicker, type DateRangeValue } from '../../components/DateRangePicker';
 
 type TriageTab = 'needs_review' | 'spikes' | 'all';
 type TimePreset = '1h' | '24h' | '7d' | '30d' | 'all' | 'custom';
@@ -41,10 +43,7 @@ const AdminLinksPage: React.FC = () => {
 
   // ── Navigation & Query State ──
   const [activeTab, setActiveTab] = useState<TriageTab>('needs_review');
-  const [timePreset, setTimePreset] = useState<TimePreset>('all');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [customDateOpen, setCustomDateOpen] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRangeValue>({ type: 'preset', value: 'all' });
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
   const [domainFilter, setDomainFilter] = useState('');
   const [clickThreshold, setClickThreshold] = useState<number | null>(null);
@@ -77,28 +76,28 @@ const AdminLinksPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
 
-  // ── Compute Time Range based on Preset ──
-  const computeTimeRange = (preset: TimePreset): { start?: string; end?: string } => {
-    if (preset === 'custom') {
+  // ── Compute Time Range based on DateRangeValue ──
+  const computeTimeRange = (val: DateRangeValue): { start?: string; end?: string } => {
+    if (val.type === 'custom') {
       return {
-        start: startDate ? new Date(startDate).toISOString() : undefined,
-        end: endDate ? new Date(endDate).toISOString() : undefined
+        start: val.start ? val.start.toISOString() : undefined,
+        end: val.end ? val.end.toISOString() : undefined
       };
     }
     const now = new Date();
-    if (preset === '1h') {
+    if (val.value === '1h') {
       const past = new Date(now.getTime() - 60 * 60 * 1000);
       return { start: past.toISOString() };
     }
-    if (preset === '24h') {
+    if (val.value === '24h') {
       const past = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       return { start: past.toISOString() };
     }
-    if (preset === '7d') {
+    if (val.value === '7d') {
       const past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       return { start: past.toISOString() };
     }
-    if (preset === '30d') {
+    if (val.value === '30d') {
       const past = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       return { start: past.toISOString() };
     }
@@ -119,7 +118,7 @@ const AdminLinksPage: React.FC = () => {
   const fetchLinks = async () => {
     try {
       setIsLoading(true);
-      const timeRange = computeTimeRange(timePreset);
+      const timeRange = computeTimeRange(dateRange);
 
       let effectiveStatus: string = activeTab;
       if (activeTab === 'all') {
@@ -157,7 +156,7 @@ const AdminLinksPage: React.FC = () => {
 
   useEffect(() => {
     fetchLinks();
-  }, [page, activeTab, timePreset, startDate, endDate, clickThreshold, domainFilter, refreshTrigger]);
+  }, [page, activeTab, dateRange, clickThreshold, domainFilter, refreshTrigger]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -336,11 +335,11 @@ const AdminLinksPage: React.FC = () => {
       {/* ── 1. Triage KPI Summary Cards ─────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <button
-          onClick={() => { setActiveTab('needs_review'); setTimePreset('all'); setPage(0); }}
-          className={`p-3.5 rounded-2xl border text-left transition-all ${
+          onClick={() => { setActiveTab('needs_review'); setDateRange({ type: 'preset', value: 'all' }); setPage(0); }}
+          className={`p-3.5 rounded-2xl border border-border text-left transition-all cursor-pointer ${
             activeTab === 'needs_review'
-              ? 'bg-secondary/70 border-foreground/30 shadow-xs'
-              : 'bg-background border-border hover:bg-secondary/40'
+              ? 'bg-secondary'
+              : 'bg-card hover:bg-secondary/80'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -354,11 +353,11 @@ const AdminLinksPage: React.FC = () => {
         </button>
 
         <button
-          onClick={() => { setActiveTab('spikes'); setTimePreset('all'); setPage(0); }}
-          className={`p-3.5 rounded-2xl border text-left transition-all ${
+          onClick={() => { setActiveTab('spikes'); setDateRange({ type: 'preset', value: 'all' }); setPage(0); }}
+          className={`p-3.5 rounded-2xl border border-border text-left transition-all cursor-pointer ${
             activeTab === 'spikes'
-              ? 'bg-secondary/70 border-foreground/30 shadow-xs'
-              : 'bg-background border-border hover:bg-secondary/40'
+              ? 'bg-secondary'
+              : 'bg-card hover:bg-secondary/80'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -372,11 +371,11 @@ const AdminLinksPage: React.FC = () => {
         </button>
 
         <button
-          onClick={() => { setActiveTab('all'); setTimePreset('24h'); setPage(0); }}
-          className={`p-3.5 rounded-2xl border text-left transition-all ${
-            timePreset === '24h' && activeTab === 'all'
-              ? 'bg-secondary/70 border-foreground/30 shadow-xs'
-              : 'bg-background border-border hover:bg-secondary/40'
+          onClick={() => { setActiveTab('all'); setDateRange({ type: 'preset', value: '24h' }); setPage(0); }}
+          className={`p-3.5 rounded-2xl border border-border text-left transition-all cursor-pointer ${
+            dateRange.type === 'preset' && dateRange.value === '24h' && activeTab === 'all'
+              ? 'bg-secondary'
+              : 'bg-card hover:bg-secondary/80'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -390,11 +389,11 @@ const AdminLinksPage: React.FC = () => {
         </button>
 
         <button
-          onClick={() => { setActiveTab('all'); setTimePreset('all'); setPage(0); }}
-          className={`p-3.5 rounded-2xl border text-left transition-all ${
-            activeTab === 'all' && timePreset === 'all'
-              ? 'bg-secondary/70 border-foreground/30 shadow-xs'
-              : 'bg-background border-border hover:bg-secondary/40'
+          onClick={() => { setActiveTab('all'); setDateRange({ type: 'preset', value: 'all' }); setPage(0); }}
+          className={`p-3.5 rounded-2xl border border-border text-left transition-all cursor-pointer ${
+            activeTab === 'all' && dateRange.type === 'preset' && dateRange.value === 'all'
+              ? 'bg-secondary'
+              : 'bg-card hover:bg-secondary/80'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -450,82 +449,26 @@ const AdminLinksPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Time Slicing Preset Chips */}
-          <div className="flex flex-wrap items-center gap-1 text-xs">
-            <span className="text-[11px] text-muted-foreground mr-1 hidden sm:inline">Time Slice:</span>
-            {(['1h', '24h', '7d', '30d', 'all'] as TimePreset[]).map(preset => (
-              <button
-                key={preset}
-                onClick={() => { setTimePreset(preset); setCustomDateOpen(false); setPage(0); }}
-                className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors ${
-                  timePreset === preset && !customDateOpen
-                    ? 'bg-secondary text-foreground border-border'
-                    : 'text-muted-foreground border-transparent hover:text-foreground hover:bg-secondary/30'
-                }`}
-              >
-                {preset === '1h' ? 'Last 1h' :
-                 preset === '24h' ? 'Last 24h' :
-                 preset === '7d' ? 'Last 7d' :
-                 preset === '30d' ? 'Last 30d' : 'All Time'}
-              </button>
-            ))}
-
-            <button
-              onClick={() => setCustomDateOpen(!customDateOpen)}
-              className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors flex items-center gap-1 ${
-                customDateOpen || timePreset === 'custom'
-                  ? 'bg-secondary text-foreground border-border'
-                  : 'text-muted-foreground border-transparent hover:text-foreground hover:bg-secondary/30'
-              }`}
-            >
-              <Calendar className="w-3 h-3" />
-              <span>Custom Range</span>
-            </button>
+          {/* Date Range Picker with Calendar */}
+          <div className="flex items-center">
+            <DateRangePicker 
+              value={dateRange} 
+              onChange={(val) => { setDateRange(val); setPage(0); }}
+              align="right"
+            />
           </div>
         </div>
-
-        {/* Custom Date Range Popover */}
-        {customDateOpen && (
-          <div className="p-3 bg-secondary/30 border border-border rounded-xl flex flex-wrap items-center gap-3 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-[11px]">From:</span>
-              <input
-                type="datetime-local"
-                value={startDate}
-                onChange={e => { setStartDate(e.target.value); setTimePreset('custom'); setPage(0); }}
-                className="px-2 py-1 text-xs bg-background border border-border rounded-lg text-foreground font-mono"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-[11px]">To:</span>
-              <input
-                type="datetime-local"
-                value={endDate}
-                onChange={e => { setEndDate(e.target.value); setTimePreset('custom'); setPage(0); }}
-                className="px-2 py-1 text-xs bg-background border border-border rounded-lg text-foreground font-mono"
-              />
-            </div>
-            {(startDate || endDate) && (
-              <button
-                onClick={() => { setStartDate(''); setEndDate(''); setTimePreset('all'); setCustomDateOpen(false); }}
-                className="text-[11px] text-muted-foreground hover:text-foreground underline ml-auto"
-              >
-                Clear Custom Range
-              </button>
-            )}
-          </div>
-        )}
 
         {/* Smart Search and Exploration Controls */}
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 pt-1">
           <form onSubmit={handleSearchSubmit} className="sm:col-span-6 relative">
-            <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search by hash, long URL, domain, user email…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-secondary/50 border border-border rounded-xl focus:outline-hidden focus:ring-1 focus:ring-primary text-foreground font-mono placeholder:font-sans"
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-foreground font-mono placeholder:font-sans transition-colors"
             />
           </form>
 
@@ -535,18 +478,18 @@ const AdminLinksPage: React.FC = () => {
               placeholder="Filter domain (e.g. *.xyz)"
               value={domainFilter}
               onChange={(e) => { setDomainFilter(e.target.value); setPage(0); }}
-              className="w-full px-3 py-1.5 text-xs bg-secondary/50 border border-border rounded-xl focus:outline-hidden focus:ring-1 focus:ring-primary text-foreground font-mono"
+              className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-foreground font-mono transition-colors"
             />
           </div>
 
-          <div className="sm:col-span-3">
+          <div className="sm:col-span-3 relative">
             <select
               value={clickThreshold === null ? '' : clickThreshold}
               onChange={(e) => {
                 setClickThreshold(e.target.value === '' ? null : Number(e.target.value));
                 setPage(0);
               }}
-              className="w-full px-3 py-1.5 text-xs bg-secondary/50 border border-border rounded-xl focus:outline-hidden focus:ring-1 focus:ring-primary text-foreground"
+              className="w-full appearance-none pl-3 pr-8 py-1.5 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-foreground transition-colors cursor-pointer"
             >
               <option value="">Any Traffic Volume</option>
               <option value="100">&gt; 100 Clicks</option>
@@ -554,6 +497,7 @@ const AdminLinksPage: React.FC = () => {
               <option value="5000">&gt; 5,000 Clicks (Viral)</option>
               <option value="0">0 Clicks (Dead / Stale)</option>
             </select>
+            <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none opacity-60" />
           </div>
         </div>
       </div>
@@ -653,8 +597,8 @@ const AdminLinksPage: React.FC = () => {
                   return (
                     <tr 
                       key={link.id} 
-                      className={`hover:bg-secondary/30 transition-colors ${
-                        isSelected ? 'bg-secondary/40' : ''
+                      className={`hover:bg-secondary/70 transition-colors ${
+                        isSelected ? 'bg-secondary/80' : ''
                       }`}
                     >
                       {/* Selection Checkbox */}
@@ -866,7 +810,7 @@ const AdminLinksPage: React.FC = () => {
                   value={quarantineReason}
                   onChange={(e) => setQuarantineReason(e.target.value)}
                   placeholder="e.g. Phishing campaign, malware dropper, high-velocity bot spam"
-                  className="w-full px-3 py-2 text-xs bg-secondary/50 border border-border rounded-xl focus:outline-hidden focus:ring-1 focus:ring-primary text-foreground"
+                  className="w-full px-3 py-2 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
                 />
               </div>
 
@@ -922,7 +866,7 @@ const AdminLinksPage: React.FC = () => {
                   value={suspendReason}
                   onChange={(e) => setSuspendReason(e.target.value)}
                   placeholder="e.g. Terms violation, malicious campaign creator"
-                  className="w-full px-3 py-2 text-xs bg-secondary/50 border border-border rounded-xl focus:outline-hidden focus:ring-1 focus:ring-primary text-foreground"
+                  className="w-full px-3 py-2 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
                 />
               </div>
 
@@ -975,7 +919,7 @@ const AdminLinksPage: React.FC = () => {
                     value={domainToBlock}
                     onChange={(e) => setDomainToBlock(e.target.value)}
                     placeholder="e.g. badsite.com or *.malware.xyz"
-                    className="w-full px-3 py-2 text-xs bg-secondary/50 border border-border rounded-xl focus:outline-hidden focus:ring-1 focus:ring-primary text-foreground font-mono mt-1"
+                    className="w-full px-3 py-2 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 font-mono mt-1 transition-colors"
                   />
                 </div>
 
@@ -986,7 +930,7 @@ const AdminLinksPage: React.FC = () => {
                     value={blockDomainReason}
                     onChange={(e) => setBlockDomainReason(e.target.value)}
                     placeholder="e.g. Known malicious origin"
-                    className="w-full px-3 py-2 text-xs bg-secondary/50 border border-border rounded-xl focus:outline-hidden focus:ring-1 focus:ring-primary text-foreground mt-1"
+                    className="w-full px-3 py-2 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 mt-1 transition-colors"
                   />
                 </div>
               </div>

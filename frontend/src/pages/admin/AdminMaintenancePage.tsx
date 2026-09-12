@@ -18,7 +18,8 @@ import {
   Search,
   Sparkles,
   Clock,
-  ArrowRight
+  ArrowRight,
+  ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -201,8 +202,8 @@ const AdminMaintenancePage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-5">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
-              <Wrench className="w-5 h-5" />
+            <div className="p-2 rounded-xl bg-secondary text-foreground border border-border">
+              <Wrench className="w-5 h-5 text-muted-foreground" />
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-foreground">
@@ -218,9 +219,9 @@ const AdminMaintenancePage: React.FC = () => {
         <button
           onClick={fetchOverview}
           disabled={isLoading}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-accent text-xs font-medium transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-secondary text-xs font-medium text-foreground transition-colors cursor-pointer"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-primary' : 'text-muted-foreground'}`} />
           Refresh Metrics
         </button>
       </div>
@@ -235,11 +236,11 @@ const AdminMaintenancePage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Redis Memory */}
-          <div className="p-4 rounded-xl border border-border bg-card/60 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+          <div className="p-4 rounded-xl border border-border bg-card shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">Redis Memory</span>
-              <span className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                <Activity className="w-3 h-3" /> v{overview?.redisVersion || '7.x'}
+              <span className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-secondary text-muted-foreground border border-border">
+                <Activity className="w-3 h-3 text-emerald-500" /> v{overview?.redisVersion || '7.x'}
               </span>
             </div>
             <div className="mt-2">
@@ -253,10 +254,10 @@ const AdminMaintenancePage: React.FC = () => {
           </div>
 
           {/* Cached URLs */}
-          <div className="p-4 rounded-xl border border-border bg-card/60 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+          <div className="p-4 rounded-xl border border-border bg-card shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">URL Cache Keys</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-secondary text-muted-foreground border border-border">
                 urls::*
               </span>
             </div>
@@ -271,10 +272,10 @@ const AdminMaintenancePage: React.FC = () => {
           </div>
 
           {/* Cache Hit Ratio */}
-          <div className="p-4 rounded-xl border border-border bg-card/60 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+          <div className="p-4 rounded-xl border border-border bg-card shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">Cache Hit Ratio</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-secondary text-muted-foreground border border-border">
                 Keyspace
               </span>
             </div>
@@ -289,10 +290,10 @@ const AdminMaintenancePage: React.FC = () => {
           </div>
 
           {/* Total DB Size */}
-          <div className="p-4 rounded-xl border border-border bg-card/60 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+          <div className="p-4 rounded-xl border border-border bg-card shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">Database Storage</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-secondary text-muted-foreground border border-border">
                 MySQL 8.0
               </span>
             </div>
@@ -309,12 +310,12 @@ const AdminMaintenancePage: React.FC = () => {
       )}
 
       {/* ── Section Navigation Tabs ─────────────────────────────────── */}
-      <div className="flex items-center gap-2 border-b border-border">
+      <div className="flex items-center gap-1.5 p-1 bg-secondary/40 border border-border rounded-xl w-fit">
         {[
-          { id: 'CACHE', label: 'Cache Sweeper & Warm-Up', icon: Zap },
+          { id: 'CACHE', label: 'Cache Sweeper', icon: Zap },
           { id: 'LINKS', label: 'Dormant Link Garbage Collector', icon: Trash2 },
-          { id: 'CLICKS', label: 'Click Events Data Retention', icon: Clock },
-          { id: 'STORAGE', label: 'Database Storage Breakdown', icon: Database },
+          { id: 'CLICKS', label: 'Click Retention', icon: Clock },
+          { id: 'STORAGE', label: 'Database Storage', icon: Database },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeSection === tab.id;
@@ -322,10 +323,10 @@ const AdminMaintenancePage: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveSection(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-medium border-b-2 transition-all ${
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer ${
                 isActive
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'bg-foreground text-background shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -337,40 +338,43 @@ const AdminMaintenancePage: React.FC = () => {
 
       {/* ── Tab Content ─────────────────────────────────────────────── */}
       {activeSection === 'CACHE' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Cache Pre-Warm */}
-          <div className="p-5 rounded-xl border border-border bg-card shadow-sm space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                <Flame className="w-4 h-4" />
+          <div className="p-5 rounded-2xl border border-border bg-card shadow-xs space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-secondary text-foreground border border-border">
+                <Flame className="w-4 h-4 text-primary" />
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Cache Warm-Up Engine</h3>
-                <p className="text-xs text-muted-foreground">Pre-populate Redis with top-performing links to prevent initial cache misses</p>
+                <p className="text-xs text-muted-foreground">Pre-populate Redis with top-performing links to prevent cold cache latency</p>
               </div>
             </div>
 
-            <div className="p-3 rounded-lg bg-accent/30 border border-border/50 text-xs text-muted-foreground">
-              Queries the highest accessed active URLs from the database and inserts them directly into Redis with standard TTL.
+            <div className="p-3 rounded-xl bg-secondary/30 border border-border text-xs text-muted-foreground leading-relaxed">
+              Queries the highest accessed active URLs from MySQL and inserts them directly into Redis with standard TTL.
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 pt-1">
               <label className="text-xs font-medium text-foreground whitespace-nowrap">Warm Top URLs:</label>
-              <select
-                value={warmUpCount}
-                onChange={e => setWarmUpCount(Number(e.target.value))}
-                className="px-3 py-1.5 rounded-lg border border-border bg-background text-xs font-mono"
-              >
-                <option value={20}>Top 20 URLs</option>
-                <option value={50}>Top 50 URLs</option>
-                <option value={100}>Top 100 URLs</option>
-                <option value={250}>Top 250 URLs</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={warmUpCount}
+                  onChange={e => setWarmUpCount(Number(e.target.value))}
+                  className="appearance-none pl-3 pr-8 py-1.5 rounded-lg border border-border bg-background text-xs font-mono text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors cursor-pointer"
+                >
+                  <option value={20}>Top 20 URLs</option>
+                  <option value={50}>Top 50 URLs</option>
+                  <option value={100}>Top 100 URLs</option>
+                  <option value={250}>Top 250 URLs</option>
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none opacity-60" />
+              </div>
 
               <button
                 onClick={handleWarmUp}
                 disabled={isWarmingUp}
-                className="ml-auto inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="ml-auto inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Flame className={`w-3.5 h-3.5 ${isWarmingUp ? 'animate-bounce' : ''}`} />
                 {isWarmingUp ? 'Warming...' : 'Execute Warm-Up'}
@@ -379,29 +383,33 @@ const AdminMaintenancePage: React.FC = () => {
           </div>
 
           {/* Selective Key Eviction */}
-          <div className="p-5 rounded-xl border border-border bg-card shadow-sm space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                <Search className="w-4 h-4" />
+          <div className="p-5 rounded-2xl border border-border bg-card shadow-xs space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-secondary text-foreground border border-border">
+                <Search className="w-4 h-4 text-muted-foreground" />
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Single Key Eviction</h3>
-                <p className="text-xs text-muted-foreground">Targeted invalidation for a specific short hash or cache key</p>
+                <p className="text-xs text-muted-foreground">Targeted invalidation for a specific short hash or Redis cache key</p>
               </div>
             </div>
 
-            <form onSubmit={handleEvictKey} className="flex gap-2">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Remove cached metadata immediately if a target redirect was modified or requires immediate cache refresh.
+            </p>
+
+            <form onSubmit={handleEvictKey} className="flex gap-2 pt-1">
               <input
                 type="text"
                 placeholder="e.g. abcd12 or urls::abcd12"
                 value={evictKeyInput}
                 onChange={e => setEvictKeyInput(e.target.value)}
-                className="flex-1 px-3 py-1.5 rounded-lg border border-border bg-background text-xs font-mono placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 px-3 py-1.5 rounded-lg border border-border bg-background text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
               />
               <button
                 type="submit"
                 disabled={isEvictingKey || !evictKeyInput.trim()}
-                className="px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-accent text-xs font-medium transition-colors disabled:opacity-50"
+                className="px-3.5 py-1.5 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-xs font-medium text-foreground transition-colors cursor-pointer disabled:opacity-50"
               >
                 {isEvictingKey ? 'Evicting...' : 'Evict Key'}
               </button>
@@ -409,10 +417,10 @@ const AdminMaintenancePage: React.FC = () => {
           </div>
 
           {/* URL Bulk Flush */}
-          <div className="p-5 rounded-xl border border-border bg-card shadow-sm space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                <RefreshCw className="w-4 h-4" />
+          <div className="p-5 rounded-2xl border border-border bg-card shadow-xs space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-secondary text-foreground border border-border">
+                <RefreshCw className="w-4 h-4 text-muted-foreground" />
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Flush URL Cache (`urls::*`)</h3>
@@ -420,14 +428,14 @@ const AdminMaintenancePage: React.FC = () => {
               </div>
             </div>
 
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               Useful when updating routing domain configurations or clearing stale redirects en masse.
             </p>
 
             <button
               onClick={handleFlushUrls}
               disabled={isFlushingUrls}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 text-xs font-medium transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-foreground text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isFlushingUrls ? 'animate-spin' : ''}`} />
               Flush All URL Caches
@@ -435,18 +443,16 @@ const AdminMaintenancePage: React.FC = () => {
           </div>
 
           {/* Full Redis Flush (ROOT Only) */}
-          <div className={`p-5 rounded-xl border bg-card shadow-sm space-y-4 ${
-            isRoot ? 'border-red-500/30' : 'border-border opacity-70'
-          }`}>
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20">
-                <AlertTriangle className="w-4 h-4" />
+          <div className="p-5 rounded-2xl border border-border bg-card shadow-xs space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-secondary text-foreground border border-border">
+                <AlertTriangle className="w-4 h-4 text-red-500" />
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                   Purge Entire Redis Store (FLUSHDB)
                   {!isRoot && (
-                    <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500">
+                    <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-secondary text-muted-foreground border border-border">
                       Root Required
                     </span>
                   )}
@@ -455,14 +461,14 @@ const AdminMaintenancePage: React.FC = () => {
               </div>
             </div>
 
-            <p className="text-xs text-red-500/80">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               Warning: All cached tokens, link lookups, and active connection state will be dropped immediately.
             </p>
 
             <button
               onClick={handleFlushAll}
               disabled={!isRoot || isFlushingAll}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Trash2 className="w-3.5 h-3.5" />
               {isFlushingAll ? 'Purging...' : 'Flush Entire Redis DB'}
@@ -473,10 +479,10 @@ const AdminMaintenancePage: React.FC = () => {
 
       {activeSection === 'LINKS' && (
         <div className="space-y-6">
-          <div className="p-5 rounded-xl border border-border bg-card shadow-sm space-y-5">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                <Trash2 className="w-4 h-4" />
+          <div className="p-5 rounded-2xl border border-border bg-card shadow-xs space-y-5">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-secondary text-foreground border border-border">
+                <Trash2 className="w-4 h-4 text-muted-foreground" />
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Dormant & Expired Link Garbage Collector</h3>
@@ -488,31 +494,37 @@ const AdminMaintenancePage: React.FC = () => {
               {/* Cleanup Type Selection */}
               <div>
                 <label className="text-xs font-medium text-foreground block mb-1.5">Target Link Category</label>
-                <select
-                  value={cleanupType}
-                  onChange={e => setCleanupType(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-xs"
-                >
-                  <option value="DORMANT">Dormant (0 Clicks & Inactive)</option>
-                  <option value="EXPIRED">Expired (expiresAt &lt; Now)</option>
-                  <option value="INACTIVE">Deactivated Links</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={cleanupType}
+                    onChange={e => setCleanupType(e.target.value as any)}
+                    className="w-full pl-3 pr-8 py-2 rounded-lg border border-border bg-background text-xs text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 appearance-none cursor-pointer transition-colors"
+                  >
+                    <option value="DORMANT">Dormant (0 Clicks & Inactive)</option>
+                    <option value="EXPIRED">Expired (expiresAt &lt; Now)</option>
+                    <option value="INACTIVE">Deactivated Links</option>
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
 
               {/* Days Inactive */}
               <div>
                 <label className="text-xs font-medium text-foreground block mb-1.5">Inactivity Age Threshold</label>
-                <select
-                  value={daysThreshold}
-                  onChange={e => setDaysThreshold(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-xs"
-                >
-                  <option value={7}>Older than 7 days</option>
-                  <option value={30}>Older than 30 days</option>
-                  <option value={90}>Older than 90 days</option>
-                  <option value={180}>Older than 180 days</option>
-                  <option value={365}>Older than 365 days (1 Year)</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={daysThreshold}
+                    onChange={e => setDaysThreshold(Number(e.target.value))}
+                    className="w-full pl-3 pr-8 py-2 rounded-lg border border-border bg-background text-xs text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 appearance-none cursor-pointer transition-colors"
+                  >
+                    <option value={7}>Older than 7 days</option>
+                    <option value={30}>Older than 30 days</option>
+                    <option value={90}>Older than 90 days</option>
+                    <option value={180}>Older than 180 days</option>
+                    <option value={365}>Older than 365 days (1 Year)</option>
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
 
               {/* Action Mode */}
@@ -548,7 +560,7 @@ const AdminMaintenancePage: React.FC = () => {
               <button
                 onClick={handlePreviewLinkCleanup}
                 disabled={isLinkActionLoading}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border bg-card hover:bg-accent text-xs font-medium transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-foreground text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Search className="w-3.5 h-3.5" />
                 Dry-Run Preview
@@ -557,10 +569,10 @@ const AdminMaintenancePage: React.FC = () => {
               <button
                 onClick={handleExecuteLinkCleanup}
                 disabled={isLinkActionLoading}
-                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-colors ${
+                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 ${
                   hardDelete
                     ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'bg-amber-600 text-white hover:bg-amber-700'
+                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
                 }`}
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -574,16 +586,16 @@ const AdminMaintenancePage: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-4 rounded-xl border border-border bg-card/70 space-y-3"
+              className="p-4 rounded-2xl border border-border bg-card shadow-xs space-y-3"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {linkCleanupResult.dryRun ? (
-                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-secondary text-foreground border border-border">
                       Dry-Run Preview
                     </span>
                   ) : (
-                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                       Executed
                     </span>
                   )}
@@ -603,7 +615,7 @@ const AdminMaintenancePage: React.FC = () => {
                   <div className="text-[11px] text-muted-foreground mb-1">Sample Matched Hashes:</div>
                   <div className="flex flex-wrap gap-1.5">
                     {linkCleanupResult.sampleAffectedUrls.map(hash => (
-                      <span key={hash} className="text-xs font-mono px-2 py-0.5 rounded bg-background border border-border">
+                      <span key={hash} className="text-xs font-mono px-2 py-0.5 rounded bg-secondary border border-border text-foreground">
                         /{hash}
                       </span>
                     ))}
@@ -617,10 +629,10 @@ const AdminMaintenancePage: React.FC = () => {
 
       {activeSection === 'CLICKS' && (
         <div className="space-y-6">
-          <div className="p-5 rounded-xl border border-border bg-card shadow-sm space-y-5">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                <Clock className="w-4 h-4" />
+          <div className="p-5 rounded-2xl border border-border bg-card shadow-xs space-y-5">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-secondary text-foreground border border-border">
+                <Clock className="w-4 h-4 text-muted-foreground" />
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-foreground">High-Volume Click Events Pruning</h3>
@@ -628,7 +640,7 @@ const AdminMaintenancePage: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-3.5 rounded-lg bg-accent/40 border border-border/60 text-xs text-muted-foreground space-y-1.5">
+            <div className="p-3.5 rounded-xl bg-secondary/50 border border-border text-xs text-muted-foreground space-y-1.5">
               <div className="flex items-center gap-1.5 font-medium text-foreground">
                 <Info className="w-4 h-4 text-primary shrink-0" />
                 Zero Analytics Loss for Summary Counters
@@ -638,27 +650,30 @@ const AdminMaintenancePage: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-4 pt-2">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 pt-2">
+              <div className="w-full sm:w-auto">
                 <label className="text-xs font-medium text-foreground block mb-1.5">Pruning Age Threshold</label>
-                <select
-                  value={clickDaysOlderThan}
-                  onChange={e => setClickDaysOlderThan(Number(e.target.value))}
-                  className="px-3 py-2 rounded-lg border border-border bg-background text-xs font-mono"
-                >
-                  <option value={30}>Older than 30 days</option>
-                  <option value={60}>Older than 60 days</option>
-                  <option value={90}>Older than 90 days (Recommended)</option>
-                  <option value={180}>Older than 180 days</option>
-                  <option value={365}>Older than 365 days (1 Year)</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={clickDaysOlderThan}
+                    onChange={e => setClickDaysOlderThan(Number(e.target.value))}
+                    className="w-full sm:w-64 pl-3 pr-8 py-2 rounded-lg border border-border bg-background text-xs font-mono text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 appearance-none cursor-pointer transition-colors"
+                  >
+                    <option value={30}>Older than 30 days</option>
+                    <option value={60}>Older than 60 days</option>
+                    <option value={90}>Older than 90 days (Recommended)</option>
+                    <option value={180}>Older than 180 days</option>
+                    <option value={365}>Older than 365 days (1 Year)</option>
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
 
-              <div className="flex items-center gap-3 ml-auto mt-5">
+              <div className="flex items-center gap-3 sm:ml-auto sm:mt-5">
                 <button
                   onClick={handlePreviewClickPruning}
                   disabled={isClickActionLoading}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border bg-card hover:bg-accent text-xs font-medium transition-colors"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-foreground text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Search className="w-3.5 h-3.5" />
                   Preview Candidates
@@ -667,7 +682,7 @@ const AdminMaintenancePage: React.FC = () => {
                 <button
                   onClick={handleExecuteClickPruning}
                   disabled={isClickActionLoading}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-xs font-medium transition-colors"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Execute Click Prune
@@ -681,12 +696,12 @@ const AdminMaintenancePage: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-4 rounded-xl border border-border bg-card/70 space-y-2"
+              className="p-4 rounded-2xl border border-border bg-card shadow-xs space-y-2"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {clickPruneResult.dryRun ? (
-                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-secondary text-foreground border border-border">
                       Dry-Run Preview
                     </span>
                   ) : (
@@ -709,11 +724,11 @@ const AdminMaintenancePage: React.FC = () => {
       )}
 
       {activeSection === 'STORAGE' && (
-        <div className="p-5 rounded-xl border border-border bg-card shadow-sm space-y-4">
+        <div className="p-5 rounded-2xl border border-border bg-card shadow-xs space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                <HardDrive className="w-4 h-4" />
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-secondary text-foreground border border-border">
+                <HardDrive className="w-4 h-4 text-muted-foreground" />
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Relational Storage Telemetry</h3>
@@ -728,7 +743,7 @@ const AdminMaintenancePage: React.FC = () => {
           <div className="rounded-xl border border-border overflow-hidden">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-border bg-accent/40 text-muted-foreground font-medium">
+                <tr className="border-b border-border bg-secondary/30 text-muted-foreground font-medium">
                   <th className="py-2.5 px-4">Table Name</th>
                   <th className="py-2.5 px-4 text-right">Row Count</th>
                   <th className="py-2.5 px-4 text-right">Size (MB)</th>
@@ -742,18 +757,18 @@ const AdminMaintenancePage: React.FC = () => {
                       ? ((tbl.sizeMb / overview.totalDatabaseSizeMb) * 100).toFixed(1)
                       : '0.0';
                     return (
-                      <tr key={tbl.tableName} className="hover:bg-accent/20 transition-colors">
-                        <td className="py-2 px-4 text-foreground font-sans font-medium flex items-center gap-2">
-                          <Database className="w-3 h-3 text-muted-foreground" />
+                      <tr key={tbl.tableName} className="hover:bg-secondary/40 transition-colors">
+                        <td className="py-2.5 px-4 text-foreground font-sans font-medium flex items-center gap-2">
+                          <Database className="w-3.5 h-3.5 text-muted-foreground" />
                           {tbl.tableName}
                         </td>
-                        <td className="py-2 px-4 text-right text-muted-foreground">
+                        <td className="py-2.5 px-4 text-right text-muted-foreground">
                           {tbl.rowCount?.toLocaleString() || 0}
                         </td>
-                        <td className="py-2 px-4 text-right text-foreground font-semibold">
+                        <td className="py-2.5 px-4 text-right text-foreground font-semibold">
                           {tbl.sizeMb.toFixed(3)} MB
                         </td>
-                        <td className="py-2 px-4 text-right text-muted-foreground">
+                        <td className="py-2.5 px-4 text-right text-muted-foreground">
                           {pct}%
                         </td>
                       </tr>

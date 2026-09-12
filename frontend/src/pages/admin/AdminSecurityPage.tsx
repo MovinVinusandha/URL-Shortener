@@ -349,7 +349,7 @@ const AdminSecurityPage: React.FC = () => {
                         'bg-blue-500/10 text-blue-500 border-blue-500/20';
 
                       return (
-                        <tr key={incident.id} className="hover:bg-secondary/30 transition-colors">
+                        <tr key={incident.id} className="hover:bg-secondary/70 transition-colors">
                           <td className="py-3 px-4">
                             <span className={`inline-block px-2 py-0.5 text-[10px] font-semibold font-mono rounded-md border ${sevBadgeColor}`}>
                               {incident.severity}
@@ -428,12 +428,12 @@ const AdminSecurityPage: React.FC = () => {
                 placeholder="https://example.com/payload.exe or https://domain.xyz"
                 value={testUrl}
                 onChange={(e) => setTestUrl(e.target.value)}
-                className="flex-1 px-3 py-2 text-xs bg-secondary/50 border border-border rounded-xl focus:outline-hidden focus:ring-1 focus:ring-primary text-foreground font-mono"
+                className="flex-1 px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground font-mono transition-colors"
               />
               <button
                 type="submit"
                 disabled={isScanning || !testUrl.trim()}
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium bg-foreground text-background rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
               >
                 {isScanning ? (
                   <>
@@ -579,7 +579,7 @@ const AdminSecurityPage: React.FC = () => {
                     placeholder="Domain (e.g. *.malware.com or spam.biz)"
                     value={domainPattern}
                     onChange={(e) => setDomainPattern(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-secondary/50 border border-border rounded-xl focus:outline-hidden focus:ring-1 focus:ring-primary text-foreground font-mono"
+                    className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground font-mono transition-colors"
                   />
                 </div>
                 <div className="sm:col-span-5">
@@ -588,14 +588,14 @@ const AdminSecurityPage: React.FC = () => {
                     placeholder="Reason (e.g. Known credential phishing)"
                     value={domainReason}
                     onChange={(e) => setDomainReason(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-secondary/50 border border-border rounded-xl focus:outline-hidden focus:ring-1 focus:ring-primary text-foreground"
+                    className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground transition-colors"
                   />
                 </div>
                 <div className="sm:col-span-2">
                   <button
                     type="submit"
                     disabled={isDomainSubmitting || !domainPattern.trim()}
-                    className="w-full h-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-foreground text-background rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="w-full h-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
                   >
                     <ShieldAlert className="w-3.5 h-3.5" />
                     <span>{isDomainSubmitting ? 'Blocking…' : 'Block'}</span>
@@ -642,7 +642,7 @@ const AdminSecurityPage: React.FC = () => {
                       </tr>
                     ) : (
                       domainBlacklist.map((item) => (
-                        <tr key={item.id} className="hover:bg-secondary/30 transition-colors">
+                        <tr key={item.id} className="hover:bg-secondary/70 transition-colors">
                           <td className="py-3 px-4 font-mono font-medium text-foreground">
                             {item.domainPattern}
                           </td>
@@ -655,7 +655,7 @@ const AdminSecurityPage: React.FC = () => {
                           <td className="py-3 px-4 text-right">
                             <button
                               onClick={() => handleDeleteDomain(item)}
-                              className="p-1.5 text-xs text-muted-foreground hover:text-red-500 hover:bg-secondary rounded-lg transition-colors"
+                              className="p-1.5 text-xs text-muted-foreground hover:text-red-500 hover:bg-secondary rounded-lg transition-colors cursor-pointer"
                               title="Remove domain rule"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -685,7 +685,7 @@ const AdminSecurityPage: React.FC = () => {
                     placeholder="IP or CIDR (e.g. 192.168.1.100 or 10.0.0.0/8)"
                     value={ipAddress}
                     onChange={(e) => setIpAddress(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-secondary/50 border border-border rounded-xl focus:outline-hidden focus:ring-1 focus:ring-primary text-foreground font-mono"
+                    className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground font-mono transition-colors"
                   />
                 </div>
                 <div className="sm:col-span-5">
@@ -694,14 +694,14 @@ const AdminSecurityPage: React.FC = () => {
                     placeholder="Reason (e.g. Automated bot flood / brute force)"
                     value={ipReason}
                     onChange={(e) => setIpReason(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-secondary/50 border border-border rounded-xl focus:outline-hidden focus:ring-1 focus:ring-primary text-foreground"
+                    className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground transition-colors"
                   />
                 </div>
                 <div className="sm:col-span-2">
                   <button
                     type="submit"
                     disabled={isIpSubmitting || !ipAddress.trim()}
-                    className="w-full h-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-foreground text-background rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="w-full h-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
                   >
                     <ShieldAlert className="w-3.5 h-3.5" />
                     <span>{isIpSubmitting ? 'Blocking…' : 'Block IP'}</span>
@@ -731,7 +731,7 @@ const AdminSecurityPage: React.FC = () => {
                       <th className="py-3 px-4 text-right">Unblock</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody className="divide-y border-border">
                     {isIpLoading ? (
                       Array.from({ length: 2 }).map((_, i) => (
                         <tr key={i}>
@@ -748,7 +748,7 @@ const AdminSecurityPage: React.FC = () => {
                       </tr>
                     ) : (
                       blockedIps.map((item) => (
-                        <tr key={item.id} className="hover:bg-secondary/30 transition-colors">
+                        <tr key={item.id} className="hover:bg-secondary/70 transition-colors">
                           <td className="py-3 px-4 font-mono font-medium text-foreground">
                             {item.ipAddress}
                           </td>

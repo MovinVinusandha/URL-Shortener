@@ -7,6 +7,7 @@ import {
   Shield, 
   ChevronLeft, 
   ChevronRight,
+  ChevronDown,
   AlertCircle
 } from 'lucide-react';
 import axiosInstance from '../../api/axiosInstance';
@@ -91,13 +92,13 @@ const AdminUsersPage: React.FC = () => {
       {/* ── Search & Filter Controls ───────────────────────── */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-background border border-border p-3 rounded-2xl shadow-xs">
         <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             placeholder="Search by username, email…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-secondary/50 border border-border rounded-xl focus:outline-hidden focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted-foreground"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-background border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground transition-colors"
           />
         </form>
 
@@ -142,7 +143,7 @@ const AdminUsersPage: React.FC = () => {
                   const isRootUser = u.role === 'ROOT';
 
                   return (
-                    <tr key={u.id} className="hover:bg-secondary/30 transition-colors">
+                    <tr key={u.id} className="hover:bg-secondary/70 transition-colors">
                       {/* User Info */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2.5">
@@ -168,14 +169,17 @@ const AdminUsersPage: React.FC = () => {
                       {/* Role Badge / Selector */}
                       <td className="py-3 px-4">
                         {isRoot && !isRootUser && !isSelf ? (
-                          <select
-                            value={u.role}
-                            onChange={(e) => handleRoleChange(u, e.target.value as 'USER' | 'ADMIN')}
-                            className="text-xs bg-secondary border border-border rounded-lg px-2 py-1 font-medium focus:outline-hidden"
-                          >
-                            <option value="USER">USER</option>
-                            <option value="ADMIN">ADMIN</option>
-                          </select>
+                          <div className="relative inline-block">
+                            <select
+                              value={u.role}
+                              onChange={(e) => handleRoleChange(u, e.target.value as 'USER' | 'ADMIN')}
+                              className="text-xs bg-background text-foreground border border-border rounded-lg pl-2 pr-6 py-1 font-medium focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 appearance-none cursor-pointer transition-colors"
+                            >
+                              <option value="USER">USER</option>
+                              <option value="ADMIN">ADMIN</option>
+                            </select>
+                            <ChevronDown className="w-3 h-3 text-muted-foreground absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          </div>
                         ) : (
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
                             u.role === 'ROOT' 

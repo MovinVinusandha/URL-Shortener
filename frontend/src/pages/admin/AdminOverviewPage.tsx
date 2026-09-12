@@ -285,7 +285,7 @@ const AdminOverviewPage: React.FC = () => {
 
       {/* ── 2. Primary Dual-Layer Time Series Graph ───────────────── */}
       <div className="p-5 bg-card border border-border rounded-2xl shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/70">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
               <TrendingUp className="w-4 h-4" />
@@ -310,9 +310,9 @@ const AdminOverviewPage: React.FC = () => {
               <button
                 key={range.days}
                 onClick={() => setTimeRangeDays(range.days)}
-                className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+                className={`px-3 py-1 text-xs font-medium rounded-lg transition-all cursor-pointer ${
                   timeRangeDays === range.days
-                    ? 'bg-primary text-primary-foreground shadow-xs'
+                    ? 'bg-foreground text-background shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -337,7 +337,7 @@ const AdminOverviewPage: React.FC = () => {
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border/40" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.6} />
                 <XAxis 
                   dataKey="date" 
                   tickLine={false} 
@@ -391,7 +391,7 @@ const AdminOverviewPage: React.FC = () => {
         {/* Device Distribution */}
         <div className="p-5 bg-card border border-border rounded-2xl shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-border/70 mb-3">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Monitor className="w-4 h-4 text-primary" />
                 <h3 className="text-sm font-semibold text-foreground">Device Classes</h3>
@@ -435,7 +435,7 @@ const AdminOverviewPage: React.FC = () => {
         {/* Top Countries */}
         <div className="p-5 bg-card border border-border rounded-2xl shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-border/70 mb-3">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Globe className="w-4 h-4 text-emerald-500" />
                 <h3 className="text-sm font-semibold text-foreground">Top Geographies</h3>
@@ -475,7 +475,7 @@ const AdminOverviewPage: React.FC = () => {
         {/* Infrastructure & Audit Pulse */}
         <div className="p-5 bg-card border border-border rounded-2xl shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-border/70 mb-3">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Cpu className="w-4 h-4 text-amber-500" />
                 <h3 className="text-sm font-semibold text-foreground">Infrastructure Pulse</h3>
@@ -487,7 +487,7 @@ const AdminOverviewPage: React.FC = () => {
             </div>
 
             <div className="space-y-2.5 text-xs">
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/40 border border-border/60">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/40 border border-border">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Database className="w-3.5 h-3.5" />
                   <span>Redis In-Memory</span>
@@ -497,7 +497,7 @@ const AdminOverviewPage: React.FC = () => {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/40 border border-border/60">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/40 border border-border">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Clock className="w-3.5 h-3.5" />
                   <span>Expiration Sweeper</span>
@@ -507,7 +507,7 @@ const AdminOverviewPage: React.FC = () => {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/40 border border-border/60">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/40 border border-border">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Audit Trail Integrity</span>
@@ -534,7 +534,7 @@ const AdminOverviewPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Destination Domains Card */}
         <div className="p-5 bg-card border border-border rounded-2xl shadow-xs flex flex-col">
-          <div className="flex items-center justify-between pb-4 border-b border-border/70 mb-4">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Globe className="w-4 h-4 text-primary" />
               <h2 className="text-sm font-semibold text-foreground">Top Destination Domains</h2>
@@ -577,7 +577,7 @@ const AdminOverviewPage: React.FC = () => {
 
         {/* Recent Admin Audit Activity Stream */}
         <div className="p-5 bg-card border border-border rounded-2xl shadow-xs flex flex-col">
-          <div className="flex items-center justify-between pb-4 border-b border-border/70 mb-4">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-primary" />
               <h2 className="text-sm font-semibold text-foreground">Recent Admin Operations</h2>
@@ -593,7 +593,7 @@ const AdminOverviewPage: React.FC = () => {
           <div className="space-y-3 flex-1">
             {stats?.recentAuditActions && stats.recentAuditActions.length > 0 ? (
               stats.recentAuditActions.map(action => (
-                <div key={action.id} className="p-3 rounded-xl bg-secondary/30 border border-border/60 flex items-start justify-between gap-3 text-xs">
+                <div key={action.id} className="p-3 rounded-xl bg-secondary/30 border border-border flex items-start justify-between gap-3 text-xs">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-semibold px-1.5 py-0.5 rounded text-[10px] bg-primary/10 text-primary border border-primary/20">

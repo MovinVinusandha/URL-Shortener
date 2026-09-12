@@ -14,6 +14,7 @@ export type DateRangeValue =
 interface DateRangePickerProps {
   value: DateRangeValue;
   onChange: (value: DateRangeValue) => void;
+  align?: 'left' | 'right';
 }
 
 interface PresetItem {
@@ -31,7 +32,7 @@ const PRESETS: PresetItem[] = [
   { label: 'All time', value: 'all' },
 ];
 
-export const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange }) => {
+export const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, align = 'left' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -245,7 +246,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChang
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.1, ease: "easeOut" }}
-            className="absolute left-0 top-full mt-1 bg-popover border border-border rounded-xl shadow-xl flex flex-col md:flex-row overflow-hidden z-[80]"
+            className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} top-full mt-1 bg-popover border border-border rounded-xl shadow-xl flex flex-col md:flex-row overflow-hidden z-[80]`}
             style={{ width: 'max-content' }}
           >
             {/* Calendar Range Selection (Left Grid) */}

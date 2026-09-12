@@ -197,6 +197,8 @@ const AdminLayout: React.FC = () => {
               {location.pathname.startsWith('/admin/links') && 'Global Link Moderation'}
               {location.pathname.startsWith('/admin/users') && 'User Governance'}
               {location.pathname.startsWith('/admin/security') && 'Security & Domain Blacklist'}
+              {location.pathname.startsWith('/admin/audit-logs') && 'Immutable Audit Trail'}
+              {location.pathname.startsWith('/admin/maintenance') && 'System Maintenance & Retention'}
               {location.pathname.startsWith('/admin/settings') && 'Runtime System Configuration'}
             </h1>
           </div>

@@ -14,6 +14,7 @@ import {
   User, 
   ChevronLeft, 
   ChevronRight, 
+  ChevronDown,
   Info, 
   ExternalLink,
   Lock,
@@ -30,27 +31,27 @@ import { useAuth } from '../../context/AuthContext';
 import type { AdminLayoutContext } from '../../layouts/AdminLayout';
 
 const ACTION_COLOR_MAP: Record<string, { bg: string; text: string; border: string }> = {
-  LINK_QUARANTINED: { bg: 'bg-amber-500/10', text: 'text-amber-500', border: 'border-amber-500/20' },
-  BULK_LINK_QUARANTINED: { bg: 'bg-amber-500/10', text: 'text-amber-500', border: 'border-amber-500/20' },
-  LINK_UNQUARANTINED: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', border: 'border-emerald-500/20' },
-  LINK_DELETED: { bg: 'bg-red-500/10', text: 'text-red-500', border: 'border-red-500/20' },
-  BULK_LINK_DELETED: { bg: 'bg-red-500/10', text: 'text-red-500', border: 'border-red-500/20' },
-  USER_SUSPENDED: { bg: 'bg-red-500/10', text: 'text-red-500', border: 'border-red-500/20' },
-  USER_UNSUSPENDED: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', border: 'border-emerald-500/20' },
-  USER_ROLE_CHANGED: { bg: 'bg-blue-500/10', text: 'text-blue-500', border: 'border-blue-500/20' },
-  DOMAIN_BLOCKED: { bg: 'bg-red-500/10', text: 'text-red-500', border: 'border-red-500/20' },
+  LINK_QUARANTINED: { bg: 'bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-500/20' },
+  BULK_LINK_QUARANTINED: { bg: 'bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-500/20' },
+  LINK_UNQUARANTINED: { bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500/20' },
+  LINK_DELETED: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/20' },
+  BULK_LINK_DELETED: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/20' },
+  USER_SUSPENDED: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/20' },
+  USER_UNSUSPENDED: { bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500/20' },
+  USER_ROLE_CHANGED: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-500/20' },
+  DOMAIN_BLOCKED: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/20' },
   DOMAIN_UNBLOCKED: { bg: 'bg-neutral-500/10', text: 'text-muted-foreground', border: 'border-border' },
-  IP_BLOCKED: { bg: 'bg-red-500/10', text: 'text-red-500', border: 'border-red-500/20' },
+  IP_BLOCKED: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/20' },
   IP_UNBLOCKED: { bg: 'bg-neutral-500/10', text: 'text-muted-foreground', border: 'border-border' },
-  SETTING_UPDATED: { bg: 'bg-indigo-500/10', text: 'text-indigo-400', border: 'border-indigo-500/20' },
-  INCIDENT_RESOLVED: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', border: 'border-emerald-500/20' },
-  CACHE_EVICT_KEY: { bg: 'bg-cyan-500/10', text: 'text-cyan-400', border: 'border-cyan-500/20' },
-  CACHE_FLUSH_URLS: { bg: 'bg-cyan-500/10', text: 'text-cyan-400', border: 'border-cyan-500/20' },
-  CACHE_FLUSH_ALL: { bg: 'bg-red-500/10', text: 'text-red-500', border: 'border-red-500/20' },
-  CACHE_WARM_UP: { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20' },
-  LINKS_PURGE_DEACTIVATE: { bg: 'bg-amber-500/10', text: 'text-amber-500', border: 'border-amber-500/20' },
-  LINKS_PURGE_HARD: { bg: 'bg-red-500/10', text: 'text-red-500', border: 'border-red-500/20' },
-  CLICK_EVENTS_PRUNED: { bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/20' },
+  SETTING_UPDATED: { bg: 'bg-indigo-500/10', text: 'text-indigo-600 dark:text-indigo-400', border: 'border-indigo-500/20' },
+  INCIDENT_RESOLVED: { bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500/20' },
+  CACHE_EVICT_KEY: { bg: 'bg-cyan-500/10', text: 'text-cyan-700 dark:text-cyan-400', border: 'border-cyan-500/20' },
+  CACHE_FLUSH_URLS: { bg: 'bg-cyan-500/10', text: 'text-cyan-700 dark:text-cyan-400', border: 'border-cyan-500/20' },
+  CACHE_FLUSH_ALL: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/20' },
+  CACHE_WARM_UP: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-500/20' },
+  LINKS_PURGE_DEACTIVATE: { bg: 'bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-500/20' },
+  LINKS_PURGE_HARD: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/20' },
+  CLICK_EVENTS_PRUNED: { bg: 'bg-purple-500/10', text: 'text-purple-600 dark:text-purple-400', border: 'border-purple-500/20' },
 };
 
 const AdminAuditLogsPage: React.FC = () => {
@@ -238,64 +239,70 @@ const AdminAuditLogsPage: React.FC = () => {
         <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-2.5">
           {/* Search Box */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search across target identifier, description, actor email, or hash..."
-              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-secondary/30 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
             />
           </div>
 
           {/* Action Filter */}
-          <select
-            value={actionFilter}
-            onChange={(e) => { setActionFilter(e.target.value); setPage(0); }}
-            className="px-3 py-2 text-xs rounded-xl bg-secondary/30 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="ALL">All Actions</option>
-            <option value="LINK_QUARANTINED">Link Quarantined</option>
-            <option value="BULK_LINK_QUARANTINED">Bulk Link Quarantined</option>
-            <option value="LINK_UNQUARANTINED">Link Restored</option>
-            <option value="LINK_DELETED">Link Deleted</option>
-            <option value="BULK_LINK_DELETED">Bulk Link Deleted</option>
-            <option value="USER_SUSPENDED">User Suspended</option>
-            <option value="USER_UNSUSPENDED">User Restored</option>
-            <option value="USER_ROLE_CHANGED">User Role Changed</option>
-            <option value="DOMAIN_BLOCKED">Domain Blocked</option>
-            <option value="IP_BLOCKED">IP Blocked</option>
-            <option value="SETTING_UPDATED">Setting Updated</option>
-            <option value="INCIDENT_RESOLVED">Incident Resolved</option>
-            <option value="CACHE_WARM_UP">Cache Warm Up</option>
-            <option value="CACHE_FLUSH_URLS">Flush URL Cache</option>
-            <option value="CACHE_FLUSH_ALL">Flush Entire Redis</option>
-            <option value="LINKS_PURGE_DEACTIVATE">Links Deactivated</option>
-            <option value="LINKS_PURGE_HARD">Links Hard Purged</option>
-            <option value="CLICK_EVENTS_PRUNED">Click Events Pruned</option>
-          </select>
+          <div className="relative">
+            <select
+              value={actionFilter}
+              onChange={(e) => { setActionFilter(e.target.value); setPage(0); }}
+              className="w-full md:w-auto appearance-none pl-3 pr-8 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors cursor-pointer"
+            >
+              <option value="ALL">All Actions</option>
+              <option value="LINK_QUARANTINED">Link Quarantined</option>
+              <option value="BULK_LINK_QUARANTINED">Bulk Link Quarantined</option>
+              <option value="LINK_UNQUARANTINED">Link Restored</option>
+              <option value="LINK_DELETED">Link Deleted</option>
+              <option value="BULK_LINK_DELETED">Bulk Link Deleted</option>
+              <option value="USER_SUSPENDED">User Suspended</option>
+              <option value="USER_UNSUSPENDED">User Restored</option>
+              <option value="USER_ROLE_CHANGED">User Role Changed</option>
+              <option value="DOMAIN_BLOCKED">Domain Blocked</option>
+              <option value="IP_BLOCKED">IP Blocked</option>
+              <option value="SETTING_UPDATED">Setting Updated</option>
+              <option value="INCIDENT_RESOLVED">Incident Resolved</option>
+              <option value="CACHE_WARM_UP">Cache Warm Up</option>
+              <option value="CACHE_FLUSH_URLS">Flush URL Cache</option>
+              <option value="CACHE_FLUSH_ALL">Flush Entire Redis</option>
+              <option value="LINKS_PURGE_DEACTIVATE">Links Deactivated</option>
+              <option value="LINKS_PURGE_HARD">Links Hard Purged</option>
+              <option value="CLICK_EVENTS_PRUNED">Click Events Pruned</option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none opacity-60" />
+          </div>
 
           {/* Target Type Filter */}
-          <select
-            value={targetTypeFilter}
-            onChange={(e) => { setTargetTypeFilter(e.target.value); setPage(0); }}
-            className="px-3 py-2 text-xs rounded-xl bg-secondary/30 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="ALL">All Targets</option>
-            <option value="LINK">Links</option>
-            <option value="USER">Users</option>
-            <option value="DOMAIN">Domains</option>
-            <option value="IP">Perimeter IPs</option>
-            <option value="SETTING">Settings</option>
-            <option value="INCIDENT">Incidents</option>
-            <option value="REDIS">Redis Cache</option>
-            <option value="URL_STORE">URL Store</option>
-            <option value="ANALYTICS_STORE">Analytics Store</option>
-          </select>
+          <div className="relative">
+            <select
+              value={targetTypeFilter}
+              onChange={(e) => { setTargetTypeFilter(e.target.value); setPage(0); }}
+              className="w-full md:w-auto appearance-none pl-3 pr-8 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors cursor-pointer"
+            >
+              <option value="ALL">All Targets</option>
+              <option value="LINK">Links</option>
+              <option value="USER">Users</option>
+              <option value="DOMAIN">Domains</option>
+              <option value="IP">Perimeter IPs</option>
+              <option value="SETTING">Settings</option>
+              <option value="INCIDENT">Incidents</option>
+              <option value="REDIS">Redis Cache</option>
+              <option value="URL_STORE">URL Store</option>
+              <option value="ANALYTICS_STORE">Analytics Store</option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none opacity-60" />
+          </div>
 
           <button
             type="submit"
-            className="px-4 py-2 text-xs font-medium rounded-xl bg-secondary hover:bg-secondary/70 text-foreground transition-colors"
+            className="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-secondary hover:bg-secondary/80 text-foreground border border-border transition-colors cursor-pointer"
           >
             Filter
           </button>
@@ -348,7 +355,7 @@ const AdminAuditLogsPage: React.FC = () => {
                     <tr 
                       key={log.id} 
                       onClick={() => setActiveModalEntry(log)}
-                      className="hover:bg-secondary/30 transition-colors cursor-pointer group"
+                      className="hover:bg-secondary/70 transition-colors cursor-pointer group"
                     >
                       {/* ID */}
                       <td className="py-3 px-4 font-mono text-muted-foreground text-center">

@@ -92,6 +92,39 @@ html {
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-gray-400 dark:bg-[#343248];
   }
+
+  /* Form controls theme alignment (select, option, date picker) */
+  select {
+    @apply bg-background text-foreground;
+  }
+
+  select option {
+    background-color: #FFFFFF;
+    color: #111827;
+  }
+
+  .dark select option {
+    background-color: #141417;
+    color: #FFFFFF;
+  }
+
+  /* Browser date picker color-scheme match */
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"] {
+    color-scheme: light dark;
+  }
+
+  /* Universal dark mode autofill and textbox contrast fix */
+  .dark input:-webkit-autofill,
+  .dark input:-webkit-autofill:hover,
+  .dark input:-webkit-autofill:focus,
+  .dark select:-webkit-autofill,
+  .dark textarea:-webkit-autofill {
+    -webkit-text-fill-color: #FFFFFF !important;
+    -webkit-box-shadow: 0 0 0px 1000px #000000 inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
 }
 
 @layer components {
