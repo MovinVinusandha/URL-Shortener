@@ -308,3 +308,41 @@ export interface ThreatScanResult {
   scanDurationMs: number;
 }
 
+export interface AdminAuditLogItem {
+  id: number;
+  actorId?: number | null;
+  actorEmail: string;
+  actorRole: string;
+  actorIp?: string | null;
+  action: string;
+  targetType: string;
+  targetIdentifier?: string | null;
+  details?: string | null;
+  metadataJson?: string | null;
+  prevHash: string;
+  entryHash: string;
+  createdAt: string;
+}
+
+export interface PaginatedAuditLogs {
+  content: AdminAuditLogItem[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+
+export interface AuditChainVerification {
+  valid: boolean;
+  totalVerified: number;
+  genesisHash: string;
+  latestHash: string;
+  tamperedEntryId?: number | null;
+  failureReason?: string | null;
+  verifiedAt: string;
+}
+
+

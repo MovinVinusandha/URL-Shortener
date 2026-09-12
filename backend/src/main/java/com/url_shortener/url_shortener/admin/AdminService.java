@@ -43,6 +43,7 @@ public class AdminService {
     private final com.url_shortener.url_shortener.security.SecurityIncidentRepository securityIncidentRepository;
     private final com.url_shortener.url_shortener.security.ThreatScannerService threatScannerService;
     private final com.url_shortener.url_shortener.security.BlockedIpService blockedIpService;
+    private final com.url_shortener.url_shortener.admin.audit.AdminAuditService adminAuditService;
 
     @Value("${app.domain.root}")
     private String rootDomainUrl;
@@ -259,6 +260,9 @@ public class AdminService {
             evictCache(u.getShortUrl());
         }
         urls = urlRepository.saveAll(urls);
+        recordAudit("BULK_LINK_QUARANTINED", "LINK", String.join(",", hashes),
+                "Bulk quarantined " + hashes.size() + " link(s). Reason: " + r,
+                "{\"count\":" + hashes.size() + ",\"hashes\":" + hashes + "}");
         return urls.stream().map(this::toAdminLinkDto).collect(Collectors.toList());
     }
 
@@ -272,6 +276,9 @@ public class AdminService {
             evictCache(u.getShortUrl());
         }
         urlRepository.deleteAll(urls);
+        recordAudit("BULK_LINK_DELETED", "LINK", String.join(",", hashes),
+                "Bulk deleted " + hashes.size() + " link(s)",
+                "{\"count\":" + hashes.size() + ",\"hashes\":" + hashes + "}");
     }
 
     @Transactional
@@ -288,6 +295,10 @@ public class AdminService {
 
         // Invalidate Redis cache
         evictCache(url.getShortUrl());
+
+        recordAudit("LINK_QUARANTINED", "LINK", hash,
+                "Quarantined link /" + hash + ". Reason: " + url.getQuarantineReason(),
+                "{\"longUrl\":\"" + url.getLongUrl() + "\"}");
 
         return toAdminLinkDto(url);
     }
@@ -308,6 +319,10 @@ public class AdminService {
 
         evictCache(url.getShortUrl());
 
+        recordAudit("LINK_UNQUARANTINED", "LINK", hash,
+                "Restored quarantined link /" + hash,
+                "{\"longUrl\":\"" + url.getLongUrl() + "\"}");
+
         return toAdminLinkDto(url);
     }
 
@@ -319,6 +334,10 @@ public class AdminService {
         }
         evictCache(url.getShortUrl());
         urlRepository.delete(url);
+
+        recordAudit("LINK_DELETED", "LINK", hash,
+                "Deleted link /" + hash,
+                "{\"longUrl\":\"" + url.getLongUrl() + "\"}");
     }
 
     public Page<AdminUserDto> getUsers(int page, int size, String search) {
@@ -356,6 +375,10 @@ public class AdminService {
             tokenRevocationService.revokeAllUserTokens(user.getId());
         }
 
+        recordAudit(willSuspend ? "USER_SUSPENDED" : "USER_UNSUSPENDED", "USER", user.getEmail(),
+                (willSuspend ? "Suspended user " : "Restored user ") + user.getEmail() + (reason != null ? ". Reason: " + reason : ""),
+                "{\"userId\":" + user.getId() + ",\"email\":\"" + user.getEmail() + "\"}");
+
         return toAdminUserDto(user);
     }
 
@@ -374,8 +397,13 @@ public class AdminService {
             throw new IllegalArgumentException("Cannot assign ROOT role.");
         }
 
+        Role oldRole = user.getRole();
         user.setRole(newRole);
         user = userRepository.save(user);
+
+        recordAudit("USER_ROLE_CHANGED", "USER", user.getEmail(),
+                "Changed role of user " + user.getEmail() + " from " + oldRole + " to " + newRole,
+                "{\"oldRole\":\"" + oldRole + "\",\"newRole\":\"" + newRole + "\"}");
 
         return toAdminUserDto(user);
     }
@@ -398,12 +426,22 @@ public class AdminService {
                 .domainPattern(cleanPattern)
                 .reason(reason != null ? reason.trim() : "Flagged malicious domain")
                 .build();
-        return blacklistedDomainRepository.save(item);
+        item = blacklistedDomainRepository.save(item);
+
+        recordAudit("DOMAIN_BLOCKED", "DOMAIN", cleanPattern,
+                "Added domain to blacklist: " + cleanPattern + ". Reason: " + item.getReason(),
+                "{\"domain\":\"" + cleanPattern + "\"}");
+
+        return item;
     }
 
     @Transactional
     public void deleteBlacklistDomain(Long id) {
+        var domainObj = blacklistedDomainRepository.findById(id).orElse(null);
         blacklistedDomainRepository.deleteById(id);
+
+        recordAudit("DOMAIN_UNBLOCKED", "DOMAIN", domainObj != null ? domainObj.getDomainPattern() : String.valueOf(id),
+                "Removed domain from blacklist: " + (domainObj != null ? domainObj.getDomainPattern() : id), null);
     }
 
     public List<SystemSettingDto> getSystemSettings() {
@@ -427,11 +465,16 @@ public class AdminService {
                         .settingKey(key.trim())
                         .build());
 
+        String oldValue = setting.getSettingValue();
         setting.setSettingValue(value != null ? value.trim() : "");
         if (description != null && !description.isBlank()) {
             setting.setDescription(description.trim());
         }
         setting = systemSettingRepository.save(setting);
+
+        recordAudit("SETTING_UPDATED", "SETTING", key.trim(),
+                "Updated setting " + key.trim() + " = " + value,
+                "{\"key\":\"" + key.trim() + "\",\"oldValue\":\"" + oldValue + "\",\"newValue\":\"" + value + "\"}");
 
         return SystemSettingDto.builder()
                 .settingKey(setting.getSettingKey())
@@ -517,7 +560,13 @@ public class AdminService {
         incident.setIsResolved(true);
         incident.setResolvedAt(LocalDateTime.now());
         incident.setResolvedBy(resolvedBy != null ? resolvedBy : "ADMIN");
-        return securityIncidentRepository.save(incident);
+        incident = securityIncidentRepository.save(incident);
+
+        recordAudit("INCIDENT_RESOLVED", "INCIDENT", String.valueOf(id),
+                "Resolved security incident #" + id + " (" + incident.getIncidentType() + ")",
+                "{\"incidentId\":" + id + ",\"type\":\"" + incident.getIncidentType() + "\"}");
+
+        return incident;
     }
 
     public com.url_shortener.url_shortener.security.dto.ThreatScanResultDto testThreatScanner(String url) {
@@ -530,11 +579,51 @@ public class AdminService {
 
     @Transactional
     public com.url_shortener.url_shortener.security.BlockedIp addBlockedIp(String ipAddress, String reason, String createdBy) {
-        return blockedIpService.blockIp(ipAddress, reason, createdBy);
+        var blocked = blockedIpService.blockIp(ipAddress, reason, createdBy);
+
+        recordAudit("IP_BLOCKED", "IP", ipAddress,
+                "Blocked perimeter IP/subnet: " + ipAddress + ". Reason: " + reason,
+                "{\"ipAddress\":\"" + ipAddress + "\",\"reason\":\"" + reason + "\"}");
+
+        return blocked;
     }
 
     @Transactional
     public void deleteBlockedIp(Long id) {
+        var ipObj = blockedIpService.getAllBlockedIps().stream()
+                .filter(b -> b.getId().equals(id))
+                .findFirst()
+                .orElse(null);
         blockedIpService.unblockIp(id);
+        recordAudit("IP_UNBLOCKED", "IP", ipObj != null ? ipObj.getIpAddress() : String.valueOf(id),
+                "Unblocked perimeter IP: " + (ipObj != null ? ipObj.getIpAddress() : id), null);
+    }
+
+    private void recordAudit(String action, String targetType, String targetIdentifier, String details, String metadataJson) {
+        try {
+            var ctx = com.url_shortener.url_shortener.admin.audit.AdminAuditContextHolder.getContext();
+            Long actorId = ctx != null ? ctx.getActorId() : null;
+            String actorEmail = ctx != null ? ctx.getActorEmail() : null;
+            String actorRole = ctx != null ? ctx.getActorRole() : null;
+            String actorIp = ctx != null ? ctx.getActorIp() : null;
+
+            if (actorEmail == null) {
+                org.springframework.security.core.Authentication auth =
+                        org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null) {
+                    actorEmail = auth.getName();
+                    if (auth.getPrincipal() instanceof Long) {
+                        actorId = (Long) auth.getPrincipal();
+                    }
+                    if (auth.getAuthorities() != null && !auth.getAuthorities().isEmpty()) {
+                        actorRole = auth.getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");
+                    }
+                }
+            }
+
+            adminAuditService.record(actorId, actorEmail, actorRole, actorIp, action, targetType, targetIdentifier, details, metadataJson);
+        } catch (Exception e) {
+            log.warn("Failed to record audit log for action {}: {}", action, e.getMessage());
+        }
     }
 }

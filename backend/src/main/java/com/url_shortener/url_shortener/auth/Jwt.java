@@ -24,6 +24,14 @@ public class Jwt {
         return Long.valueOf(claims.getSubject());
     }
 
+    public String getEmail() {
+        return claims.get("email", String.class);
+    }
+
+    public String getUsername() {
+        return claims.get("username", String.class);
+    }
+
     public Role getRole() {
         return Role.valueOf(claims.get("role", String.class));
     }
