@@ -40,25 +40,51 @@ import type { AdminLayoutContext } from '../../layouts/AdminLayout';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { motion } from 'framer-motion';
+import { parseISO, format } from 'date-fns';
+
+const formatXAxisDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  try {
+    const d = parseISO(dateStr.length === 10 ? dateStr + 'T00:00:00' : dateStr);
+    if (isNaN(d.getTime())) return dateStr.slice(5);
+    return format(d, 'MMM d');
+  } catch {
+    return dateStr.slice(5);
+  }
+};
+
+const formatTooltipDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  try {
+    const d = parseISO(dateStr.length === 10 ? dateStr + 'T00:00:00' : dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return format(d, 'EEE, MMMM d, yyyy');
+  } catch {
+    return dateStr;
+  }
+};
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-popover/95 backdrop-blur-md border border-border p-3 rounded-xl shadow-xl text-xs space-y-1.5 font-sans">
-        <div className="font-semibold text-foreground border-b border-border/60 pb-1 font-mono">
-          {label}
+      <div className="bg-popover/95 backdrop-blur-md border border-border p-3 rounded-xl shadow-xl text-xs space-y-2 font-sans min-w-[180px]">
+        <div className="font-semibold text-foreground border-b border-border/60 pb-1.5 flex items-center gap-1.5 text-[11px]">
+          <Calendar className="w-3.5 h-3.5 text-primary" />
+          <span>{formatTooltipDate(label)}</span>
         </div>
-        {payload.map((entry: any, index: number) => (
-          <div key={index} className="flex items-center justify-between gap-4">
-            <span className="flex items-center gap-1.5 text-muted-foreground">
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-              {entry.name}:
-            </span>
-            <span className="font-mono font-bold text-foreground">
-              {entry.value.toLocaleString()}
-            </span>
-          </div>
-        ))}
+        <div className="space-y-1 pt-0.5">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center justify-between gap-4">
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                {entry.name}:
+              </span>
+              <span className="font-mono font-bold text-foreground">
+                {entry.value.toLocaleString()}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -114,6 +140,28 @@ const AdminOverviewPage: React.FC = () => {
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [timeRangeDays]);
+
+  // Aggregate summary indicators for the selected velocity window
+  const velocitySummary = React.useMemo(() => {
+    if (!stats?.activitySeries || stats.activitySeries.length === 0) {
+      return { totalClicks: 0, totalLinks: 0, peakClicks: 0, peakDate: null };
+    }
+    let totalClicks = 0;
+    let totalLinks = 0;
+    let peakClicks = 0;
+    let peakDate: string | null = null;
+
+    stats.activitySeries.forEach(item => {
+      totalClicks += item.clicks || 0;
+      totalLinks += item.linksCreated || 0;
+      if ((item.clicks || 0) > peakClicks) {
+        peakClicks = item.clicks || 0;
+        peakDate = item.date;
+      }
+    });
+
+    return { totalClicks, totalLinks, peakClicks, peakDate };
+  }, [stats?.activitySeries]);
 
   if (isLoading && !stats) {
     return (
@@ -372,7 +420,7 @@ const AdminOverviewPage: React.FC = () => {
       <div className="p-5 bg-card border border-border rounded-2xl shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary border border-gray-200 dark:border-zinc-800">
               <TrendingUp className="w-4 h-4" />
             </div>
             <div>
@@ -385,25 +433,47 @@ const AdminOverviewPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Time Range Filter Buttons */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-secondary/50 border border-border self-start sm:self-auto">
-            {[
-              { days: 7, label: '7 Days' },
-              { days: 14, label: '14 Days' },
-              { days: 30, label: '30 Days' },
-            ].map(range => (
-              <button
-                key={range.days}
-                onClick={() => setTimeRangeDays(range.days)}
-                className={`px-3 py-1 text-xs font-medium rounded-lg transition-all cursor-pointer ${
-                  timeRangeDays === range.days
-                    ? 'bg-foreground text-background shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {range.label}
-              </button>
-            ))}
+          <div className="flex items-center flex-wrap gap-2">
+            {/* Quick summary badges */}
+            {stats?.activitySeries && stats.activitySeries.length > 0 && (
+              <div className="hidden lg:flex items-center gap-3 mr-1 text-xs">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/60 border border-gray-200 dark:border-zinc-800 text-muted-foreground">
+                  <span>Clicks:</span>
+                  <span className="font-mono font-semibold text-foreground">{velocitySummary.totalClicks.toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/60 border border-gray-200 dark:border-zinc-800 text-muted-foreground">
+                  <span>New Links:</span>
+                  <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">+{velocitySummary.totalLinks.toLocaleString()}</span>
+                </div>
+                {velocitySummary.peakClicks > 0 && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/60 border border-gray-200 dark:border-zinc-800 text-muted-foreground">
+                    <span>Peak:</span>
+                    <span className="font-mono font-semibold text-primary">{velocitySummary.peakClicks.toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Time Range Filter Buttons */}
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-secondary/50 border border-border self-start sm:self-auto">
+              {[
+                { days: 7, label: '7 Days' },
+                { days: 14, label: '14 Days' },
+                { days: 30, label: '30 Days' },
+              ].map(range => (
+                <button
+                  key={range.days}
+                  onClick={() => setTimeRangeDays(range.days)}
+                  className={`px-3 py-1 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+                    timeRangeDays === range.days
+                      ? 'bg-foreground text-background shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -429,7 +499,9 @@ const AdminOverviewPage: React.FC = () => {
                   axisLine={false} 
                   tick={{ fontSize: 11, fill: 'currentColor' }}
                   className="text-muted-foreground font-mono"
-                  tickFormatter={(val) => val.slice(5)} // MM-DD
+                  tickFormatter={formatXAxisDate}
+                  minTickGap={34}
+                  interval="equidistantPreserveStart"
                 />
                 <YAxis 
                   tickLine={false} 
@@ -451,6 +523,7 @@ const AdminOverviewPage: React.FC = () => {
                   strokeWidth={2}
                   fillOpacity={1} 
                   fill="url(#clicksGradient)" 
+                  animationDuration={300}
                 />
                 <Area 
                   type="monotone" 
@@ -460,6 +533,7 @@ const AdminOverviewPage: React.FC = () => {
                   strokeWidth={2}
                   fillOpacity={1} 
                   fill="url(#linksGradient)" 
+                  animationDuration={300}
                 />
               </AreaChart>
             </ResponsiveContainer>
