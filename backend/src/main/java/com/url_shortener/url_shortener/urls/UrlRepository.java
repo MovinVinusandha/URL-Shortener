@@ -2,7 +2,7 @@ package com.url_shortener.url_shortener.urls;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface UrlRepository extends JpaRepository<Url, Long> {
+public interface UrlRepository extends JpaRepository<Url, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<Url> {
     Url findByShortUrl(String url);
 
     boolean existsUrlByShortUrl(String shortUrl);
@@ -30,6 +30,11 @@ public interface UrlRepository extends JpaRepository<Url, Long> {
     long countByIsActiveFalse();
 
     long countByIsActiveTrueAndIsQuarantinedFalse();
+
+    long countByCreatedAtAfter(java.time.LocalDateTime dateTime);
+
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(u) FROM Url u WHERE u.statistic.accessedTimes >= :minClicks")
+    long countByMinClicks(@org.springframework.data.repository.query.Param("minClicks") Long minClicks);
 
     org.springframework.data.domain.Page<Url> findByShortUrlContainingIgnoreCaseOrLongUrlContainingIgnoreCase(String shortUrl, String longUrl, org.springframework.data.domain.Pageable pageable);
 }

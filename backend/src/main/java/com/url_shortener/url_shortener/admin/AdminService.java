@@ -138,17 +138,140 @@ public class AdminService {
     }
 
     public Page<AdminLinkDto> getLinks(int page, int size, String search, String status) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Url> urlPage;
+        return getLinks(page, size, search, status, null, null, null, null, "createdAt", "DESC");
+    }
 
-        if (search != null && !search.trim().isEmpty()) {
-            String q = search.trim();
-            urlPage = urlRepository.findByShortUrlContainingIgnoreCaseOrLongUrlContainingIgnoreCase(q, q, pageable);
-        } else {
-            urlPage = urlRepository.findAll(pageable);
+    public Page<AdminLinkDto> getLinks(
+            int page,
+            int size,
+            String search,
+            String status,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            Long minClicks,
+            String domain,
+            String sortBy,
+            String sortDir
+    ) {
+        Sort.Direction direction = "ASC".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        String property = "createdAt";
+        if ("clicks".equalsIgnoreCase(sortBy)) {
+            property = "statistic.accessedTimes";
         }
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, property));
 
+        org.springframework.data.jpa.domain.Specification<Url> spec = (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+
+            if (search != null && !search.trim().isEmpty()) {
+                String term = "%" + search.trim().toLowerCase() + "%";
+                var userJoin = root.join("user", jakarta.persistence.criteria.JoinType.LEFT);
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("shortUrl")), term),
+                        cb.like(cb.lower(root.get("longUrl")), term),
+                        cb.like(cb.lower(userJoin.get("email")), term),
+                        cb.like(cb.lower(userJoin.get("username")), term)
+                ));
+            }
+
+            if (domain != null && !domain.trim().isEmpty()) {
+                String domainTerm = "%" + domain.trim().toLowerCase() + "%";
+                predicates.add(cb.like(cb.lower(root.get("longUrl")), domainTerm));
+            }
+
+            if (startDate != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), startDate));
+            }
+            if (endDate != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), endDate));
+            }
+
+            if (minClicks != null && minClicks > 0) {
+                var statJoin = root.join("statistic", jakarta.persistence.criteria.JoinType.LEFT);
+                predicates.add(cb.greaterThanOrEqualTo(statJoin.get("accessedTimes"), minClicks));
+            }
+
+            if (status != null && !status.trim().isEmpty() && !"all".equalsIgnoreCase(status)) {
+                String st = status.trim().toLowerCase();
+                if ("needs_review".equals(st)) {
+                    LocalDateTime past24h = LocalDateTime.now().minusHours(24);
+                    predicates.add(cb.or(
+                            cb.isTrue(root.get("isQuarantined")),
+                            cb.greaterThanOrEqualTo(root.get("createdAt"), past24h)
+                    ));
+                } else if ("quarantined".equals(st)) {
+                    predicates.add(cb.isTrue(root.get("isQuarantined")));
+                } else if ("active".equals(st)) {
+                    predicates.add(cb.and(
+                            cb.isTrue(root.get("isActive")),
+                            cb.isFalse(root.get("isQuarantined"))
+                    ));
+                } else if ("expired".equals(st)) {
+                    predicates.add(cb.and(
+                            cb.isFalse(root.get("isActive")),
+                            cb.isFalse(root.get("isQuarantined"))
+                    ));
+                } else if ("spikes".equals(st)) {
+                    var statJoin = root.join("statistic", jakarta.persistence.criteria.JoinType.LEFT);
+                    predicates.add(cb.greaterThanOrEqualTo(statJoin.get("accessedTimes"), 500L));
+                }
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+
+        Page<Url> urlPage = urlRepository.findAll(spec, pageable);
         return urlPage.map(this::toAdminLinkDto);
+    }
+
+    public AdminLinkTriageSummaryDto getTriageSummary() {
+        long quarantined = urlRepository.countByIsQuarantinedTrue();
+        long createdLast24h = urlRepository.countByCreatedAtAfter(LocalDateTime.now().minusHours(24));
+        long spikes = 0;
+        try {
+            spikes = urlRepository.countByMinClicks(500L);
+        } catch (Exception e) {
+            log.warn("Failed to count spike clicks: {}", e.getMessage());
+        }
+        long needsAttention = quarantined + createdLast24h;
+        long totalLinks = urlRepository.count();
+
+        return AdminLinkTriageSummaryDto.builder()
+                .needsAttentionCount(needsAttention)
+                .spikeCount(spikes)
+                .quarantinedCount(quarantined)
+                .createdLast24hCount(createdLast24h)
+                .totalLinks(totalLinks)
+                .build();
+    }
+
+    @Transactional
+    public List<AdminLinkDto> bulkQuarantineLinks(List<String> hashes, String reason) {
+        if (hashes == null || hashes.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Url> urls = urlRepository.findAllByShortUrlIn(hashes);
+        String r = reason != null && !reason.trim().isEmpty() ? reason.trim() : "Bulk quarantine by administrator";
+        for (Url u : urls) {
+            u.setQuarantined(true);
+            u.setQuarantineReason(r);
+            u.setActive(false);
+            evictCache(u.getShortUrl());
+        }
+        urls = urlRepository.saveAll(urls);
+        return urls.stream().map(this::toAdminLinkDto).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void bulkDeleteLinks(List<String> hashes) {
+        if (hashes == null || hashes.isEmpty()) {
+            return;
+        }
+        List<Url> urls = urlRepository.findAllByShortUrlIn(hashes);
+        for (Url u : urls) {
+            evictCache(u.getShortUrl());
+        }
+        urlRepository.deleteAll(urls);
     }
 
     @Transactional

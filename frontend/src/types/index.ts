@@ -218,6 +218,14 @@ export interface PaginatedAdminLinks {
   empty: boolean;
 }
 
+export interface AdminLinkTriageSummary {
+  needsAttentionCount: number;
+  spikeCount: number;
+  quarantinedCount: number;
+  createdLast24hCount: number;
+  totalLinks: number;
+}
+
 export interface AdminUser {
   id: number;
   publicId: string;

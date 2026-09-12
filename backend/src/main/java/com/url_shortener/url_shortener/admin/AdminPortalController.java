@@ -29,14 +29,51 @@ public class AdminPortalController {
     }
 
     @GetMapping("/links")
-    @Operation(summary = "Browse and search all links across the instance")
+    @Operation(summary = "Browse, slice by time/metrics, and search links across the instance")
     public ResponseEntity<Page<AdminLinkDto>> getLinks(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime startDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime endDate,
+            @RequestParam(required = false) Long minClicks,
+            @RequestParam(required = false) String domain,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDir
     ) {
-        return ResponseEntity.ok(adminService.getLinks(page, size, search, status));
+        return ResponseEntity.ok(adminService.getLinks(page, size, search, status, startDate, endDate, minClicks, domain, sortBy, sortDir));
+    }
+
+    @GetMapping("/links/triage-summary")
+    @Operation(summary = "Get high-level moderation triage statistics and queues")
+    public ResponseEntity<AdminLinkTriageSummaryDto> getTriageSummary() {
+        return ResponseEntity.ok(adminService.getTriageSummary());
+    }
+
+    @PostMapping("/links/bulk-quarantine")
+    @Operation(summary = "Bulk quarantine multiple short links")
+    public ResponseEntity<List<AdminLinkDto>> bulkQuarantineLinks(
+            @Valid @RequestBody BulkLinkQuarantineRequestDto request
+    ) {
+        return ResponseEntity.ok(adminService.bulkQuarantineLinks(request.getHashes(), request.getReason()));
+    }
+
+    @PostMapping("/links/bulk-delete")
+    @Operation(summary = "Bulk delete multiple short links")
+    public ResponseEntity<Map<String, Object>> bulkDeleteLinks(
+            @Valid @RequestBody BulkLinkDeleteRequestDto request
+    ) {
+        adminService.bulkDeleteLinks(request.getHashes());
+        return ResponseEntity.ok(Map.of("message", "Links deleted successfully", "count", request.getHashes().size()));
+    }
+
+    @PostMapping("/links/block-domain")
+    @Operation(summary = "Quick blacklist a domain from a link in the Moderation Hub")
+    public ResponseEntity<BlacklistedDomain> blockDomainFromLink(
+            @Valid @RequestBody BlockDomainFromLinkDto request
+    ) {
+        return ResponseEntity.ok(adminService.addBlacklistDomain(request.getDomainPattern(), request.getReason()));
     }
 
     @PostMapping("/links/{hash}/quarantine")
