@@ -130,11 +130,64 @@ public class AdminPortalController {
         ));
     }
 
+    @GetMapping("/incidents")
+    @Operation(summary = "Get list of security threat incidents")
+    public ResponseEntity<Page<com.url_shortener.url_shortener.security.SecurityIncident>> getIncidents(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) Boolean resolved
+    ) {
+        return ResponseEntity.ok(adminService.getSecurityIncidents(page, size, resolved));
+    }
+
+    @PostMapping("/incidents/{id}/resolve")
+    @Operation(summary = "Mark a security incident as resolved")
+    public ResponseEntity<com.url_shortener.url_shortener.security.SecurityIncident> resolveIncident(@PathVariable Long id) {
+        return ResponseEntity.ok(adminService.resolveSecurityIncident(id, getCurrentUserEmail()));
+    }
+
+    @PostMapping("/threat-scanner/test")
+    @Operation(summary = "On-demand diagnostic threat scanner for any URL")
+    public ResponseEntity<com.url_shortener.url_shortener.security.dto.ThreatScanResultDto> testThreatScanner(
+            @Valid @RequestBody com.url_shortener.url_shortener.security.dto.ThreatScanRequestDto request
+    ) {
+        return ResponseEntity.ok(adminService.testThreatScanner(request.getUrl()));
+    }
+
+    @GetMapping("/blocked-ips")
+    @Operation(summary = "List all perimeter blacklisted IPs and CIDR subnets")
+    public ResponseEntity<List<com.url_shortener.url_shortener.security.BlockedIp>> getBlockedIps() {
+        return ResponseEntity.ok(adminService.getBlockedIps());
+    }
+
+    @PostMapping("/blocked-ips")
+    @Operation(summary = "Add an IP address or CIDR subnet to perimeter blacklist")
+    public ResponseEntity<com.url_shortener.url_shortener.security.BlockedIp> addBlockedIp(
+            @Valid @RequestBody com.url_shortener.url_shortener.security.dto.BlockedIpRequestDto request
+    ) {
+        return ResponseEntity.ok(adminService.addBlockedIp(request.getIpAddress(), request.getReason(), getCurrentUserEmail()));
+    }
+
+    @DeleteMapping("/blocked-ips/{id}")
+    @Operation(summary = "Remove an IP address or CIDR subnet from perimeter blacklist")
+    public ResponseEntity<Map<String, String>> deleteBlockedIp(@PathVariable Long id) {
+        adminService.deleteBlockedIp(id);
+        return ResponseEntity.ok(Map.of("message", "IP unblocked successfully"));
+    }
+
     private Long getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof Long) {
             return (Long) auth.getPrincipal();
         }
         return null;
+    }
+
+    private String getCurrentUserEmail() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            return auth.getName();
+        }
+        return "ADMIN";
     }
 }

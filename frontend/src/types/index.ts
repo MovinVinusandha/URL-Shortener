@@ -256,3 +256,47 @@ export interface SystemSettingItem {
   description?: string | null;
   updatedAt?: string | null;
 }
+
+export interface SecurityIncident {
+  id: number;
+  incidentType: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  targetUrl?: string;
+  shortUrl?: string;
+  clientIp?: string;
+  userEmail?: string;
+  details?: string;
+  isResolved: boolean;
+  resolvedBy?: string | null;
+  resolvedAt?: string | null;
+  createdAt: string;
+}
+
+export interface PaginatedIncidents {
+  content: SecurityIncident[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+
+export interface BlockedIpItem {
+  id: number;
+  ipAddress: string;
+  reason?: string | null;
+  createdBy?: string | null;
+  createdAt: string;
+}
+
+export interface ThreatScanResult {
+  safe: boolean;
+  riskScore: number;
+  threatType: string;
+  detectedThreats: string[];
+  engine: string;
+  scanDurationMs: number;
+}
+

@@ -40,6 +40,9 @@ public class AdminService {
     private final TokenRevocationService tokenRevocationService;
     private final StringRedisTemplate redisTemplate;
     private final CacheManager cacheManager;
+    private final com.url_shortener.url_shortener.security.SecurityIncidentRepository securityIncidentRepository;
+    private final com.url_shortener.url_shortener.security.ThreatScannerService threatScannerService;
+    private final com.url_shortener.url_shortener.security.BlockedIpService blockedIpService;
 
     @Value("${app.domain.root}")
     private String rootDomainUrl;
@@ -374,5 +377,41 @@ public class AdminService {
         } catch (Exception e) {
             log.warn("Failed to evict cache for short URL {}: {}", shortUrl, e.getMessage());
         }
+    }
+
+    public Page<com.url_shortener.url_shortener.security.SecurityIncident> getSecurityIncidents(int page, int size, Boolean resolved) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        if (resolved != null) {
+            return securityIncidentRepository.findByIsResolved(resolved, pageable);
+        }
+        return securityIncidentRepository.findAllByOrderByCreatedAtDesc(pageable);
+    }
+
+    @Transactional
+    public com.url_shortener.url_shortener.security.SecurityIncident resolveSecurityIncident(Long id, String resolvedBy) {
+        var incident = securityIncidentRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Security incident not found: " + id));
+        incident.setIsResolved(true);
+        incident.setResolvedAt(LocalDateTime.now());
+        incident.setResolvedBy(resolvedBy != null ? resolvedBy : "ADMIN");
+        return securityIncidentRepository.save(incident);
+    }
+
+    public com.url_shortener.url_shortener.security.dto.ThreatScanResultDto testThreatScanner(String url) {
+        return threatScannerService.scanUrl(url);
+    }
+
+    public List<com.url_shortener.url_shortener.security.BlockedIp> getBlockedIps() {
+        return blockedIpService.getAllBlockedIps();
+    }
+
+    @Transactional
+    public com.url_shortener.url_shortener.security.BlockedIp addBlockedIp(String ipAddress, String reason, String createdBy) {
+        return blockedIpService.blockIp(ipAddress, reason, createdBy);
+    }
+
+    @Transactional
+    public void deleteBlockedIp(Long id) {
+        blockedIpService.unblockIp(id);
     }
 }

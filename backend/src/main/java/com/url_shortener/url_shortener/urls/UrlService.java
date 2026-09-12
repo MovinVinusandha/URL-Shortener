@@ -38,12 +38,42 @@ public class UrlService {
     @org.springframework.beans.factory.annotation.Autowired 
     private org.springframework.cache.CacheManager cacheManager;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.url_shortener.url_shortener.security.ThreatScannerService threatScannerService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.url_shortener.url_shortener.security.SpamVelocityService spamVelocityService;
+
     @org.springframework.beans.factory.annotation.Value("${app.domain.root}")
     private String rootDomainUrl;
 
     public UrlSend generateShortUrl(UrlRequest urlRequest) {
+        return generateShortUrl(urlRequest, null);
+    }
+
+    public UrlSend generateShortUrl(UrlRequest urlRequest, String clientIp) {
         if (isDomainBlacklisted(urlRequest.getLongUrl())) {
             throw new IllegalArgumentException("The destination URL domain is blacklisted or prohibited on this instance.");
+        }
+
+        Long currentUserId = null;
+        String currentUserEmail = null;
+        var authCheck = SecurityContextHolder.getContext().getAuthentication();
+        if (authCheck != null && authCheck.isAuthenticated() && !"anonymousUser".equals(authCheck.getPrincipal())) {
+            if (authCheck.getPrincipal() instanceof Long) {
+                currentUserId = (Long) authCheck.getPrincipal();
+            }
+            currentUserEmail = authCheck.getName();
+        }
+        if (spamVelocityService != null) {
+            spamVelocityService.checkAndRecordVelocity(currentUserId, currentUserEmail, clientIp);
+        }
+
+        if (threatScannerService != null) {
+            var scan = threatScannerService.scanUrl(urlRequest.getLongUrl());
+            if (!scan.isSafe() && scan.getRiskScore() >= 70) {
+                throw new IllegalArgumentException("Destination URL rejected by threat intelligence: " + String.join(", ", scan.getDetectedThreats()));
+            }
         }
         String hash;
         if (urlRequest.getCustomAlias() != null && !urlRequest.getCustomAlias().trim().isEmpty()) {
@@ -154,6 +184,10 @@ public class UrlService {
             }
         } else {
             redisTemplate.opsForValue().set(cacheKey, url.getLongUrl(), java.time.Duration.ofHours(24));
+        }
+
+        if (threatScannerService != null) {
+            threatScannerService.scanAndEnforceAsync(url.getShortUrl(), url.getLongUrl(), currentUserEmail, clientIp);
         }
         
         var sendDto = urlMapper.toSendDto(url);

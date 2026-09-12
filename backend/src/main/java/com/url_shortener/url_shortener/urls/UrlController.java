@@ -35,9 +35,16 @@ public class UrlController {
     @Value("${app.dashboard.url:http://app.localhost}")
     private String dashboardUrl;
 
+    public ResponseEntity<UrlSend> generateShortUrl(UrlRequest urlRequest) {
+        return generateShortUrl(urlRequest, (HttpServletRequest) null);
+    }
+
     @PostMapping("/shorten")
     @Operation(summary = "Generate short url")
-    public ResponseEntity<UrlSend> generateShortUrl(@Valid @RequestBody UrlRequest urlRequest) {
+    public ResponseEntity<UrlSend> generateShortUrl(
+            @Valid @RequestBody UrlRequest urlRequest,
+            HttpServletRequest request
+    ) {
         if (urlRequest.getCustomAlias() != null && !urlRequest.getCustomAlias().trim().isEmpty()) {
             var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
             if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
@@ -50,7 +57,8 @@ public class UrlController {
                 throw new org.springframework.security.access.AccessDeniedException("You must be logged in to set an expiration date.");
             }
         }
-        var urlDto = urlService.generateShortUrl(urlRequest);
+        String clientIp = request != null ? resolveClientIp(request) : null;
+        var urlDto = urlService.generateShortUrl(urlRequest, clientIp);
         return ResponseEntity.ok(urlDto);
     }
 

@@ -89,4 +89,11 @@ public class GlobalExceptionHandler {
                 Map.of("message", exception.getMessage())
         );
     }
+
+    @ExceptionHandler(com.url_shortener.url_shortener.security.SpamVelocityExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleSpamVelocity(com.url_shortener.url_shortener.security.SpamVelocityExceededException ex) {
+        return ResponseEntity.status(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS).body(
+                Map.of("status", 429, "error", "Too Many Requests", "message", ex.getMessage())
+        );
+    }
 }
