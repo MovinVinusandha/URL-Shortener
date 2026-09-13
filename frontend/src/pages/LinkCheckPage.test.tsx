@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import LinkCheckPage from './LinkCheckPage';
+import { LinkCheckProvider } from '../context/LinkCheckContext';
 import axiosInstance from '../api/axiosInstance';
 
 vi.mock('../api/axiosInstance', () => ({
@@ -50,7 +51,9 @@ describe('LinkCheckPage', () => {
   it('renders redesigned link check elements and graphs', async () => {
     render(
       <MemoryRouter>
-        <LinkCheckPage />
+        <LinkCheckProvider>
+          <LinkCheckPage />
+        </LinkCheckProvider>
       </MemoryRouter>
     );
 
@@ -95,7 +98,9 @@ describe('LinkCheckPage', () => {
 
     render(
       <MemoryRouter>
-        <LinkCheckPage />
+        <LinkCheckProvider>
+          <LinkCheckPage />
+        </LinkCheckProvider>
       </MemoryRouter>
     );
 

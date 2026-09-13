@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -19,4 +21,10 @@ public class LinkCheckResultDto {
     private String error;
     private Boolean isRedirect;
     private String redirectUrl;
+
+    // Item 3 enhancements: Redirect chain and security flags
+    private Integer hopsCount;
+    private List<String> redirectChain;
+    private Boolean isHttpsDowngrade;
+    private String securityWarning;
 }

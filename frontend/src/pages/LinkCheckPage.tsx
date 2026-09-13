@@ -32,7 +32,10 @@ import {
   FileText,
   MousePointerClick,
   Layers,
-  Globe
+  Globe,
+  Pencil,
+  ShieldAlert,
+  GitCommit
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -46,22 +49,13 @@ import {
   Area
 } from 'recharts';
 import axios from 'axios';
-import axiosInstance from '../api/axiosInstance';
+import axiosInstance, { extractBackendError } from '../api/axiosInstance';
 import type { DashboardLayoutContext } from '../layouts/DashboardLayout';
 import type { UrlEntry } from '../types';
 import toast from 'react-hot-toast';
+import { useLinkCheck, type LinkCheckItem } from '../context/LinkCheckContext';
+export type { LinkCheckItem };
 
-export interface LinkCheckItem {
-  id: string;
-  slug: string;
-  url: string;
-  folderName?: string;
-  status: 'PENDING' | 'CHECKING' | 'NORMAL' | 'ABNORMAL' | 'NETWORK_ERROR';
-  statusCode?: number;
-  durationMs?: number;
-  error?: string;
-  redirectUrl?: string;
-}
 
 // Chart color palette adhering strictly to Analytics tab blues & variants (cyan/sky, indigo/magenta, royal blue)
 const CHART_BLUE_PALETTE = ['#0099ff', '#38bdf8', '#818cf8', '#6366f1', '#a855f7', '#0ea5e9'];
@@ -93,37 +87,27 @@ export const LinkCheckPage: React.FC = () => {
   const [isFolderDropdownOpen, setIsFolderDropdownOpen] = useState(false);
   const folderDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Settings
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [timeoutSec, setTimeoutSec] = useState<number>(8);
-  const [batchSize, setBatchSize] = useState<number>(6);
+  // Link check execution state provided globally via LinkCheckContext
+  // Allows checking to continue uninterrupted across page navigation and reloads
+  const {
+    checkItems,
+    setCheckItems,
+    isRunning,
+    timeoutSec,
+    setTimeoutSec,
+    batchSize,
+    setBatchSize,
+    startCheck,
+    stopCheck,
+    clearResults,
+    updateCheckItem,
+    syncRawLinks,
+  } = useLinkCheck();
 
-  // Single Check Input
+  // Settings & Single Check Input
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [customUrl, setCustomUrl] = useState('');
   const [isCheckingSingle, setIsCheckingSingle] = useState(false);
-
-  // Execution state (persist to localStorage so results don't disappear on refresh or switching tabs)
-  const [checkItems, setCheckItems] = useState<LinkCheckItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('link_check_items');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [isRunning, setIsRunning] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  // Sync checkItems to localStorage whenever they change
-  useEffect(() => {
-    try {
-      if (checkItems.length > 0) {
-        localStorage.setItem('link_check_items', JSON.stringify(checkItems));
-      }
-    } catch {
-      // Ignore quota or serialization errors
-    }
-  }, [checkItems]);
 
   // Filter & Search
   const [activeTab, setActiveTab] = useState<string>('abnormal');
@@ -131,9 +115,69 @@ export const LinkCheckPage: React.FC = () => {
   const [selectedDetailItem, setSelectedDetailItem] = useState<LinkCheckItem | null>(null);
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
 
+  // Item 2: Quick Destination URL Edit modal state
+  const [editingItem, setEditingItem] = useState<LinkCheckItem | null>(null);
+  const [editLongUrl, setEditLongUrl] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   // Pagination state (Matching Events stream table footer)
   const [page, setPage] = useState<number>(0);
   const pageSize = 15;
+
+  // Quick Fix Destination URL Save handler
+  const handleSaveQuickEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem || !editLongUrl.trim()) return;
+
+    setIsSavingEdit(true);
+    try {
+      // 1. Update the URL destination in the database via PUT /url/{hash}
+      await axiosInstance.put(`/url/${editingItem.slug}`, {
+        longUrl: editLongUrl.trim(),
+      });
+
+      // 2. Immediately run a verification check on the updated URL
+      const checkRes = await axiosInstance.post('/links/check/single', {
+        id: editingItem.id,
+        slug: editingItem.slug,
+        url: editLongUrl.trim(),
+      });
+
+      // 3. Update in-memory state and localStorage
+      setCheckItems((prev) =>
+        prev.map((item) => {
+          if (item.id === editingItem.id) {
+            return {
+              ...item,
+              url: editLongUrl.trim(),
+              status: checkRes.data.status,
+              statusCode: checkRes.data.statusCode,
+              durationMs: checkRes.data.durationMs,
+              error: checkRes.data.error,
+              redirectUrl: checkRes.data.redirectUrl,
+              hopsCount: checkRes.data.hopsCount,
+              redirectChain: checkRes.data.redirectChain,
+              isHttpsDowngrade: checkRes.data.isHttpsDowngrade,
+              securityWarning: checkRes.data.securityWarning,
+            };
+          }
+          return item;
+        })
+      );
+
+      // Update link list longUrl
+      setLinks((prev) =>
+        prev.map((l) => (l.shortUrl === editingItem.id ? { ...l, longUrl: editLongUrl.trim() } : l))
+      );
+
+      toast.success('Destination URL updated & verified successfully!');
+      setEditingItem(null);
+    } catch (err: any) {
+      toast.error(extractBackendError(err, 'Failed to update destination URL'));
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   // Reset pagination when active filter tab or search changes
   useEffect(() => {
@@ -157,7 +201,7 @@ export const LinkCheckPage: React.FC = () => {
     try {
       const res = await axiosInstance.get<UrlEntry[]>('/url/all');
       setLinks(res.data);
-      initializeCheckItems(res.data, selectedFolderId, forceReset);
+      syncRawLinks(res.data, selectedFolderId, forceReset);
     } catch (err: any) {
       toast.error('Failed to load short links');
     } finally {
@@ -169,51 +213,11 @@ export const LinkCheckPage: React.FC = () => {
     fetchLinks(false);
   }, []);
 
-  const initializeCheckItems = (rawLinks: UrlEntry[], folderFilter: string, forceReset = false) => {
-    const filtered = rawLinks.filter((l) => {
-      if (folderFilter === 'all') return true;
-      if (folderFilter === 'none') return !l.folderId;
-      return l.folderId?.toString() === folderFilter;
-    });
-
-    setCheckItems((prev) => {
-      // If we already have checked results and are not forcing a reset, keep existing statuses
-      if (!forceReset && prev.length > 0) {
-        const prevMap = new Map(prev.map((item) => [item.id, item]));
-        return filtered.map((l) => {
-          const existing = prevMap.get(l.shortUrl);
-          if (existing) {
-            return {
-              ...existing,
-              url: l.longUrl,
-              folderName: l.folderName || undefined,
-            };
-          }
-          return {
-            id: l.shortUrl,
-            slug: extractHash(l.shortUrl),
-            url: l.longUrl,
-            folderName: l.folderName || undefined,
-            status: 'PENDING',
-          };
-        });
-      }
-
-      return filtered.map((l) => ({
-        id: l.shortUrl,
-        slug: extractHash(l.shortUrl),
-        url: l.longUrl,
-        folderName: l.folderName || undefined,
-        status: 'PENDING',
-      }));
-    });
-  };
-
   const handleFolderChange = (folderId: string) => {
     setSelectedFolderId(folderId);
     setIsFolderDropdownOpen(false);
     if (!isRunning) {
-      initializeCheckItems(links, folderId, false);
+      syncRawLinks(links, folderId, false);
     }
   };
 
@@ -285,123 +289,6 @@ export const LinkCheckPage: React.FC = () => {
   }, [checkItems]);
 
   // Start Check Engine
-  const startCheck = async () => {
-    if (isRunning) return;
-    if (checkItems.length === 0) {
-      toast.error('No links to check. Select a folder or reload links.');
-      return;
-    }
-
-    setIsRunning(true);
-    const abortCtrl = new AbortController();
-    abortControllerRef.current = abortCtrl;
-
-    const queue = [...checkItems];
-    const effectiveBatchSize = Math.max(1, Math.min(batchSize, 10));
-    const effectiveTimeout = Math.max(1, Math.min(timeoutSec, 60));
-
-    // Reset items
-    setCheckItems((prev) =>
-      prev.map((it) => ({
-        ...it,
-        status: 'PENDING',
-        statusCode: undefined,
-        durationMs: undefined,
-        error: undefined,
-      }))
-    );
-
-    let currentIndex = 0;
-
-    try {
-      while (currentIndex < queue.length) {
-        if (abortCtrl.signal.aborted) break;
-
-        const currentBatch = queue.slice(currentIndex, currentIndex + effectiveBatchSize);
-        const batchIds = new Set(currentBatch.map((b) => b.id));
-
-        setCheckItems((prev) =>
-          prev.map((item) => (batchIds.has(item.id) ? { ...item, status: 'CHECKING' } : item))
-        );
-
-        try {
-          const res = await axiosInstance.post<{
-            results: Array<{
-              id: string;
-              slug: string;
-              url: string;
-              statusCode: number;
-              status: 'NORMAL' | 'ABNORMAL' | 'NETWORK_ERROR';
-              durationMs: number;
-              error?: string;
-              redirectUrl?: string;
-            }>;
-          }>(
-            '/links/check',
-            {
-              items: currentBatch.map((b) => ({ id: b.id, slug: b.slug, url: b.url })),
-              timeoutSeconds: effectiveTimeout,
-            },
-            { signal: abortCtrl.signal }
-          );
-
-          const resultMap = new Map(res.data.results.map((r) => [r.id, r]));
-
-          setCheckItems((prev) =>
-            prev.map((item) => {
-              const resData = resultMap.get(item.id);
-              if (resData) {
-                return {
-                  ...item,
-                  status: resData.status,
-                  statusCode: resData.statusCode,
-                  durationMs: resData.durationMs,
-                  error: resData.error,
-                  redirectUrl: resData.redirectUrl,
-                };
-              }
-              return item;
-            })
-          );
-        } catch (err: any) {
-          if (axios.isCancel(err) || abortCtrl.signal.aborted) {
-            break;
-          }
-          setCheckItems((prev) =>
-            prev.map((item) =>
-              batchIds.has(item.id)
-                ? { ...item, status: 'NETWORK_ERROR', error: err.message || 'Batch request failed' }
-                : item
-            )
-          );
-        }
-
-        currentIndex += effectiveBatchSize;
-      }
-    } finally {
-      setIsRunning(false);
-      abortControllerRef.current = null;
-    }
-  };
-
-  const stopCheck = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-    setIsRunning(false);
-    toast('Check stopped', { icon: '⏹️' });
-  };
-
-  const clearResults = () => {
-    if (isRunning) stopCheck();
-    try {
-      localStorage.removeItem('link_check_items');
-    } catch {}
-    initializeCheckItems(links, selectedFolderId, true);
-    toast.success('Results cleared');
-  };
-
   const reloadLinks = () => {
     if (isRunning) stopCheck();
     fetchLinks(false);
@@ -430,6 +317,10 @@ export const LinkCheckPage: React.FC = () => {
         durationMs: res.data.durationMs,
         error: res.data.error,
         redirectUrl: res.data.redirectUrl,
+        hopsCount: res.data.hopsCount,
+        redirectChain: res.data.redirectChain,
+        isHttpsDowngrade: res.data.isHttpsDowngrade,
+        securityWarning: res.data.securityWarning,
       };
 
       setCheckItems((prev) => [newItem, ...prev]);
@@ -1078,6 +969,29 @@ export const LinkCheckPage: React.FC = () => {
                               ERR
                             </span>
                           ) : null}
+
+                          {/* Item 3: Redirect hops and Security warning badge */}
+                          {item.isHttpsDowngrade ? (
+                            <span
+                              className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1 shrink-0"
+                              title="Insecure HTTP downgrade detected"
+                            >
+                              <ShieldAlert className="w-2.5 h-2.5" />
+                              HTTP Downgrade
+                            </span>
+                          ) : item.hopsCount && item.hopsCount > 1 ? (
+                            <span
+                              className={`px-1.5 py-0.2 rounded text-[10px] font-medium flex items-center gap-1 shrink-0 ${
+                                item.hopsCount > 2
+                                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                                  : 'bg-secondary text-muted-foreground border border-border'
+                              }`}
+                              title={`${item.hopsCount} redirect hops detected`}
+                            >
+                              <GitCommit className="w-2.5 h-2.5" />
+                              {item.hopsCount} Hops
+                            </span>
+                          ) : null}
                         </div>
 
                         <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] mt-0.5 min-w-0">
@@ -1100,6 +1014,24 @@ export const LinkCheckPage: React.FC = () => {
                           {item.durationMs} ms
                         </span>
                       ) : null}
+
+                      {/* Item 2: Quick Destination URL Fix Button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingItem(item);
+                          setEditLongUrl(item.url);
+                        }}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors cursor-pointer shadow-xs shrink-0 ${
+                          isAbnormal || isNetErr
+                            ? 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20'
+                            : 'border-border bg-secondary/40 text-foreground hover:bg-secondary'
+                        }`}
+                        title="Quick fix destination URL"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        <span className="hidden sm:inline">Edit URL</span>
+                      </button>
 
                       {/* Action buttons matching Analytics style */}
                       <a
@@ -1208,6 +1140,37 @@ export const LinkCheckPage: React.FC = () => {
                   </div>
                 )}
 
+                {/* Item 3: Redirect Chain Path Timeline & Warnings */}
+                {selectedDetailItem.securityWarning && (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-lg flex items-start gap-2 text-xs">
+                    <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-semibold block">Security Notice</span>
+                      <span>{selectedDetailItem.securityWarning}</span>
+                    </div>
+                  </div>
+                )}
+
+                {selectedDetailItem.redirectChain && selectedDetailItem.redirectChain.length > 1 && (
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-muted-foreground block text-[11px] font-medium">
+                      Redirect Trail ({selectedDetailItem.redirectChain.length - 1} hops)
+                    </span>
+                    <div className="bg-secondary/30 border border-border rounded-lg p-2.5 space-y-2 font-mono text-[11px]">
+                      {selectedDetailItem.redirectChain.map((hopUrl: string, idx: number) => (
+                        <div key={idx} className="flex items-start gap-2">
+                          <span className="text-muted-foreground shrink-0 w-4 text-right">
+                            {idx === 0 ? '1.' : `${idx + 1}.`}
+                          </span>
+                          <span className={idx === selectedDetailItem.redirectChain!.length - 1 ? 'text-primary font-semibold break-all' : 'text-foreground/80 break-all'}>
+                            {hopUrl}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <div className="bg-secondary/40 border border-border rounded-lg p-2.5">
                     <span className="text-muted-foreground block text-[11px]">Status Code</span>
@@ -1234,7 +1197,20 @@ export const LinkCheckPage: React.FC = () => {
                 )}
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-border">
+              <div className="flex justify-between items-center gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingItem(selectedDetailItem);
+                    setEditLongUrl(selectedDetailItem.url);
+                    setSelectedDetailItem(null);
+                  }}
+                  className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Fix Destination URL</span>
+                </button>
+
                 <button
                   onClick={() => setSelectedDetailItem(null)}
                   className="px-3.5 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground border border-border rounded-lg text-xs font-medium transition-colors cursor-pointer"
@@ -1242,6 +1218,82 @@ export const LinkCheckPage: React.FC = () => {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Item 2: Quick Destination URL Edit Modal ───────────────────── */}
+        {editingItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+            <div className="bg-popover border border-border rounded-xl shadow-xl max-w-lg w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <div className="flex items-center gap-2">
+                  <Pencil className="w-4 h-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground">Quick Fix Destination URL</h3>
+                </div>
+                <button
+                  onClick={() => setEditingItem(null)}
+                  disabled={isSavingEdit}
+                  className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveQuickEdit} className="space-y-4 text-xs">
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">Short Link</span>
+                  <span className="font-mono text-foreground font-semibold bg-secondary px-2 py-0.5 rounded border border-border inline-block mt-0.5">
+                    {displayDomain}/{editingItem.slug}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-foreground font-medium block">
+                    Target Destination URL
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    value={editLongUrl}
+                    onChange={(e) => setEditLongUrl(e.target.value)}
+                    placeholder="https://example.com/target"
+                    disabled={isSavingEdit}
+                    className="w-full bg-background dark:bg-black text-foreground border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors placeholder:text-muted-foreground"
+                  />
+                  <span className="text-[11px] text-muted-foreground block">
+                    Updating this URL will modify the short link destination and immediately re-verify reachability.
+                  </span>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-border">
+                  <button
+                    type="button"
+                    onClick={() => setEditingItem(null)}
+                    disabled={isSavingEdit}
+                    className="px-3.5 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground border border-border rounded-lg text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingEdit || !editLongUrl.trim()}
+                    className="px-4 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 shadow-xs"
+                  >
+                    {isSavingEdit ? (
+                      <>
+                        <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Saving & Checking...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Save & Re-check</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

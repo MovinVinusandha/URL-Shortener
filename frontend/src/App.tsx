@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LinkCheckProvider } from './context/LinkCheckContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
@@ -107,7 +108,9 @@ function App() {
       <Toaster position="bottom-center" toastOptions={{ duration: 3000 }} />
       <BrowserRouter>
         <AuthProvider>
-          <AnimatedRoutes />
+          <LinkCheckProvider>
+            <AnimatedRoutes />
+          </LinkCheckProvider>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>

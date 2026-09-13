@@ -9,7 +9,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -20,12 +22,14 @@ public class LinkCheckService {
 
     private final HttpClient httpClient;
     private final ExecutorService executorService;
+    private static final int MAX_REDIRECT_HOPS = 6;
 
     public LinkCheckService() {
         this.executorService = Executors.newFixedThreadPool(20);
+        // HttpClient without automatic redirect following so we can record every hop and detect loops/downgrades
         this.httpClient = HttpClient.newBuilder()
                 .executor(this.executorService)
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
     }
@@ -43,6 +47,9 @@ public class LinkCheckService {
                     .statusCode(400)
                     .durationMs(0L)
                     .error("URL is empty")
+                    .hopsCount(0)
+                    .redirectChain(List.of())
+                    .isHttpsDowngrade(false)
                     .build();
         }
 
@@ -51,23 +58,46 @@ public class LinkCheckService {
             targetUrl = "https://" + targetUrl;
         }
 
+        List<String> redirectChain = new ArrayList<>();
+        redirectChain.add(targetUrl);
+
+        boolean isHttpsDowngrade = false;
+        boolean startedWithHttps = targetUrl.startsWith("https://");
+        String currentUrl = targetUrl;
+        int hops = 0;
+        Set<String> visitedUrls = new HashSet<>();
+        visitedUrls.add(currentUrl);
+
+        int effectiveTimeout = (timeoutSeconds > 0 && timeoutSeconds <= 60) ? timeoutSeconds : 8;
+
         try {
-            URI uri = URI.create(targetUrl);
-            int effectiveTimeout = (timeoutSeconds > 0 && timeoutSeconds <= 60) ? timeoutSeconds : 8;
+            int finalStatusCode = 0;
+            String finalRedirectUrl = null;
 
-            // Attempt HEAD first
-            HttpRequest headRequest = HttpRequest.newBuilder()
-                    .uri(uri)
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 TrimLinkChecker/1.0")
-                    .timeout(Duration.ofSeconds(effectiveTimeout))
-                    .method("HEAD", HttpRequest.BodyPublishers.noBody())
-                    .build();
+            while (hops < MAX_REDIRECT_HOPS) {
+                URI uri = URI.create(currentUrl);
 
-            HttpResponse<Void> response;
-            try {
-                response = httpClient.send(headRequest, HttpResponse.BodyHandlers.discarding());
-                // Some servers reject HEAD requests with 405 Method Not Allowed or 403 Forbidden
-                if (response.statusCode() == 405 || response.statusCode() == 403) {
+                // Attempt HEAD first, fallback to GET if unsupported
+                HttpRequest headRequest = HttpRequest.newBuilder()
+                        .uri(uri)
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 TrimLinkChecker/1.0")
+                        .timeout(Duration.ofSeconds(effectiveTimeout))
+                        .method("HEAD", HttpRequest.BodyPublishers.noBody())
+                        .build();
+
+                HttpResponse<Void> response;
+                try {
+                    response = httpClient.send(headRequest, HttpResponse.BodyHandlers.discarding());
+                    if (response.statusCode() == 405 || response.statusCode() == 403) {
+                        HttpRequest getRequest = HttpRequest.newBuilder()
+                                .uri(uri)
+                                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 TrimLinkChecker/1.0")
+                                .timeout(Duration.ofSeconds(effectiveTimeout))
+                                .GET()
+                                .build();
+                        response = httpClient.send(getRequest, HttpResponse.BodyHandlers.discarding());
+                    }
+                } catch (Exception e) {
                     HttpRequest getRequest = HttpRequest.newBuilder()
                             .uri(uri)
                             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 TrimLinkChecker/1.0")
@@ -76,28 +106,75 @@ public class LinkCheckService {
                             .build();
                     response = httpClient.send(getRequest, HttpResponse.BodyHandlers.discarding());
                 }
-            } catch (Exception e) {
-                // If HEAD fails, try GET once
-                HttpRequest getRequest = HttpRequest.newBuilder()
-                        .uri(uri)
-                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 TrimLinkChecker/1.0")
-                        .timeout(Duration.ofSeconds(effectiveTimeout))
-                        .GET()
-                        .build();
-                response = httpClient.send(getRequest, HttpResponse.BodyHandlers.discarding());
+
+                finalStatusCode = response.statusCode();
+
+                // Check for redirect status (301, 302, 303, 307, 308)
+                if (finalStatusCode >= 300 && finalStatusCode < 400) {
+                    var locationOpt = response.headers().firstValue("Location");
+                    if (locationOpt.isPresent()) {
+                        String nextLocation = locationOpt.get();
+                        // Resolve relative redirect locations
+                        URI nextUri = uri.resolve(nextLocation);
+                        String resolvedNextUrl = nextUri.toString();
+
+                        if (startedWithHttps && resolvedNextUrl.startsWith("http://")) {
+                            isHttpsDowngrade = true;
+                        }
+
+                        if (visitedUrls.contains(resolvedNextUrl)) {
+                            // Circular redirect detected
+                            redirectChain.add(resolvedNextUrl);
+                            long duration = System.currentTimeMillis() - startTime;
+                            return builder
+                                    .statusCode(finalStatusCode)
+                                    .status("ABNORMAL")
+                                    .durationMs(duration)
+                                    .isRedirect(true)
+                                    .redirectUrl(resolvedNextUrl)
+                                    .hopsCount(hops + 1)
+                                    .redirectChain(redirectChain)
+                                    .isHttpsDowngrade(isHttpsDowngrade)
+                                    .securityWarning("Circular redirect loop detected")
+                                    .error("Circular redirect loop detected")
+                                    .build();
+                        }
+
+                        visitedUrls.add(resolvedNextUrl);
+                        redirectChain.add(resolvedNextUrl);
+                        finalRedirectUrl = resolvedNextUrl;
+                        currentUrl = resolvedNextUrl;
+                        hops++;
+                        continue;
+                    }
+                }
+
+                // If not redirect, we reached destination
+                break;
             }
 
             long duration = System.currentTimeMillis() - startTime;
-            int statusCode = response.statusCode();
-            String status = (statusCode >= 200 && statusCode < 400) ? "NORMAL" : "ABNORMAL";
+            String status = (finalStatusCode >= 200 && finalStatusCode < 400) ? "NORMAL" : "ABNORMAL";
+
+            // Formulate warnings
+            String warning = null;
+            if (isHttpsDowngrade) {
+                warning = "Insecure redirect: Downgraded from HTTPS to unencrypted HTTP";
+            } else if (hops > 2) {
+                warning = "Long redirect chain: " + hops + " intermediate hops detected";
+            }
 
             return builder
-                    .statusCode(statusCode)
+                    .statusCode(finalStatusCode)
                     .status(status)
                     .durationMs(duration)
-                    .isRedirect(statusCode >= 300 && statusCode < 400)
-                    .redirectUrl(response.headers().firstValue("Location").orElse(null))
-                    .error(status.equals("ABNORMAL") ? "HTTP Status " + statusCode : null)
+                    .isRedirect(hops > 0)
+                    .redirectUrl(finalRedirectUrl)
+                    .hopsCount(hops)
+                    .redirectChain(redirectChain)
+                    .isHttpsDowngrade(isHttpsDowngrade)
+                    .securityWarning(warning)
+                    .error(status.equals("ABNORMAL") ? "HTTP Status " + finalStatusCode : null)
                     .build();
 
         } catch (java.net.http.HttpConnectTimeoutException | java.net.SocketTimeoutException e) {
@@ -106,6 +183,9 @@ public class LinkCheckService {
                     .status("NETWORK_ERROR")
                     .statusCode(0)
                     .durationMs(duration)
+                    .hopsCount(hops)
+                    .redirectChain(redirectChain)
+                    .isHttpsDowngrade(isHttpsDowngrade)
                     .error("Timeout: " + e.getMessage())
                     .build();
         } catch (Exception e) {
@@ -115,6 +195,9 @@ public class LinkCheckService {
                     .status("NETWORK_ERROR")
                     .statusCode(0)
                     .durationMs(duration)
+                    .hopsCount(hops)
+                    .redirectChain(redirectChain)
+                    .isHttpsDowngrade(isHttpsDowngrade)
                     .error(msg)
                     .build();
         }
