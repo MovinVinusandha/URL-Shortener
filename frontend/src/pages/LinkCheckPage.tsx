@@ -102,10 +102,28 @@ export const LinkCheckPage: React.FC = () => {
   const [customUrl, setCustomUrl] = useState('');
   const [isCheckingSingle, setIsCheckingSingle] = useState(false);
 
-  // Execution state
-  const [checkItems, setCheckItems] = useState<LinkCheckItem[]>([]);
+  // Execution state (persist to localStorage so results don't disappear on refresh or switching tabs)
+  const [checkItems, setCheckItems] = useState<LinkCheckItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('link_check_items');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [isRunning, setIsRunning] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Sync checkItems to localStorage whenever they change
+  useEffect(() => {
+    try {
+      if (checkItems.length > 0) {
+        localStorage.setItem('link_check_items', JSON.stringify(checkItems));
+      }
+    } catch {
+      // Ignore quota or serialization errors
+    }
+  }, [checkItems]);
 
   // Filter & Search
   const [activeTab, setActiveTab] = useState<string>('abnormal');
@@ -134,12 +152,12 @@ export const LinkCheckPage: React.FC = () => {
   }, []);
 
   // Fetch Links
-  const fetchLinks = async () => {
+  const fetchLinks = async (forceReset = false) => {
     setIsLoadingLinks(true);
     try {
       const res = await axiosInstance.get<UrlEntry[]>('/url/all');
       setLinks(res.data);
-      initializeCheckItems(res.data, selectedFolderId);
+      initializeCheckItems(res.data, selectedFolderId, forceReset);
     } catch (err: any) {
       toast.error('Failed to load short links');
     } finally {
@@ -148,32 +166,54 @@ export const LinkCheckPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchLinks();
+    fetchLinks(false);
   }, []);
 
-  const initializeCheckItems = (rawLinks: UrlEntry[], folderFilter: string) => {
+  const initializeCheckItems = (rawLinks: UrlEntry[], folderFilter: string, forceReset = false) => {
     const filtered = rawLinks.filter((l) => {
       if (folderFilter === 'all') return true;
       if (folderFilter === 'none') return !l.folderId;
       return l.folderId?.toString() === folderFilter;
     });
 
-    const items: LinkCheckItem[] = filtered.map((l) => ({
-      id: l.shortUrl,
-      slug: extractHash(l.shortUrl),
-      url: l.longUrl,
-      folderName: l.folderName || undefined,
-      status: 'PENDING',
-    }));
+    setCheckItems((prev) => {
+      // If we already have checked results and are not forcing a reset, keep existing statuses
+      if (!forceReset && prev.length > 0) {
+        const prevMap = new Map(prev.map((item) => [item.id, item]));
+        return filtered.map((l) => {
+          const existing = prevMap.get(l.shortUrl);
+          if (existing) {
+            return {
+              ...existing,
+              url: l.longUrl,
+              folderName: l.folderName || undefined,
+            };
+          }
+          return {
+            id: l.shortUrl,
+            slug: extractHash(l.shortUrl),
+            url: l.longUrl,
+            folderName: l.folderName || undefined,
+            status: 'PENDING',
+          };
+        });
+      }
 
-    setCheckItems(items);
+      return filtered.map((l) => ({
+        id: l.shortUrl,
+        slug: extractHash(l.shortUrl),
+        url: l.longUrl,
+        folderName: l.folderName || undefined,
+        status: 'PENDING',
+      }));
+    });
   };
 
   const handleFolderChange = (folderId: string) => {
     setSelectedFolderId(folderId);
     setIsFolderDropdownOpen(false);
     if (!isRunning) {
-      initializeCheckItems(links, folderId);
+      initializeCheckItems(links, folderId, false);
     }
   };
 
@@ -355,13 +395,16 @@ export const LinkCheckPage: React.FC = () => {
 
   const clearResults = () => {
     if (isRunning) stopCheck();
-    initializeCheckItems(links, selectedFolderId);
+    try {
+      localStorage.removeItem('link_check_items');
+    } catch {}
+    initializeCheckItems(links, selectedFolderId, true);
     toast.success('Results cleared');
   };
 
   const reloadLinks = () => {
     if (isRunning) stopCheck();
-    fetchLinks();
+    fetchLinks(false);
     toast.success('Links reloaded');
   };
 
