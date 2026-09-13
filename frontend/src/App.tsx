@@ -15,6 +15,7 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import FoldersPage from './pages/FoldersPage';
 import TagsPage from './pages/TagsPage';
 import UtmTemplatesPage from './pages/UtmTemplatesPage';
+import LinkCheckPage from './pages/LinkCheckPage';
 import ExpiredPage from './pages/ExpiredPage';
 import NotFoundPage from './pages/NotFoundPage';
 import SecurePage from './pages/SecurePage';
@@ -71,6 +72,8 @@ function AnimatedRoutes() {
                 <Route path="/tags" element={<TagsPage />} />
                 <Route path="/utm-templates" element={<UtmTemplatesPage />} />
                 <Route path="/utm" element={<Navigate to="/utm-templates" replace />} />
+                <Route path="/check" element={<LinkCheckPage />} />
+                <Route path="/link-check" element={<Navigate to="/check" replace />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/settings/security" element={<SecurityPage />} />
               </Route>

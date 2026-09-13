@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, Link, useNavigate, useParams } from 'react-router-dom';
-import { Link as LinkIcon, BarChart2, Activity, Folder as FolderIcon, Tag as TagIcon, ChevronDown, FolderPlus, HelpCircle, User, Settings, Gift, LogOut, ArrowLeft, Shield, Download, Sun, Moon, Monitor, SlidersHorizontal, Layers } from 'lucide-react';
+import { Link as LinkIcon, BarChart2, Activity, Folder as FolderIcon, Tag as TagIcon, ChevronDown, FolderPlus, HelpCircle, User, Settings, Gift, LogOut, ArrowLeft, Shield, Download, Sun, Moon, Monitor, SlidersHorizontal, Layers, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -550,6 +550,10 @@ const DashboardLayout: React.FC = () => {
               <h1 className="text-base font-semibold text-foreground tracking-tight px-1">
                 UTM Templates
               </h1>
+            ) : location.pathname.startsWith('/check') || location.pathname.startsWith('/link-check') ? (
+              <h1 className="text-base font-semibold text-foreground tracking-tight px-1">
+                Link Check
+              </h1>
             ) : (
               <h1 className="text-base font-semibold text-foreground tracking-tight px-1">
                 {getTitle()}
@@ -622,6 +626,13 @@ const DashboardLayout: React.FC = () => {
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
                   UTM Templates
+                </Link>
+                <Link 
+                  to="/check" 
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-xs transition-colors ${location.pathname.startsWith('/check') || location.pathname.startsWith('/link-check') ? 'bg-secondary text-foreground font-semibold' : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'}`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Link Check
                 </Link>
               </>
             )}
